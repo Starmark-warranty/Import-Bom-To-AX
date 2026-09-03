@@ -173,9 +173,17 @@ header .sp{flex:1}
 /* ── แผงสรุปค่าในคอลัมน์ที่เน้น (ข้อ 2) ── */
 /* ── โครงสองฝั่ง (v4.0) ── ซ้าย = ตารางจากไฟล์ · ขวา = การ์ดสรุป */
 #main{flex:1;display:flex;min-height:0;overflow:hidden}
-#side{flex:0 0 44%;min-width:340px;max-width:640px;display:none;flex-direction:column;
-      overflow:auto;background:var(--page);border-left:1px solid var(--line-2)}
+/* v4.3: ซ้ายกว้างตามเนื้อตาราง ที่เหลือยกให้ขวา (เดิมล็อกขวาไว้ 44% ตายตัว
+   แท็บ Fitting มี 4 คอลัมน์ ครึ่งจอซ้ายเลยว่างเปล่า) */
+#side{flex:1 1 auto;min-width:320px;display:none;flex-direction:column;
+      overflow:auto;background:var(--page)}
 #side.on{display:flex}
+#gutter{flex:0 0 7px;display:none;cursor:col-resize;background:var(--line);
+        position:relative;touch-action:none}
+#gutter.on{display:block}
+#gutter:hover,#gutter.drag{background:var(--orange)}
+#gutter::after{content:"";position:absolute;inset:0 -4px}
+body.resizing{cursor:col-resize;user-select:none}
 #sum{display:flex;flex-direction:column;gap:10px;padding:10px}
 
 .sumcard{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);flex:0 0 auto}
@@ -188,7 +196,7 @@ header .sp{flex:1}
 .sumcard>h3 em u{text-decoration:none;color:var(--miss-ink);font-weight:600}
 
 /* แถวในการ์ด: ค่า | สถานะ | ชื่อในระบบ */
-.vrow{display:grid;grid-template-columns:minmax(96px,auto) 62px 1fr;gap:9px;align-items:start;
+.vrow{display:grid;grid-template-columns:minmax(96px,auto) 86px 1fr;gap:9px;align-items:start;
       padding:6px 11px;border-bottom:1px solid var(--line);cursor:pointer}
 .vrow:last-child{border-bottom:0}
 .vrow:hover{background:var(--hover)}
@@ -201,19 +209,21 @@ header .sp{flex:1}
 .vrow .st.wait{color:var(--faint)}
 .vrow .nm{font-size:11.5px;color:var(--ink);line-height:1.5;word-break:break-word}
 .vrow.no .nm{color:var(--faint);font-style:italic}
-.vrow .nm .sn{display:block;font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:1px}
+.vrow .st .u{font-family:var(--mono);font-size:10px;font-weight:600;opacity:.72;margin-left:2px}
 
 /* ── ตาราง ── */
-#wrap{flex:1;min-width:0;overflow:auto;background:var(--card);position:relative}
-table{border-collapse:separate;border-spacing:0;font-size:12.5px;white-space:nowrap}
+#wrap{flex:0 0 auto;min-width:280px;overflow:auto;background:var(--card);position:relative}
+#wrap.solo{flex:1 1 auto}
+/* v4.6: ตารางแน่นขึ้น เห็นคอลัมน์ได้มากขึ้นราว 25% ต่อความกว้างเท่าเดิม */
+table{border-collapse:separate;border-spacing:0;font-size:11px;white-space:nowrap}
 thead th{position:sticky;top:0;z-index:3;background:var(--navy);color:#fff;font-weight:500;
-         text-align:left;padding:8px 10px;font-size:11.5px;
+         text-align:left;padding:5px 7px;font-size:10.5px;
          border-right:1px solid var(--navy-2);cursor:pointer;user-select:none}
 thead th:hover{background:var(--navy-2)}
 thead th.hl{background:var(--orange);color:#3a2200;font-weight:600;border-right-color:#c8790f}
-thead th .ar{opacity:.55;font-size:9px;margin-left:3px}
-tbody td{padding:6px 10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);
-         font-family:var(--mono);font-size:12px;max-width:330px;overflow:hidden;text-overflow:ellipsis}
+thead th .ar{opacity:.55;font-size:8px;margin-left:2px}
+tbody td{padding:3px 7px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);
+         font-family:var(--mono);font-size:11px;max-width:260px;overflow:hidden;text-overflow:ellipsis}
 tbody tr:hover td{background:var(--hover)}
 td.hl{background:var(--hl-bg);color:var(--hl-ink);font-weight:600;
       border-right:1px solid var(--hl-line);border-bottom-color:var(--hl-line)}
@@ -227,6 +237,15 @@ tbody tr:hover td.rn{background:var(--hover)}
 td.n{text-align:right}
 td.e{color:#c9c9cf}
 mark{background:#ffe8a3;color:inherit;border-radius:2px;padding:0 1px}
+
+/* ── แถวที่ตัวแก้ X เป็น Y ไปแตะ (v4.4) ── */
+tbody tr.ed td{background:#fff9ef}
+tbody tr.ed:hover td{background:#fdf0dc}
+tbody tr.ed td.rn{background:#fdf1e0;color:var(--hl-ink);font-weight:600;
+                  box-shadow:inset 3px 0 0 var(--orange)}
+tbody tr.ed:hover td.rn{background:#fbe8cf}
+tbody tr.ed td.hl{background:#fdeed8}
+tbody tr.ed:hover td.hl{background:#fae2c2}
 
 /* ── หน้าเปล่า / ผิดพลาด ── */
 #drop{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
@@ -411,6 +430,7 @@ footer .mono{font-family:var(--mono)}
   <button class="cbtn warn" id="reqgo" disabled>ส่งขอโค้ด</button>
   <button class="cbtn" id="onlyno" aria-pressed="false" disabled>เฉพาะที่ยังไม่มีโค้ด</button>
   <button class="cbtn" id="fixxy" disabled title="ค่าที่ขึ้นต้นด้วย G และลงท้ายด้วย X ในคอลัมน์ที่เน้น">แก้ X เป็น Y</button>
+  <button class="cbtn" id="onlyed" aria-pressed="false" style="display:none">เฉพาะแถวที่แก้</button>
   <button class="cbtn undo" id="undoxy" style="display:none">ย้อนกลับ</button>
   <span class="sp"></span>
   <span class="note" id="chkat" style="font-size:11px;color:var(--faint)"></span>
@@ -431,6 +451,7 @@ footer .mono{font-family:var(--mono)}
   </div></div>
   <div id="drop"></div>
 </div>
+<div id="gutter" title="ลากเพื่อปรับความกว้าง · ดับเบิลคลิกเพื่อคืนค่าอัตโนมัติ"></div>
 <div id="side"><div id="sum"></div></div>
 </div>
 
@@ -453,9 +474,14 @@ footer .mono{font-family:var(--mono)}
 /* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
 const APP_META = {
   name: "imos BOM Viewer",
-  version: "4.2",
-  build: "2026-09-03/skip-surface",
+  version: "4.7",
+  build: "2026-09-03/csv-roundtrip",
   changelog: [
+    ["4.7","2026-09-03","นำเข้า CSV แล้วส่งออกกลับเป็น CSV หน้าตาเหมือนต้นฉบับ ไม่แปลงเป็น xlsx · จำรูปแบบไฟล์ต้นทางไว้ตอนอ่าน แล้วเขียนคืนด้วยรูปแบบเดียวกัน ตัวคั่น (คอมมา/แท็บ/อัฒภาค) ตัวจบบรรทัด (CRLF/LF) มี BOM หรือไม่ และครอบเครื่องหมายคำพูดทุกช่องหรือเฉพาะช่องที่จำเป็น · ไฟล์จริงที่เจอครอบทุกช่องและใช้ CRLF ไม่มี BOM ถ้าเขียนคืนแบบมาตรฐานเครื่องปลายทางอาจอ่านไม่ตรง · ปุ่มเปลี่ยนชื่อตามชนิดไฟล์ บันทึก CSV หรือ บันทึก Excel"],
+    ["4.6","2026-09-03","ไฟล์ที่บันทึกออกมีคอลัมน์เท่ากับไฟล์ที่นำเข้าเป๊ะ เลิกต่อท้ายสามคอลัมน์ผลเช็ค (มีโค้ดในระบบ ชื่อในระบบ หน่วย) เพราะปลายทางต้องการโครงเดิม · เปลี่ยนคำต่อท้ายชื่อไฟล์จาก _edited เป็น _Pass ทั้งสองแท็บ · ตารางฝั่งซ้ายแน่นขึ้น ตัวอักษร 12 เหลือ 11 ระยะขอบในเซลล์ลดลง เห็นคอลัมน์ได้มากขึ้นราว 25% ต่อความกว้างเท่าเดิม · ปรับค่าประมาณความกว้างต่อตัวอักษรตามฟอนต์ที่เล็กลง"],
+    ["4.5","2026-09-03","ตัดบรรทัดสีเทาใต้ชื่อสินค้าในการ์ดออก เพราะ search_name ในฐานข้อมูลเป็นข้อความชุดเดียวกับ product_name แทบทุกแถว อ่านซ้ำสองรอบเปล่า ๆ · ย้ายหน่วยไปต่อท้ายสถานะแทน เช่น มีโค้ด EA · แถวในการ์ดเตี้ยลงครึ่งหนึ่ง เห็นได้มากขึ้นต่อหน้าจอ · search_name ยังดูได้จากการเอาเมาส์ชี้ที่ชื่อ เผื่อวันไหนมันต่างจาก product_name จริง"],
+    ["4.4","2026-09-03","ไฮไลต์แถวที่ตัวแก้ X เป็น Y ไปแตะ พื้นเหลืองอ่อนกับแถบส้มที่ขอบซ้าย เห็นได้ทันทีว่าแถวไหนถูกแก้ · เก็บเป็น reference ของแถวไม่ใช่เลขลำดับ ไฮไลต์จึงติดไปกับแถวแม้จะเรียงใหม่หรือกรอง · เพิ่มปุ่มกรองเฉพาะแถวที่แก้ ไว้ไล่ตรวจ · กดย้อนกลับแล้วไฮไลต์หายไปพร้อมกัน"],
+    ["4.3","2026-09-03","ความกว้างสองฝั่งปรับตามเนื้อหาแทนการล็อกไว้ 44% · แท็บ Fitting มีแค่ 4 คอลัมน์ ตารางซ้ายจึงหดให้พอดี ที่เหลือยกให้ฝั่งขวาหมด ชื่อสินค้ายาว ๆ ได้ที่เต็ม · แท็บไม้ 36 คอลัมน์ก็ยังได้ที่กว้างเท่าเดิม · มีเส้นแบ่งกลางลากปรับเองได้ ดับเบิลคลิกเพื่อคืนค่าอัตโนมัติ · จำค่าที่ลากไว้แยกตามแท็บ"],
     ["4.2","2026-09-03","ไม่ทำการ์ดและไม่ส่ง SurfaceBeforeCutTopCode / SurfaceBeforeCutBottomCode ไปเช็คกับ Supabase อีกแล้ว เพราะโค้ดผิวไม่ได้เก็บใน fitting_global ผลจึงเป็นแดงเปล่า ๆ ทุกแถว · สองคอลัมน์นี้ยังอยู่ในตารางและยังถูกเน้นเหมือนเดิม เพราะเป็นตัวชี้ให้ตัวแก้ X เป็น Y และเป็นตัวเทียบตอน recheck · ผลพลอยได้คือค่าที่ส่งไปเช็คลดลง ยิงถามน้อยลง"],
     ["4.1","2026-09-03","อัปโหลดไฟล์แล้วแก้ X เป็น Y ให้เลย ไม่ต้องกดปุ่ม · มีปุ่มย้อนกลับถ้าไม่ต้องการ กดดูรายละเอียดว่าแก้อะไรไปบ้างได้ · หน้าโหลดขึ้นตั้งแต่เริ่มอ่านไฟล์ ไม่ใช่ตอนเช็คโค้ดอย่างเดียว แสดงเป็นรายการขั้นตอนว่ากำลังทำอะไรอยู่ อ่านไฟล์ แยกแท็บ เช็คโค้ด แก้ X เป็น Y ทำเสร็จขั้นไหนติ๊กขั้นนั้น"],
     ["4.0","2026-09-03","จัดหน้าใหม่เป็นสองฝั่ง ซ้ายคือตารางข้อมูลจากไฟล์ Excel ขวาคือการ์ดสรุปค่า · รื้อแผงผลเช็คที่เคยแยกเป็นก้อนที่สามออก เอาผลเช็คไปใส่ในการ์ดสรุปแทน · ในการ์ดตัดตัวเลขจำนวนแถวกับเปอร์เซ็นต์ออก เปลี่ยนเป็นสถานะมีโค้ดกับชื่อในระบบจาก Supabase · เช็คทุกคอลัมน์ที่เน้นในครั้งเดียว ไม่ใช่ทีละคอลัมน์ จึงไม่ต้องมี dropdown เลือกคอลัมน์ที่จะเช็คอีก"],
@@ -493,7 +519,7 @@ const TABS = {
     noCheck: ["SurfaceBeforeCutTopCode", "SurfaceBeforeCutBottomCode"],
     guess: null,
     cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
-    chk: null, onlyNo: false
+    chk: null, onlyNo: false, paneW: null, fmt: null
   },
   fit: {
     label: "BOM Fitting",
@@ -504,7 +530,7 @@ const TABS = {
        ถ้าเดาผิด กดปุ่ม "คอลัมน์ที่เน้น" เลือกเองได้ */
     guess: c => /code$|code[^a-z]|^code|รหัส/i.test(String(c).trim()),
     cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
-    chk: null, onlyNo: false
+    chk: null, onlyNo: false, paneW: null, fmt: null
   }
 };
 let cur = "wood", view = [];
@@ -530,6 +556,38 @@ function parseDelimited(text, d){
   if (cell !== "" || row.length){ row.push(cell); out.push(row); }
   return out.filter(r => r.some(v => String(v).trim() !== ""));
 }
+/* v4.7: ไฟล์จริงครอบเครื่องหมายคำพูด "รายคอลัมน์" ไม่ใช่ทุกช่องหรือเฉพาะที่จำเป็น
+   เช่น ME15... ครอบ แต่ Qty กับ CutWidth ไม่ครอบ และสม่ำเสมอทุกแถว
+   ถ้าเขียนคืนแบบมาตรฐาน ไฟล์จะต่างจากต้นฉบับเกือบทุกบรรทัด
+   -> อ่านรูปแบบจากไฟล์แล้วเขียนคืนให้ตรง
+   คืน { head:[bool], data:[bool] } แยกกัน เพราะหัวตารางมักครอบครบแม้ข้อมูลไม่ครอบ */
+function detectQuotes(text, d){
+  const scan = line => {
+    const out = []; let q = false, was = false, i = 0;
+    while (i < line.length){
+      const c = line[i];
+      if (q){
+        if (c === '"'){
+          if (line[i+1] === '"'){ i += 2; continue; }
+          q = false; i++; continue;
+        }
+        i++; continue;
+      }
+      if (c === '"'){ q = true; was = true; i++; continue; }
+      if (c === d){ out.push(was); was = false; i++; continue; }
+      i++;
+    }
+    out.push(was);
+    return out;
+  };
+  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l !== "");
+  if (!lines.length) return { head: [], data: [] };
+  const head = scan(lines[0]);
+  const data = [];
+  lines.slice(1, 60).forEach(l => scan(l).forEach((q, i) => { data[i] = data[i] || q; }));
+  return { head, data };
+}
+
 function detectDelim(text){
   const first = text.split(/\r?\n/)[0] || "";
   const n = ch => (first.match(new RegExp("\\" + ch, "g")) || []).length;
@@ -550,7 +608,7 @@ function pickTabByContent(cols){
   return cur;
 }
 
-function ingest(matrix, name, tab){
+function ingest(matrix, name, tab, fmt){
   if (!matrix.length || matrix[0].length < 2){
     return fail("อ่านไฟล์ไม่ออก",
       "ไม่พบหัวตาราง หรือมีคอลัมน์เดียว ตรวจว่าบรรทัดแรกของไฟล์เป็นหัวตาราง");
@@ -560,9 +618,10 @@ function ingest(matrix, name, tab){
   const t = TABS[tab];
   t.cols = head;
   t.rows = matrix.slice(1).map(r => t.cols.map((_, i) => r[i] ?? ""));
-  t.file = name; t.sortCol = -1; t.sortDir = 1; t.q = ""; t.only = false; t.sel = null;
+  t.file = name; t.fmt = fmt || { kind: "xlsx" };
+  t.sortCol = -1; t.sortDir = 1; t.q = ""; t.only = false; t.sel = null;
   t.chk = null; t.onlyNo = false;   // ไฟล์ใหม่ = ผลเช็คเก่าใช้ไม่ได้แล้ว
-  t.needCheck = false; t.xy = null;
+  t.needCheck = false; t.xy = null; t.onlyEd = false;
 
   const wantSet = new Set(t.want.map(norm));
   t.hl = t.cols.map((c, i) => (wantSet.size && wantSet.has(norm(c))) ? i : -1).filter(i => i >= 0);
@@ -622,6 +681,7 @@ function apply(){
   view = t.rows.filter(r => {
     if (t.only && !t.hl.some(i => blank(r[i]))) return false;
     if (t.onlyNo && t.chk && codeState(t, r) !== "no") return false;
+    if (t.onlyEd && t.xy && !t.xy.rows.has(r)) return false;
     if (t.sel){
       const v = String(r[t.sel.col] ?? "").trim();
       if (t.sel.val === BLANK ? v !== "" : v !== t.sel.val) return false;
@@ -658,8 +718,10 @@ function drawTable(q){
     '<th class="' + (HL.has(i) ? "hl" : "") + '" data-i="' + i + '">' + esc(c) + ar(i) + "</th>").join("") + "</tr>";
 
   const MAX = 4000;
+  const ed = t.xy ? t.xy.rows : null;
   $("body").innerHTML = view.slice(0, MAX).map((r, n) => {
-    return '<tr><td class="rn">' + (n+1) + "</td>" + r.map((v, i) => {
+    return '<tr' + (ed && ed.has(r) ? ' class="ed"' : "") + '><td class="rn">' + (n+1) + "</td>" +
+      r.map((v, i) => {
       const cls = [];
       if (HL.has(i)) cls.push(blank(v) ? "miss" : "hl");
       else if (blank(v)) cls.push("e");
@@ -694,6 +756,7 @@ function drawSummary(){
   const t = T();
   if (!t.hl.length){
     $("sum").innerHTML = ""; $("side").className = ""; $("bar").className = "";
+    fitPanes();
     return;
   }
   const qi = qtyIndex(t);
@@ -725,7 +788,7 @@ function drawSummary(){
   /* v4.2: ทำการ์ดเฉพาะคอลัมน์ที่เอาไปเช็คจริง
      โค้ดผิวไม่ได้อยู่ใน fitting_global การ์ดจึงเป็นแดงเปล่า ๆ ไม่ได้บอกอะไร */
   const cards = checkCols(t);
-  if (!cards.length){ $("sum").innerHTML = ""; $("side").className = ""; return; }
+  if (!cards.length){ $("sum").innerHTML = ""; $("side").className = ""; fitPanes(); return; }
   $("side").className = "on";
   $("sum").innerHTML = cards.map(ci => {
     const vals = new Set();
@@ -746,11 +809,13 @@ function drawSummary(){
         '" data-c="' + ci + '" data-v="' + esc(v) + '">' +
         '<span class="v">' + esc(v) + "</span>" +
         '<span class="st' + (has === null ? " wait" : "") + '">' +
-          (has === null ? "\u2013" : has ? "\u2713 มีโค้ด" : "\u2715 ยังไม่มี") + "</span>" +
-        '<span class="nm">' +
-          (has ? esc(rec.product_name || "\u2013") +
-                 (rec.unit ? ' <span class="sn">หน่วย ' + esc(rec.unit) +
-                             (rec.search_name ? "  \u00B7  " + esc(rec.search_name) : "") + "</span>" : "")
+          (has === null ? "\u2013" : has ? "\u2713 มีโค้ด" : "\u2715 ยังไม่มี") +
+          /* v4.5: หน่วยมาต่อท้ายสถานะ แทนที่จะกินบรรทัดสีเทาอีกบรรทัด */
+          (has && rec.unit ? ' <b class="u">' + esc(rec.unit) + "</b>" : "") + "</span>" +
+        /* v4.5: ตัดบรรทัดสีเทาใต้ชื่อออก search_name ซ้ำกับ product_name แทบทุกแถว
+           เก็บไว้ใน title เผื่อวันไหนมันต่างกันจริง เอาเมาส์ชี้แล้วเห็น */
+        '<span class="nm"' + (has && rec.search_name ? ' title="' + esc(rec.search_name) + '"' : "") + ">" +
+          (has ? esc(rec.product_name || "\u2013")
                : has === false ? "ยังไม่มีในระบบ" : "ยังไม่ได้เช็ค") +
         "</span></div>";
     };
@@ -769,6 +834,8 @@ function drawSummary(){
       "</em></h3>" + blankRow + list.map(row).join("") + "</div>";
   }).join("");
 
+  fitPanes();
+
   $("sum").querySelectorAll(".vrow").forEach(el => {
     el.onclick = () => {
       /* v4.0: แถว (ว่าง) ใช้ธง data-blank เพราะอักขระ NUL ใน attribute
@@ -779,6 +846,84 @@ function drawSummary(){
     };
   });
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ความกว้างสองฝั่ง (v4.3)
+   เดิมล็อกฝั่งขวาไว้ 44% ตายตัว แท็บ Fitting มี 4 คอลัมน์
+   ตารางซ้ายเลยเหลือที่ว่างครึ่งจอ ส่วนชื่อสินค้าฝั่งขวาต้องตัดบรรทัด
+   -> ประมาณความกว้างที่ตารางต้องใช้จริงจากความยาวข้อความในคอลัมน์
+      แล้วยกที่เหลือให้ฝั่งขวา · ลากเส้นกลางปรับเองได้ถ้าไม่ถูกใจ
+   ═══════════════════════════════════════════════════════════════ */
+const CH = 6.6;           // ความกว้างต่อตัวอักษรโดยประมาณของ IBM Plex Mono 11px (v4.6)
+const PAD = 16;           // ระยะขอบซ้ายขวาในเซลล์ + เส้นคั่น (v4.6: padding ลดเหลือ 7px)
+const RN = 38;            // คอลัมน์เลขแถว
+
+function estTableWidth(t){
+  if (!t.cols.length) return 0;
+  const sample = t.rows.slice(0, 250);
+  let w = RN;
+  t.cols.forEach((c, i) => {
+    let len = String(c).length;
+    for (const r of sample){
+      const L = String(r[i] ?? "").length;
+      if (L > len) len = L;
+    }
+    w += Math.min(len, 42) * CH + PAD;
+  });
+  return Math.round(w);
+}
+
+function fitPanes(){
+  const t = T();
+  const g = $("gutter"), side = $("side"), wrap = $("wrap");
+  const showSide = side.className.indexOf("on") >= 0;
+  g.className = showSide ? "on" : "";
+  if (!showSide){                     // ไม่มีฝั่งขวา ตารางกินเต็มจอ
+    wrap.className = "solo"; wrap.style.width = "";
+    return;
+  }
+  wrap.className = "";
+  const total = document.getElementById("main").clientWidth || window.innerWidth || 1200;
+  const GW = 7;                       // ความกว้างเส้นแบ่ง ต้องหักด้วย ไม่งั้นฝั่งขวาเหลือน้อยกว่าขั้นต่ำ
+  const cap = total - 320 - GW;       // ซ้ายกว้างได้มากสุดเท่าไรโดยขวายังเหลือ 320
+  if (t.paneW){                       // ผู้ใช้ลากเองไว้ เคารพค่านั้น
+    wrap.style.width = Math.min(Math.max(t.paneW, 280), cap) + "px";
+    return;
+  }
+  const want = estTableWidth(t);
+  wrap.style.width = Math.min(Math.max(want, 300), Math.round(total * 0.62), cap) + "px";
+}
+
+/* ลากเส้นกลาง */
+(function(){
+  const g = $("gutter");
+  let dragging = false;
+  const move = e => {
+    if (!dragging) return;
+    const box = document.getElementById("main").getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - box.left;
+    T().paneW = Math.round(x);
+    fitPanes();
+    e.preventDefault();
+  };
+  const up = () => {
+    if (!dragging) return;
+    dragging = false;
+    g.classList.remove("drag");
+    document.body.classList.remove("resizing");
+  };
+  g.addEventListener("mousedown", e => {
+    dragging = true; g.classList.add("drag");
+    document.body.classList.add("resizing"); e.preventDefault();
+  });
+  g.addEventListener("touchstart", e => { dragging = true; g.classList.add("drag"); }, { passive: true });
+  document.addEventListener("mousemove", move);
+  document.addEventListener("touchmove", move, { passive: false });
+  document.addEventListener("mouseup", up);
+  document.addEventListener("touchend", up);
+  g.addEventListener("dblclick", () => { T().paneW = null; fitPanes(); });
+})();
+window.addEventListener("resize", () => fitPanes());
 
 /* ───────── สลับแท็บ ───────── */
 function syncTabs(){
@@ -793,6 +938,8 @@ function render(){
   const t = T();
   const has = t.rows.length > 0;
   $("csv").disabled = $("copy").disabled = $("colbtn").disabled = !has;
+  /* v4.7: บอกให้ชัดว่าจะได้ไฟล์ชนิดไหนออกมา */
+  $("csv").textContent = (has && t.fmt && t.fmt.kind === "csv") ? "บันทึก CSV" : "บันทึก Excel";
   $("find").value = t.q;
   $("only").setAttribute("aria-pressed", String(t.only));
   $("colpanel").className = "";
@@ -836,14 +983,30 @@ function readMatrix(f){
         try{
           const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
           const sh = wb.Sheets[wb.SheetNames[0]];
-          res({ name: f.name, m: XLSX.utils.sheet_to_json(sh, { header: 1, raw: false, defval: "" }) });
+          res({ name: f.name, fmt: { kind: "xlsx" },
+                m: XLSX.utils.sheet_to_json(sh, { header: 1, raw: false, defval: "" }) });
         }catch(err){ rej(err); }
       };
       fr.readAsArrayBuffer(f);
     } else {
       fr.onload = e => {
         const x = e.target.result;
-        res({ name: f.name, m: parseDelimited(x, detectDelim(x)) });
+        const delim = detectDelim(x);
+        /* v4.7: จำรูปแบบไฟล์ต้นทางไว้ จะได้เขียนคืนให้เหมือนเดิมเป๊ะ
+           ไฟล์จริงที่เจอครอบเครื่องหมายคำพูดทุกช่องและใช้ CRLF ไม่มี BOM
+           ถ้าเขียนคืนแบบมาตรฐาน เครื่องปลายทางอาจอ่านไม่ตรง */
+        res({
+          name: f.name,
+          m: parseDelimited(x, delim),
+          fmt: {
+            kind: "csv",
+            delim,
+            bom: x.charCodeAt(0) === 0xFEFF,
+            eol: /\r\n/.test(x) ? "\r\n" : "\n",
+            trail: /\r?\n$/.test(x),   // ต้นฉบับปิดท้ายด้วยบรรทัดว่างไหม ต่างกัน 2 ไบต์
+            q: detectQuotes(x, delim)
+          }
+        });
       };
       fr.readAsText(f, "UTF-8");
     }
@@ -889,7 +1052,7 @@ async function takeFiles(list){
   if (got.length === 1){
     const g = got[0];
     const t = g.w > g.f ? "wood" : g.f > g.w ? "fit" : (g.hint || cur);
-    ingest(g.m, g.name, t);
+    ingest(g.m, g.name, t, g.fmt);
     busyDone("split", TABS[t].label + "  \u00B7  " + TABS[t].rows.length + " แถว");
     return;
   }
@@ -899,8 +1062,8 @@ async function takeFiles(list){
   const aWood = (a.w - a.f) + (a.hint === "wood" ? .5 : a.hint === "fit" ? -.5 : 0);
   const bWood = (b.w - b.f) + (b.hint === "wood" ? .5 : b.hint === "fit" ? -.5 : 0);
   const first = aWood >= bWood ? a : b, second = aWood >= bWood ? b : a;
-  ingest(first.m,  first.name,  "wood");
-  ingest(second.m, second.name, "fit");
+  ingest(first.m,  first.name,  "wood", first.fmt);
+  ingest(second.m, second.name, "fit",  second.fmt);
   cur = "wood"; syncTabs(); render();
   busyDone("split", "BOM ไม้ " + TABS.wood.rows.length + "  \u00B7  Fitting " + TABS.fit.rows.length + " แถว");
 }
@@ -921,7 +1084,9 @@ document.addEventListener("paste", e => {
   if (!x || x.indexOf("\n") < 0) return;
   e.preventDefault();
   $("drop").className = "";
-  ingest(parseDelimited(x, detectDelim(x)), "วางจากคลิปบอร์ด", null);
+  { const dl = detectDelim(x);
+    ingest(parseDelimited(x, dl), "วางจากคลิปบอร์ด", null,
+           { kind: "csv", delim: dl, bom: false, eol: "\r\n", q: detectQuotes(x, dl) }); }
 });
 
 /* ───────── ปุ่มต่าง ๆ ───────── */
@@ -983,49 +1148,69 @@ $("copy").onclick = () => {
 
 /* ───────── ส่งออกเป็น .xlsx (v3.1) — ไฟล์นำเข้าเป็น xlsx อยู่แล้ว
    ถ้าตัวเขียนโหลดไม่ได้ (เครื่องออกเน็ตไม่ได้) ตกไปเป็น CSV ให้อัตโนมัติ */
-/* v3.2: ถ้าเช็คโค้ดแล้ว ให้ติดสามคอลัมน์ผลเช็คไปกับไฟล์ที่บันทึกด้วย */
+/* v4.6: ไฟล์ที่บันทึกออกต้องมีคอลัมน์เท่ากับไฟล์ที่นำเข้าเป๊ะ
+   เดิม (v3.2-v4.5) ต่อท้ายสามคอลัมน์ผลเช็ค แต่ปลายทางต้องการโครงเดิม
+   ผลเช็คดูได้จากการ์ดฝั่งขวาอยู่แล้ว ไม่ต้องติดไปกับไฟล์ */
 function exportRows(t){
-  if (!t.chk) return { head: t.cols, body: view };
-  const head = [...t.cols, "มีโค้ดในระบบ", "ชื่อในระบบ", "หน่วย"];
-  const body = view.map(r => {
-    /* v4.0: เช็คหลายคอลัมน์ ใช้ตัวแรกที่มีค่าเป็นตัวแทนในไฟล์ที่ส่งออก */
-    let v = "", rec = null;
-    for (const ci of t.chk.cols){
-      const x = String(r[ci] ?? "").trim();
-      if (!x) continue;
-      v = x; rec = t.chk.map.get(x);
-      if (!rec) break;          // เจอตัวที่ยังไม่มีโค้ด รายงานตัวนั้น
-    }
-    return [...r, !v ? "" : (rec ? "มี" : "ยังไม่มี"),
-            (rec && rec.product_name) || "", (rec && rec.unit) || ""];
-  });
-  return { head, body };
+  return { head: t.cols, body: view };
+}
+
+/* ───────── ส่งออก (v4.7) ─────────
+   นำเข้าเป็นอะไรก็ส่งออกเป็นอย่างนั้น คอลัมน์เท่าไฟล์เข้าเป๊ะ
+   CSV: รักษาตัวคั่น ตัวจบบรรทัด BOM และวิธีครอบเครื่องหมายคำพูดของต้นฉบับ */
+function csvText(head, body, fmt){
+  const D = fmt.delim || ",";
+  const EOL = fmt.eol || "\r\n";
+  const QH = (fmt.q && fmt.q.head) || [];
+  const QD = (fmt.q && fmt.q.data) || [];
+  /* ครอบเมื่อคอลัมน์นั้นเคยครอบในต้นฉบับ หรือเมื่อจำเป็นจริง ๆ (มีตัวคั่น/คำพูด/ขึ้นบรรทัด) */
+  const cell = (v, i, pat) => {
+    const x = v === null || v === undefined ? "" : String(v);
+    const need = x.indexOf(D) >= 0 || /["\r\n]/.test(x);
+    return (pat[i] || need) ? '"' + x.replace(/"/g, '""') + '"' : x;
+  };
+  const lines = [head.map((v, i) => cell(v, i, QH)).join(D)]
+    .concat(body.map(r => r.map((v, i) => cell(v, i, QD)).join(D)));
+  return (fmt.bom ? "\uFEFF" : "") + lines.join(EOL) + (fmt.trail === false ? "" : EOL);
+}
+
+function saveFile(name, blob){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 $("csv").onclick = () => {
   const t = T();
-  const { head: xh, body: xb } = exportRows(t);
-  const base = (t.file.replace(/\.[^.]+$/, "") || t.label) + "_edited";
+  const { head, body } = exportRows(t);
+  const base = (t.file.replace(/\.[^.]+$/, "") || t.label) + "_Pass";
+  const fmt = t.fmt || { kind: "xlsx" };
+
+  if (fmt.kind === "csv"){
+    saveFile(base + ".csv",
+      new Blob([csvText(head, body, fmt)], { type: "text/csv;charset=utf-8" }));
+    return toast("บันทึก " + body.length.toLocaleString("th-TH") + " แถวเป็น .csv แล้ว \u00B7 " +
+                 head.length + " คอลัมน์เท่าไฟล์ต้นทาง");
+  }
+
   if (typeof XLSX !== "undefined"){
     try{
-      const ws = XLSX.utils.aoa_to_sheet([xh, ...xb]);
-      ws["!cols"] = xh.map((c, i) => ({
+      const ws = XLSX.utils.aoa_to_sheet([head, ...body]);
+      ws["!cols"] = head.map((c, i) => ({
         wch: Math.min(38, Math.max(String(c).length + 2,
-             ...xb.slice(0, 300).map(r => String(r[i] ?? "").length + 2)))
+             ...body.slice(0, 300).map(r => String(r[i] ?? "").length + 2)))
       }));
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, t.label.slice(0, 28));
       XLSX.writeFile(wb, base + ".xlsx");
-      return toast("บันทึก " + xb.length.toLocaleString("th-TH") + " แถวเป็น .xlsx แล้ว" +
-                   (t.chk ? " (มีผลเช็คโค้ดติดไปด้วย)" : ""));
+      return toast("บันทึก " + body.length.toLocaleString("th-TH") + " แถวเป็น .xlsx แล้ว");
     }catch(e){ /* ตกไปใช้ CSV ข้างล่าง */ }
   }
-  const q = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
-  const csv = [xh.map(q).join(",")].concat(xb.map(r => r.map(q).join(","))).join("\r\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
-  a.download = base + ".csv";
-  a.click(); URL.revokeObjectURL(a.href);
+  saveFile(base + ".csv", new Blob(
+    [csvText(head, body, { delim: ",", eol: "\r\n", bom: true })],
+    { type: "text/csv;charset=utf-8" }));
   toast("เขียน .xlsx ไม่ได้ บันทึกเป็น CSV แทน");
 };
 
@@ -1103,12 +1288,17 @@ function applyXY(t){
   const { mat, hits } = scanXY(t);
   if (mat < 0 || !hits.length) return 0;
   const undo = [];
+  /* v4.4: เก็บเป็น reference ของแถว ไม่ใช่เลขลำดับ
+     ไฮไลต์จะได้ติดไปกับแถวแม้จะเรียงใหม่หรือกรอง */
+  const marked = new Set();
   let n = 0;
   hits.forEach(h => h.rows.forEach(ri => {
     undo.push([ri, t.rows[ri][mat]]);
+    marked.add(t.rows[ri]);
     t.rows[ri][mat] = h.to; n++;
   }));
-  t.xy = { col: mat, undo, at: new Date(), n, hits: hits.map(h => [h.from, h.to, h.rows.length]) };
+  t.xy = { col: mat, undo, rows: marked, at: new Date(), n,
+           hits: hits.map(h => [h.from, h.to, h.rows.length]) };
   t.sel = null;
   return n;
 }
@@ -1117,14 +1307,14 @@ function undoXY(t){
   const { col, undo } = t.xy;
   undo.forEach(([ri, v]) => { t.rows[ri][col] = v; });
   const n = undo.length;
-  t.xy = null; t.sel = null;
+  t.xy = null; t.sel = null; t.onlyEd = false;
   return n;
 }
 
 function syncFixBtn(){
   const t = T();
-  const btn = $("fixxy"), un = $("undoxy");
-  un.style.display = "none";
+  const btn = $("fixxy"), un = $("undoxy"), oe = $("onlyed");
+  un.style.display = "none"; oe.style.display = "none";
   if (!t.rows.length){ btn.disabled = true; btn.textContent = "แก้ X เป็น Y"; return; }
   const { mat, cells } = scanXY(t);
   if (mat < 0){
@@ -1140,6 +1330,8 @@ function syncFixBtn(){
     btn.title = "คลิกเพื่อดูว่าแก้อะไรไปบ้าง";
     un.style.display = "";
     un.textContent = "ย้อนกลับ";
+    oe.style.display = "";
+    oe.setAttribute("aria-pressed", String(!!t.onlyEd));
     return;
   }
   btn.title = "แก้เฉพาะ CutRiteMaterialCode \u00B7 สองคอลัมน์ผิวเก็บ X ไว้เป็นตัวเทียบ";
@@ -1466,6 +1658,13 @@ function scheduleChecks(){
 }
 
 /* ปุ่มย้อนกลับการแก้ X เป็น Y */
+$("onlyed").onclick = function(){
+  const t = T();
+  t.onlyEd = this.getAttribute("aria-pressed") !== "true";
+  this.setAttribute("aria-pressed", String(t.onlyEd));
+  apply();
+};
+
 $("undoxy").onclick = () => {
   const t = T();
   const n = undoXY(t);
