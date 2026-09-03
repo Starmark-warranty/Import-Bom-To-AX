@@ -171,28 +171,40 @@ header .sp{flex:1}
 .stat i{font-style:normal;font-size:10.5px;color:var(--faint);line-height:1.3}
 
 /* ── แผงสรุปค่าในคอลัมน์ที่เน้น (ข้อ 2) ── */
-#sum{flex:0 0 auto;display:none;background:var(--card);border-bottom:1px solid var(--line);
-     padding:10px 12px 12px;gap:10px;overflow-x:auto;max-height:34vh;overflow-y:auto}
-#sum.on{display:flex}
-.sumcard{flex:0 0 320px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+/* ── โครงสองฝั่ง (v4.0) ── ซ้าย = ตารางจากไฟล์ · ขวา = การ์ดสรุป */
+#main{flex:1;display:flex;min-height:0;overflow:hidden}
+#side{flex:0 0 44%;min-width:340px;max-width:640px;display:none;flex-direction:column;
+      overflow:auto;background:var(--page);border-left:1px solid var(--line-2)}
+#side.on{display:flex}
+#sum{display:flex;flex-direction:column;gap:10px;padding:10px}
+
+.sumcard{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);flex:0 0 auto}
 .sumcard>h3{font-size:11.5px;font-weight:600;padding:7px 11px;background:var(--hl-bg);
             color:var(--hl-ink);border-bottom:1px solid var(--hl-line);
-            display:flex;justify-content:space-between;gap:8px;font-family:var(--mono)}
-.sumcard>h3 em{font-style:normal;font-weight:400;opacity:.75}
-.vrow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:9px;
-      padding:5px 11px;border-bottom:1px solid var(--line);cursor:pointer;position:relative}
+            display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);
+            position:sticky;top:0;z-index:1}
+.sumcard>h3 em{font-style:normal;font-weight:400;opacity:.8}
+.sumcard>h3 em i{font-style:normal;color:#1e6b38;font-weight:600}
+.sumcard>h3 em u{text-decoration:none;color:var(--miss-ink);font-weight:600}
+
+/* แถวในการ์ด: ค่า | สถานะ | ชื่อในระบบ */
+.vrow{display:grid;grid-template-columns:minmax(96px,auto) 62px 1fr;gap:9px;align-items:start;
+      padding:6px 11px;border-bottom:1px solid var(--line);cursor:pointer}
 .vrow:last-child{border-bottom:0}
 .vrow:hover{background:var(--hover)}
 .vrow.sel{background:#fff6e7;box-shadow:inset 3px 0 0 var(--orange)}
-.vrow .v{font-family:var(--mono);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;z-index:1}
+.vrow .v{font-family:var(--mono);font-size:11.5px;word-break:break-all;line-height:1.45}
 .vrow .v.none{color:var(--miss-ink);font-weight:600}
-.vrow .c{font-family:var(--mono);font-size:11.5px;font-weight:600;z-index:1}
-.vrow .p{font-family:var(--mono);font-size:10px;color:var(--faint);width:38px;text-align:right;z-index:1}
-.vrow .bar{position:absolute;left:0;top:0;bottom:0;background:#f6efe4;z-index:0}
-.vrow.none-row .bar{background:#fbe6e6}
+.vrow .st{font-family:var(--mono);font-size:10.5px;white-space:nowrap;line-height:1.55}
+.vrow.yes .st{color:#1e6b38}
+.vrow.no  .st{color:var(--miss-ink);font-weight:600}
+.vrow .st.wait{color:var(--faint)}
+.vrow .nm{font-size:11.5px;color:var(--ink);line-height:1.5;word-break:break-word}
+.vrow.no .nm{color:var(--faint);font-style:italic}
+.vrow .nm .sn{display:block;font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:1px}
 
 /* ── ตาราง ── */
-#wrap{flex:1;overflow:auto;background:var(--card);position:relative}
+#wrap{flex:1;min-width:0;overflow:auto;background:var(--card);position:relative}
 table{border-collapse:separate;border-spacing:0;font-size:12.5px;white-space:nowrap}
 thead th{position:sticky;top:0;z-index:3;background:var(--navy);color:#fff;font-weight:500;
          text-align:left;padding:8px 10px;font-size:11.5px;
@@ -306,27 +318,6 @@ tbody tr:hover td.st.no{background:#fbe0e0}
 .sfoot .sp{flex:1}
 .sfoot .note{font-size:11.5px;color:var(--faint)}
 /* ── กล่องรอระหว่างเช็คโค้ด ── */
-/* ── การ์ดผลเช็คโค้ด (v3.4) ── */
-.sumcard.wide{flex:0 0 430px}
-.sumcard.wide>h3{background:#e8eefa;color:#1c3866;border-bottom-color:#c6d5ee}
-.crow{display:grid;grid-template-columns:auto 128px 1fr 34px auto;gap:8px;align-items:center;
-      padding:5px 11px;border-bottom:1px solid var(--line);cursor:pointer}
-.crow:last-child{border-bottom:0}
-.crow:hover{background:var(--hover)}
-.crow.sel{background:#fff6e7;box-shadow:inset 3px 0 0 var(--orange)}
-.crow .ic{font-family:var(--mono);font-size:11px;width:15px;text-align:center}
-.crow.yes .ic{color:#1e6b38}
-.crow.no  .ic{color:var(--miss-ink);font-weight:700}
-.crow .cd{font-family:var(--mono);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.crow.no .cd{color:var(--miss-ink);font-weight:600}
-.crow .nm{font-size:11.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.crow.no .nm{color:var(--faint);font-style:italic}
-.crow .un{font-family:var(--mono);font-size:10.5px;color:var(--faint);text-align:center}
-.crow .qt{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:right;min-width:26px}
-.csplit{padding:5px 11px;background:var(--miss-bg);color:var(--miss-ink);font-size:10.5px;
-        font-weight:600;border-bottom:1px solid var(--miss-line)}
-.csplit.ok{background:#eef7f1;color:#1e6b38;border-bottom-color:#cfe6d8}
-
 #busy{position:absolute;inset:0;z-index:25;display:none;align-items:center;justify-content:center;
       background:rgba(255,255,255,.72)}
 #busy.on{display:flex}
@@ -335,6 +326,23 @@ tbody tr:hover td.st.no{background:#fbe0e0}
 .bcard .bt{font-size:14px;font-weight:600;margin-bottom:3px}
 .bcard .bsub{font-size:11.5px;color:var(--faint);margin-top:9px;font-family:var(--mono);
              min-height:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bcard{width:min(400px,90vw)}
+#bsteps{text-align:left;margin:14px 0 4px;display:flex;flex-direction:column;gap:1px}
+.bstep{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:baseline;
+       font-size:12.5px;color:var(--faint);padding:3px 0;line-height:1.5}
+.bstep .m{font-family:var(--mono);font-size:11px;text-align:center}
+.bstep.run{color:var(--ink);font-weight:500}
+.bstep.run .m{color:var(--orange)}
+.bstep.done{color:var(--dim)}
+.bstep.done .m{color:#1e6b38}
+.bstep .d{font-size:11px;color:var(--faint);font-family:var(--mono);display:block;font-weight:400}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bstep.run .m span{display:inline-block;animation:spin 1s linear infinite}
+@media(prefers-reduced-motion:reduce){ .bstep.run .m span{animation:none} }
+
+/* ปุ่มย้อนกลับการแก้ X เป็น Y */
+.undo{background:var(--hl-bg);border-color:var(--hl-line);color:var(--hl-ink);font-weight:600}
+.undo:hover{background:#fbe8cf}
 .bnum{font-family:var(--mono);font-size:12.5px;color:var(--dim);margin-bottom:11px}
 .bnum b{font-size:20px;color:var(--navy);font-weight:600}
 .btrack{height:6px;border-radius:4px;background:var(--page);overflow:hidden;position:relative}
@@ -399,30 +407,31 @@ footer .mono{font-family:var(--mono)}
 </div>
 
 <div id="chkbar">
-  <label for="chkcol">เช็คคอลัมน์</label>
-  <select id="chkcol"></select>
-  <button class="cbtn primary" id="chkgo">เช็คกับ Supabase</button>
   <span class="pill wait" id="chkres">ยังไม่ได้เช็ค</span>
   <button class="cbtn warn" id="reqgo" disabled>ส่งขอโค้ด</button>
   <button class="cbtn" id="onlyno" aria-pressed="false" disabled>เฉพาะที่ยังไม่มีโค้ด</button>
   <button class="cbtn" id="fixxy" disabled title="ค่าที่ขึ้นต้นด้วย G และลงท้ายด้วย X ในคอลัมน์ที่เน้น">แก้ X เป็น Y</button>
+  <button class="cbtn undo" id="undoxy" style="display:none">ย้อนกลับ</button>
   <span class="sp"></span>
   <span class="note" id="chkat" style="font-size:11px;color:var(--faint)"></span>
 </div>
 
 <div id="bar"></div>
-<div id="sum"></div>
 
+<div id="main">
 <div id="wrap">
   <table><thead id="head"></thead><tbody id="body"></tbody></table>
   <div id="colpanel"></div>
   <div id="busy"><div class="bcard">
     <div class="bt" id="btitle">กำลังเช็คโค้ดกับ Supabase</div>
+    <div id="bsteps"></div>
     <div class="bnum"><b id="bnow">0</b> / <span id="ball">0</span> โค้ด</div>
     <div class="btrack"><div class="bfill idle" id="bfill"></div></div>
-    <div class="bsub" id="bsub">กำลังเชื่อมต่อ…</div>
+    <div class="bsub" id="bsub">กำลังเริ่ม…</div>
   </div></div>
   <div id="drop"></div>
+</div>
+<div id="side"><div id="sum"></div></div>
 </div>
 
 <footer>
@@ -444,9 +453,14 @@ footer .mono{font-family:var(--mono)}
 /* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
 const APP_META = {
   name: "imos BOM Viewer",
-  version: "3.5",
-  build: "2026-09-03/version-badge",
+  version: "4.2",
+  build: "2026-09-03/skip-surface",
   changelog: [
+    ["4.2","2026-09-03","ไม่ทำการ์ดและไม่ส่ง SurfaceBeforeCutTopCode / SurfaceBeforeCutBottomCode ไปเช็คกับ Supabase อีกแล้ว เพราะโค้ดผิวไม่ได้เก็บใน fitting_global ผลจึงเป็นแดงเปล่า ๆ ทุกแถว · สองคอลัมน์นี้ยังอยู่ในตารางและยังถูกเน้นเหมือนเดิม เพราะเป็นตัวชี้ให้ตัวแก้ X เป็น Y และเป็นตัวเทียบตอน recheck · ผลพลอยได้คือค่าที่ส่งไปเช็คลดลง ยิงถามน้อยลง"],
+    ["4.1","2026-09-03","อัปโหลดไฟล์แล้วแก้ X เป็น Y ให้เลย ไม่ต้องกดปุ่ม · มีปุ่มย้อนกลับถ้าไม่ต้องการ กดดูรายละเอียดว่าแก้อะไรไปบ้างได้ · หน้าโหลดขึ้นตั้งแต่เริ่มอ่านไฟล์ ไม่ใช่ตอนเช็คโค้ดอย่างเดียว แสดงเป็นรายการขั้นตอนว่ากำลังทำอะไรอยู่ อ่านไฟล์ แยกแท็บ เช็คโค้ด แก้ X เป็น Y ทำเสร็จขั้นไหนติ๊กขั้นนั้น"],
+    ["4.0","2026-09-03","จัดหน้าใหม่เป็นสองฝั่ง ซ้ายคือตารางข้อมูลจากไฟล์ Excel ขวาคือการ์ดสรุปค่า · รื้อแผงผลเช็คที่เคยแยกเป็นก้อนที่สามออก เอาผลเช็คไปใส่ในการ์ดสรุปแทน · ในการ์ดตัดตัวเลขจำนวนแถวกับเปอร์เซ็นต์ออก เปลี่ยนเป็นสถานะมีโค้ดกับชื่อในระบบจาก Supabase · เช็คทุกคอลัมน์ที่เน้นในครั้งเดียว ไม่ใช่ทีละคอลัมน์ จึงไม่ต้องมี dropdown เลือกคอลัมน์ที่จะเช็คอีก"],
+    ["3.7","2026-09-03","เอาปุ่มเช็คกับ Supabase ออก เปิดไฟล์แล้วเช็คให้เองทันที และเช็คทั้งสองแท็บ ไม่ใช่เฉพาะ Fitting · ลากสองไฟล์พร้อมกันก็ไล่เช็คให้ทีละแท็บ · เปลี่ยนคอลัมน์ที่จะเช็คแล้วเช็คใหม่ให้เองเลย ไม่ต้องกดอะไร · หมายเหตุ: fitting_global เก็บ item ของ AX ถ้าโค้ดฝั่งไม้ไม่ได้อยู่ในนั้นจะขึ้นว่ายังไม่มีทั้งหมด ซึ่งเป็นผลที่ถูกต้องของข้อมูล ไม่ใช่บั๊ก"],
+    ["3.6","2026-09-03","ผลเช็คโค้ดย้ายจากการ์ดแคบไปเป็นแผงเต็มความกว้าง แบ่งสองฝั่ง ซ้ายคือข้อมูลจากไฟล์ Excel ขวาคือข้อมูลที่ดึงมาจาก Supabase มีเส้นคั่นกลางชัด · เดิมชื่อสินค้ายาวโดนตัดตั้งแต่ 20 กว่าตัวอักษร ตอนนี้เห็นเต็ม · พับเก็บได้ถ้าอยากดูตารางเต็มจอ"],
     ["3.5","2026-09-03","ติดเลขเวอร์ชันบนหัวแอปและชื่อแท็บ คลิกดู changelog ได้ · เพิ่มโหมดทดลองในกล่องส่งขอโค้ด ติ๊กไว้ให้ตั้งแต่แรก กดแล้วเห็นข้อมูลที่จะส่งโดยยังไม่เขียนลง Supabase"],
     ["3.4","2026-09-03","ย้ายผลเช็คโค้ดออกจากตาราง ไปเป็นการ์ดบนแถบสรุป ตารางเหลือคอลัมน์จากไฟล์ล้วน ตัวที่ยังไม่มีโค้ดขึ้นก่อน คลิกกรองได้"],
     ["3.3","2026-09-03","ปุ่มแก้ X เป็น Y แก้เฉพาะ CutRiteMaterialCode สองคอลัมน์ผิวไม่ถูกแตะ เก็บ X ไว้ใช้ recheck · ใช้ค่าในคอลัมน์ผิวเป็นตัวชี้ว่าต้องแทนช่วงไหน"],
@@ -457,9 +471,11 @@ const APP_META = {
     ["1.0","2026-09-03","ไฟล์แรก อัปโหลด CSV/XLSX แล้วเน้นสามคอลัมน์วัสดุกับผิว"]
   ]
 };
+window.APP_META = APP_META;   // เรียกดูจาก console ได้ เหมือน StarNexus
 try{ document.title = APP_META.name + " v" + APP_META.version; }catch(e){}
 
 const $ = id => document.getElementById(id);
+const BLANK = "\u0000<ว่าง>";   // ค่าภายในสำหรับกรองแถวที่ช่องนั้นว่าง ไม่เอาไปใส่ใน HTML
 const norm = s => String(s).toLowerCase().replace(/[\s_\-.]/g, "");
 const esc = v => String(v).replace(/[&<>]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" }[c]));
 const blank = v => String(v ?? "").trim() === "";
@@ -471,19 +487,24 @@ const TABS = {
   wood: {
     label: "BOM ไม้",
     want: ["CutRiteMaterialCode", "SurfaceBeforeCutTopCode", "SurfaceBeforeCutBottomCode"],
+    /* v4.2: เน้นในตารางไว้เหมือนเดิม แต่ไม่เอาไปเช็คกับ Supabase และไม่ทำการ์ด
+       โค้ดผิวไม่ได้เก็บใน fitting_global ผลจึงเป็นแดงทุกแถวโดยไม่ได้บอกอะไร
+       ยังต้องเก็บไว้เพราะเป็นตัวชี้ให้ scanXY และเป็นตัวเทียบตอน recheck */
+    noCheck: ["SurfaceBeforeCutTopCode", "SurfaceBeforeCutBottomCode"],
     guess: null,
     cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
-    chk: null, chkCol: -1, onlyNo: false
+    chk: null, onlyNo: false
   },
   fit: {
     label: "BOM Fitting",
     want: ["ItemId"],
+    noCheck: [],
     /* ยังไม่รู้โครงคอลัมน์ของ BOM Fitting จึงเดาเฉพาะชื่อที่ลงท้ายหรือมีคำว่า code
        ไม่กวาด FittingName / FittingID มาด้วย เพราะนั่นไม่ใช่โค้ดที่ต้องเช็ค
        ถ้าเดาผิด กดปุ่ม "คอลัมน์ที่เน้น" เลือกเองได้ */
     guess: c => /code$|code[^a-z]|^code|รหัส/i.test(String(c).trim()),
     cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
-    chk: null, chkCol: -1, onlyNo: false
+    chk: null, onlyNo: false
   }
 };
 let cur = "wood", view = [];
@@ -540,7 +561,8 @@ function ingest(matrix, name, tab){
   t.cols = head;
   t.rows = matrix.slice(1).map(r => t.cols.map((_, i) => r[i] ?? ""));
   t.file = name; t.sortCol = -1; t.sortDir = 1; t.q = ""; t.only = false; t.sel = null;
-  t.chk = null; t.chkCol = -1; t.onlyNo = false;   // ไฟล์ใหม่ = ผลเช็คเก่าใช้ไม่ได้แล้ว
+  t.chk = null; t.onlyNo = false;   // ไฟล์ใหม่ = ผลเช็คเก่าใช้ไม่ได้แล้ว
+  t.needCheck = false; t.xy = null;
 
   const wantSet = new Set(t.want.map(norm));
   t.hl = t.cols.map((c, i) => (wantSet.size && wantSet.has(norm(c))) ? i : -1).filter(i => i >= 0);
@@ -560,12 +582,10 @@ function ingest(matrix, name, tab){
   cur = tab;
   syncTabs();
   render();
-  /* v3.2: เปิดไฟล์เสร็จเช็คให้เลย ไม่ต้องกดเอง · ล้มเหลวก็เงียบ ๆ
-     เฉพาะแท็บ Fitting เท่านั้น เพราะ fitting_global เก็บ item ของ AX
-     ส่วนโค้ดผิวไม้ (G01M0234Y) ไม่ได้อยู่ในนั้น เช็คไปก็ขึ้นแดงทั้งกระดาน
-     แท็บไม้ยังกดปุ่มเช็คเองได้ถ้าต้องการ */
-  if (tab === "fit" && t.hl.length)
-    setTimeout(() => { if (cur === tab && !t.chk) runCheck(true); }, 120);
+  /* v3.7: ตั้งธงไว้ แล้วให้ scheduleChecks ไล่เช็คทีละแท็บ
+     ลากสองไฟล์พร้อมกัน ingest จะถูกเรียกสองครั้ง ธงจึงติดทั้งคู่ */
+  t.needCheck = t.hl.length > 0;
+  scheduleChecks();
 }
 
 function fail(title, body){
@@ -604,7 +624,7 @@ function apply(){
     if (t.onlyNo && t.chk && codeState(t, r) !== "no") return false;
     if (t.sel){
       const v = String(r[t.sel.col] ?? "").trim();
-      if (t.sel.val === "\u0000" ? v !== "" : v !== t.sel.val) return false;
+      if (t.sel.val === BLANK ? v !== "" : v !== t.sel.val) return false;
     }
     if (q && !r.some(v => String(v).toLowerCase().includes(q))) return false;
     return true;
@@ -660,7 +680,7 @@ function drawTable(q){
     (view.length !== t.rows.length ? " จาก " + t.rows.length.toLocaleString("th-TH") : "") + " แถว" +
     (view.length > MAX ? "  (จำกัด " + MAX.toLocaleString("th-TH") + " แถวเพื่อความลื่น)" : "") +
     (t.sel ? "  \u00B7  กรองที่ " + t.cols[t.sel.col] + " = " +
-             (t.sel.val === "\u0000" ? "(ว่าง)" : t.sel.val) + "  \u2014 คลิกซ้ำเพื่อยกเลิก" : "");
+             (t.sel.val === BLANK ? "(ว่าง)" : t.sel.val) + "  \u2014 คลิกซ้ำเพื่อยกเลิก" : "");
   $("meta").textContent = t.file + "  \u00B7  " + t.cols.length + " คอลัมน์";
 }
 
@@ -672,94 +692,88 @@ function qtyIndex(t){
 }
 function drawSummary(){
   const t = T();
-  if (!t.hl.length && !t.chk){ $("sum").className = ""; $("bar").className = ""; return; }
+  if (!t.hl.length){
+    $("sum").innerHTML = ""; $("side").className = ""; $("bar").className = "";
+    return;
+  }
   const qi = qtyIndex(t);
 
-  /* แถบสถิติบรรทัดเดียว */
+  /* แถบสถิติบรรทัดเดียวด้านบน — ตัวเลขภาพรวมย้ายมาอยู่ตรงนี้แทน
+     เพราะในการ์ดเอาออกไปเพื่อเปิดที่ให้ชื่อในระบบ */
   let bar = '<div class="stat"><b>' + t.rows.length.toLocaleString("th-TH") + "</b><i>แถวทั้งหมด</i></div>";
   if (qi >= 0){
     const sq = t.rows.reduce((s, r) => s + (parseFloat(String(r[qi]).replace(/,/g,"")) || 0), 0);
     bar += '<div class="stat"><b>' + sq.toLocaleString("th-TH") + "</b><i>รวม Qty</i></div>";
   }
+  const chk = new Set(checkCols(t));
   t.hl.forEach(i => {
     const miss = t.rows.filter(r => blank(r[i])).length;
     const uniq = new Set(t.rows.map(r => String(r[i]).trim()).filter(v => v !== "")).size;
     bar += '<div class="stat"><b class="' + (miss ? "bad" : "hl") + '">' + uniq + " ค่า" +
-           (miss ? "  \u00B7  ว่าง " + miss : "") + "</b><i>" + esc(t.cols[i]) + "</i></div>";
+           (miss ? "  \u00B7  ว่าง " + miss : "") + "</b><i>" + esc(t.cols[i]) +
+           (chk.has(i) ? "" : "  \u00B7  ไม่ได้เช็ค") + "</i></div>";
   });
+  if (t.chk){
+    bar += '<div class="stat"><b><span style="color:#1e6b38">' + t.chk.found +
+           ' มี</span> <span style="color:var(--miss-ink)">' + t.chk.missing.length +
+           ' ยังไม่มี</span></b><i>เช็คกับ fitting_global</i></div>';
+  }
   $("bar").className = "on"; $("bar").innerHTML = bar;
 
-  /* v3.4: การ์ดผลเช็คโค้ด — ใบแรก กว้างกว่าใบอื่น
-     ตัวที่ยังไม่มีโค้ดขึ้นก่อนเพราะเป็นตัวที่ต้องลงมือทำ */
-  let checkCard = "";
-  if (t.chk){
-    const ci = t.chk.col;
-    const cnt = new Map();     // code -> จำนวนแถวในไฟล์
+  /* การ์ดต่อคอลัมน์ที่เน้น — ค่า | มีโค้ด? | ชื่อในระบบ
+     v4.0: ตัดจำนวนแถวกับเปอร์เซ็นต์ออก เอาที่ไปให้ชื่อในระบบจาก Supabase */
+  /* v4.2: ทำการ์ดเฉพาะคอลัมน์ที่เอาไปเช็คจริง
+     โค้ดผิวไม่ได้อยู่ใน fitting_global การ์ดจึงเป็นแดงเปล่า ๆ ไม่ได้บอกอะไร */
+  const cards = checkCols(t);
+  if (!cards.length){ $("sum").innerHTML = ""; $("side").className = ""; return; }
+  $("side").className = "on";
+  $("sum").innerHTML = cards.map(ci => {
+    const vals = new Set();
+    let blanks = 0;
     t.rows.forEach(r => {
       const v = String(r[ci] ?? "").trim();
-      if (v) cnt.set(v, (cnt.get(v) || 0) + 1);
+      if (v) vals.add(v); else blanks++;
     });
-    const codes = [...cnt.keys()];
-    const miss = codes.filter(c => !t.chk.map.has(c)).sort();
-    const have = codes.filter(c =>  t.chk.map.has(c)).sort();
+    const list = [...vals].sort();
+    let nYes = 0, nNo = 0;
+    if (t.chk) list.forEach(v => t.chk.map.has(v) ? nYes++ : nNo++);
 
-    const line = (c, isMiss) => {
-      const rec = t.chk.map.get(c);
-      const on = t.sel && t.sel.col === ci && t.sel.val === c;
-      return '<div class="crow ' + (isMiss ? "no" : "yes") + (on ? " sel" : "") +
-        '" data-c="' + ci + '" data-v="' + esc(c) + '">' +
-        '<span class="ic">' + (isMiss ? "\u2715" : "\u2713") + "</span>" +
-        '<span class="cd" title="' + esc(c) + '">' + esc(c) + "</span>" +
-        '<span class="nm" title="' + esc((rec && rec.search_name) || "") + '">' +
-          esc(isMiss ? "ยังไม่มีในระบบ" : ((rec && rec.product_name) || "\u2013")) + "</span>" +
-        '<span class="un">' + esc((rec && rec.unit) || "") + "</span>" +
-        '<span class="qt">' + cnt.get(c) + "</span></div>";
+    const row = v => {
+      const rec = t.chk ? t.chk.map.get(v) : null;
+      const has = t.chk ? !!rec : null;
+      const on = t.sel && t.sel.col === ci && t.sel.val === v;
+      return '<div class="vrow ' + (has === null ? "" : has ? "yes" : "no") + (on ? " sel" : "") +
+        '" data-c="' + ci + '" data-v="' + esc(v) + '">' +
+        '<span class="v">' + esc(v) + "</span>" +
+        '<span class="st' + (has === null ? " wait" : "") + '">' +
+          (has === null ? "\u2013" : has ? "\u2713 มีโค้ด" : "\u2715 ยังไม่มี") + "</span>" +
+        '<span class="nm">' +
+          (has ? esc(rec.product_name || "\u2013") +
+                 (rec.unit ? ' <span class="sn">หน่วย ' + esc(rec.unit) +
+                             (rec.search_name ? "  \u00B7  " + esc(rec.search_name) : "") + "</span>" : "")
+               : has === false ? "ยังไม่มีในระบบ" : "ยังไม่ได้เช็ค") +
+        "</span></div>";
     };
 
-    checkCard =
-      '<div class="sumcard wide"><h3><span>ผลเช็คโค้ด \u00B7 ' + esc(t.cols[ci]) + "</span><em>" +
-        have.length + " มี \u00B7 " + miss.length + " ยังไม่มี</em></h3>" +
-      (miss.length ? '<div class="csplit">ยังไม่มีในระบบ ' + miss.length + " โค้ด</div>" +
-                     miss.map(c => line(c, true)).join("") : "") +
-      (have.length ? '<div class="csplit ok">มีในระบบแล้ว ' + have.length + " โค้ด</div>" +
-                     have.map(c => line(c, false)).join("") : "") +
-      "</div>";
-  }
-
-  /* การ์ดสรุปต่อคอลัมน์ */
-  $("sum").className = "on";
-  $("sum").innerHTML = checkCard + t.hl.map(ci => {
-    const m = new Map();
-    t.rows.forEach(r => {
-      const raw = String(r[ci] ?? "").trim();
-      const key = raw === "" ? "\u0000" : raw;
-      const o = m.get(key) || { n: 0, q: 0 };
-      o.n++;
-      if (qi >= 0) o.q += parseFloat(String(r[qi]).replace(/,/g,"")) || 0;
-      m.set(key, o);
-    });
-    const list = [...m.entries()].sort((a, b) => b[1].n - a[1].n);
-    const top = list[0] ? list[0][1].n : 1;
-    const tot = t.rows.length || 1;
+    const blankRow = blanks
+      ? '<div class="vrow no' +
+        (t.sel && t.sel.col === ci && t.sel.val === BLANK ? " sel" : "") +
+        '" data-c="' + ci + '" data-blank="1">' +
+        '<span class="v none">(ว่าง)</span><span class="st">\u2715 ไม่มีค่า</span>' +
+        '<span class="nm">' + blanks + " แถวไม่ได้กรอกค่านี้</span></div>"
+      : "";
 
     return '<div class="sumcard"><h3><span>' + esc(t.cols[ci]) + "</span><em>" +
-      list.length + " ค่า</em></h3>" +
-      list.map(([v, o]) => {
-        const isNone = v === "\u0000";
-        const on = t.sel && t.sel.col === ci && t.sel.val === v;
-        return '<div class="vrow' + (isNone ? " none-row" : "") + (on ? " sel" : "") +
-          '" data-c="' + ci + '" data-v="' + esc(v) + '">' +
-          '<span class="bar" style="width:' + (o.n / top * 100).toFixed(1) + '%"></span>' +
-          '<span class="v' + (isNone ? " none" : "") + '" title="' + esc(isNone ? "(ว่าง)" : v) + '">' +
-            esc(isNone ? "(ว่าง)" : v) + "</span>" +
-          '<span class="c">' + o.n + (qi >= 0 ? "  \u00B7  " + o.q.toLocaleString("th-TH") : "") + "</span>" +
-          '<span class="p">' + (o.n / tot * 100).toFixed(0) + "%</span></div>";
-      }).join("") + "</div>";
+      list.length + " ค่า" +
+      (t.chk ? "  \u00B7  <i>" + nYes + " มี</i>  \u00B7  <u>" + nNo + " ยังไม่มี</u>" : "") +
+      "</em></h3>" + blankRow + list.map(row).join("") + "</div>";
   }).join("");
 
-  $("sum").querySelectorAll(".vrow, .crow").forEach(el => {
+  $("sum").querySelectorAll(".vrow").forEach(el => {
     el.onclick = () => {
-      const c = +el.dataset.c, v = el.dataset.v;
+      /* v4.0: แถว (ว่าง) ใช้ธง data-blank เพราะอักขระ NUL ใน attribute
+         โดน HTML parser แปลงเป็น U+FFFD ทำให้เทียบค่าไม่ตรงแล้วกรองได้ 0 แถว */
+      const c = +el.dataset.c, v = el.dataset.blank ? BLANK : el.dataset.v;
       t.sel = (t.sel && t.sel.col === c && t.sel.val === v) ? null : { col: c, val: v };
       apply();
     };
@@ -849,10 +863,14 @@ async function takeFiles(list){
   const fs = [...list].slice(0, 2);
   if (!fs.length) return;
 
+  busyStart("กำลังเตรียมข้อมูล");
+  busyRun("read", fs.map(f => f.name).join("  \u00B7  "));
+
   let got;
   try{
     got = await Promise.all(fs.map(readMatrix));
   }catch(e){
+    busyClose();
     return fail("เปิดไฟล์ไม่สำเร็จ", esc(e.message) +
       "<br><br>ถ้าเป็นไฟล์ Excel ลอง <b>Save As \u2192 CSV UTF-8</b> แล้วลากไฟล์นั้นมาแทน " +
       "หรือคัดลอกทั้งตารางแล้วกด <b>Ctrl+V</b>");
@@ -865,10 +883,15 @@ async function takeFiles(list){
     g.hint = guessTab(g.name);          // ชื่อไฟล์เป็นแค่ตัวช่วยตัดสินเวลาคะแนนเท่ากัน
   });
 
+  busyDone("read", fs.length + " ไฟล์");
+  busyRun("split");
+
   if (got.length === 1){
     const g = got[0];
     const t = g.w > g.f ? "wood" : g.f > g.w ? "fit" : (g.hint || cur);
-    return ingest(g.m, g.name, t);
+    ingest(g.m, g.name, t);
+    busyDone("split", TABS[t].label + "  \u00B7  " + TABS[t].rows.length + " แถว");
+    return;
   }
 
   /* สองไฟล์: ให้คนที่เหมาะกับ wood มากกว่าไปอยู่ wood อีกคนไป fit */
@@ -879,6 +902,7 @@ async function takeFiles(list){
   ingest(first.m,  first.name,  "wood");
   ingest(second.m, second.name, "fit");
   cur = "wood"; syncTabs(); render();
+  busyDone("split", "BOM ไม้ " + TABS.wood.rows.length + "  \u00B7  Fitting " + TABS.fit.rows.length + " แถว");
 }
 
 $("open").onclick = () => $("pick").click();
@@ -924,7 +948,9 @@ $("colbtn").onclick = () => {
       t.hl = cb.checked ? [...t.hl, i].sort((a,b)=>a-b) : t.hl.filter(x => x !== i);
       if (t.sel && !t.hl.includes(t.sel.col)) t.sel = null;
       syncFixBtn();   // v3.1: เปลี่ยนคอลัมน์ที่เน้น จำนวน X ที่ต้องแก้ก็เปลี่ยนตาม
-      apply();
+      t.chk = null; t.onlyNo = false;   // v4.0: เน้นคอลัมน์ต่างไป ต้องเช็คใหม่
+      syncChkBar(); apply();
+      runCheck(false, cur);
     };
   });
 };
@@ -962,8 +988,14 @@ function exportRows(t){
   if (!t.chk) return { head: t.cols, body: view };
   const head = [...t.cols, "มีโค้ดในระบบ", "ชื่อในระบบ", "หน่วย"];
   const body = view.map(r => {
-    const v = String(r[t.chk.col] ?? "").trim();
-    const rec = t.chk.map.get(v);
+    /* v4.0: เช็คหลายคอลัมน์ ใช้ตัวแรกที่มีค่าเป็นตัวแทนในไฟล์ที่ส่งออก */
+    let v = "", rec = null;
+    for (const ci of t.chk.cols){
+      const x = String(r[ci] ?? "").trim();
+      if (!x) continue;
+      v = x; rec = t.chk.map.get(x);
+      if (!rec) break;          // เจอตัวที่ยังไม่มีโค้ด รายงานตัวนั้น
+    }
     return [...r, !v ? "" : (rec ? "มี" : "ยังไม่มี"),
             (rec && rec.product_name) || "", (rec && rec.unit) || ""];
   });
@@ -1065,15 +1097,49 @@ function scanXY(t){
   return { mat, hits, cells };
 }
 
+/* v4.1: แยกการลงมือแก้ออกมา จะได้เรียกได้ทั้งอัตโนมัติตอนอัปโหลด
+   และตอนกดปุ่ม · เก็บของเดิมไว้เพื่อย้อนกลับได้ */
+function applyXY(t){
+  const { mat, hits } = scanXY(t);
+  if (mat < 0 || !hits.length) return 0;
+  const undo = [];
+  let n = 0;
+  hits.forEach(h => h.rows.forEach(ri => {
+    undo.push([ri, t.rows[ri][mat]]);
+    t.rows[ri][mat] = h.to; n++;
+  }));
+  t.xy = { col: mat, undo, at: new Date(), n, hits: hits.map(h => [h.from, h.to, h.rows.length]) };
+  t.sel = null;
+  return n;
+}
+function undoXY(t){
+  if (!t.xy) return 0;
+  const { col, undo } = t.xy;
+  undo.forEach(([ri, v]) => { t.rows[ri][col] = v; });
+  const n = undo.length;
+  t.xy = null; t.sel = null;
+  return n;
+}
+
 function syncFixBtn(){
   const t = T();
-  const btn = $("fixxy");
+  const btn = $("fixxy"), un = $("undoxy");
+  un.style.display = "none";
   if (!t.rows.length){ btn.disabled = true; btn.textContent = "แก้ X เป็น Y"; return; }
   const { mat, cells } = scanXY(t);
   if (mat < 0){
     btn.disabled = true;
     btn.textContent = "ไม่มี CutRiteMaterialCode";
     btn.title = "แท็บนี้ไม่มีคอลัมน์ CutRiteMaterialCode จึงไม่มีอะไรให้แก้";
+    return;
+  }
+  /* v4.1: แก้ให้อัตโนมัติตอนอัปโหลดแล้ว ปุ่มจึงกลายเป็นตัวบอกผล + ย้อนกลับ */
+  if (t.xy){
+    btn.disabled = false;
+    btn.textContent = "\u2713 แก้ X เป็น Y แล้ว " + t.xy.n + " แถว";
+    btn.title = "คลิกเพื่อดูว่าแก้อะไรไปบ้าง";
+    un.style.display = "";
+    un.textContent = "ย้อนกลับ";
     return;
   }
   btn.title = "แก้เฉพาะ CutRiteMaterialCode \u00B7 สองคอลัมน์ผิวเก็บ X ไว้เป็นตัวเทียบ";
@@ -1083,6 +1149,37 @@ function syncFixBtn(){
 
 $("fixxy").onclick = () => {
   const t = T();
+
+  /* v4.1: แก้ไปแล้วตอนอัปโหลด กดปุ่มคือขอดูว่าแก้อะไรไปบ้าง */
+  if (t.xy){
+    $("mtitle").textContent = "แก้ X เป็น Y ไปแล้ว";
+    $("mbody").innerHTML =
+      '<p style="font-size:13px;color:var(--dim);line-height:1.7">' +
+      "ตอนอัปโหลดไฟล์ โปรแกรมแก้ <b>" + esc(t.cols[t.xy.col]) + "</b> ให้อัตโนมัติ รวม <b>" +
+      t.xy.n + "</b> แถว จาก <b>" + t.xy.hits.length + "</b> รูปแบบ<br>" +
+      "เมื่อ " + t.xy.at.toLocaleTimeString("th-TH") + "</p>" +
+      '<div id="xylist"><div class="h"><span></span><span>จาก</span><span>เป็น</span><span>แถว</span></div>' +
+      t.xy.hits.map(h =>
+        '<div class="xyrow"><span class="col"></span>' +
+        '<span class="from" title="' + esc(h[0]) + '">' + esc(h[0]) + "</span>" +
+        '<span class="to" title="' + esc(h[1]) + '">' + esc(h[1]) + "</span>" +
+        '<span class="cnt">' + h[2] + "</span></div>").join("") +
+      "</div>" +
+      '<p style="font-size:12px;color:var(--faint);margin-top:11px;line-height:1.6">' +
+      "คอลัมน์ผิวไม่ถูกแตะ เก็บ X ไว้ตามเดิมเพื่อใช้ตรวจย้อนว่าแถวไหนเคยแก้</p>";
+    $("mfoot").innerHTML =
+      '<span class="note">แก้เฉพาะข้อมูลในหน้าจอนี้ ไม่แตะไฟล์ต้นฉบับ</span><span class="sp"></span>' +
+      '<button class="cbtn undo" id="xyundo">ย้อนกลับทั้งหมด</button>' +
+      '<button class="cbtn primary" id="xyclose">ปิด</button>';
+    $("xyclose").onclick = closeModal;
+    $("xyundo").onclick = () => {
+      const n = undoXY(t); closeModal(); syncFixBtn(); apply();
+      toast("ย้อนกลับแล้ว " + n + " แถว");
+    };
+    $("modal").className = "on";
+    return;
+  }
+
   const { mat, hits, cells } = scanXY(t);
   if (mat < 0) return toast("แท็บนี้ไม่มีคอลัมน์ CutRiteMaterialCode");
   if (!hits.length) return toast("ไม่พบ X ที่ต้องแก้ใน CutRiteMaterialCode");
@@ -1120,9 +1217,7 @@ $("fixxy").onclick = () => {
 
   $("xycancel").onclick = closeModal;
   $("xyok").onclick = () => {
-    let n = 0;
-    hits.forEach(h => h.rows.forEach(ri => { t.rows[ri][mat] = h.to; n++; }));
-    t.sel = null;
+    const n = applyXY(t);
     closeModal();
     syncFixBtn(); apply();
     toast("แก้ " + t.cols[mat] + " แล้ว " + n + " แถว  \u00B7  คอลัมน์ผิวคงเดิม  \u00B7  กดบันทึก Excel เพื่อเอาออก");
@@ -1151,18 +1246,26 @@ function getSb(){
 }
 
 /* โค้ดของแถวนี้อยู่ในระบบแล้วหรือยัง — "yes" / "no" / "" (ไม่มีโค้ดให้เช็ค) */
-function codeState(t, r){
-  if (!t.chk || t.chkCol < 0) return "";
-  const v = String(r[t.chkCol] ?? "").trim();
-  if (!v) return "";
-  return t.chk.map.has(v) ? "yes" : "no";
+/* v4.2: คอลัมน์ที่เอาไปเช็คจริง = คอลัมน์ที่เน้น หักตัวที่อยู่ใน noCheck
+   ใช้ที่เดียวกันทั้งตอนยิงถาม ตอนทำการ์ด และตอนนับค่ารอเช็ค
+   จะได้ไม่หลุดไม่ตรงกันเวลาแก้ทีหลัง */
+function checkCols(t){
+  const skip = new Set((t.noCheck || []).map(norm));
+  return t.hl.filter(i => !skip.has(norm(t.cols[i])));
 }
 
-/* รายการโค้ดไม่ซ้ำในคอลัมน์ที่เลือก */
-function codesOf(t, col){
-  const set = new Set();
-  t.rows.forEach(r => { const v = String(r[col] ?? "").trim(); if (v) set.add(v); });
-  return [...set];
+/* v4.0: แถวนี้ถือว่า "ยังไม่มีโค้ด" ถ้าคอลัมน์ที่เน้นตัวใดตัวหนึ่ง
+   มีค่าแต่หาไม่เจอในระบบ · ว่างเปล่าก็นับว่ายังไม่มีเหมือนกัน */
+function codeState(t, r){
+  if (!t.chk) return "";
+  let seen = false;
+  for (const ci of t.chk.cols){
+    const v = String(r[ci] ?? "").trim();
+    if (!v) return "no";
+    seen = true;
+    if (!t.chk.map.has(v)) return "no";
+  }
+  return seen ? "yes" : "";
 }
 
 function syncChkBar(){
@@ -1172,50 +1275,85 @@ function syncChkBar(){
   syncFixBtn();
   if (!has) return;
 
-  const sel = $("chkcol");
-  if (t.chkCol < 0) t.chkCol = t.hl.length ? t.hl[0] : 0;
-  sel.innerHTML = t.cols.map((c, i) =>
-    '<option value="' + i + '"' + (i === t.chkCol ? " selected" : "") + ">" + esc(c) + "</option>").join("");
-
   const p = $("chkres");
   if (!t.chk){
+    /* v4.0: เช็คทุกคอลัมน์ที่เน้นรวมกัน ไม่ต้องเลือกคอลัมน์เองแล้ว */
+    const set = new Set();
+    checkCols(t).forEach(ci => t.rows.forEach(r => {
+      const v = String(r[ci] ?? "").trim(); if (v) set.add(v);
+    }));
     p.className = "pill wait";
-    p.textContent = "ยังไม่ได้เช็ค \u00B7 " + codesOf(t, t.chkCol).length + " โค้ดไม่ซ้ำ";
+    p.textContent = "กำลังรอเช็ค \u00B7 " + set.size + " ค่าไม่ซ้ำ";
     $("reqgo").disabled = true;
     $("onlyno").disabled = true;
     $("onlyno").setAttribute("aria-pressed", "false");
     $("chkat").textContent = "";
   } else {
-    const { found, missing } = t.chk;
+    const { found, missing, total, cols } = t.chk;
     p.className = "pill " + (missing.length ? "bad" : "good");
     p.textContent = missing.length
       ? "มีแล้ว " + found + "  \u00B7  ยังไม่มี " + missing.length
-      : "มีครบทั้ง " + found + " โค้ด";
+      : "มีครบทั้ง " + total + " ค่า";
     $("reqgo").disabled = missing.length === 0;
     $("reqgo").textContent = missing.length ? "ส่งขอโค้ด " + missing.length + " รายการ" : "ส่งขอโค้ด";
     $("onlyno").disabled = missing.length === 0;
     $("onlyno").setAttribute("aria-pressed", String(t.onlyNo));
     $("chkat").textContent = "เช็คเมื่อ " + t.chk.at.toLocaleTimeString("th-TH") +
-      "  \u00B7  คอลัมน์ " + t.cols[t.chk.col];
+      "  \u00B7  " + cols.map(i => t.cols[i]).join(", ");
   }
 }
 
-$("chkcol").onchange = function(){
-  const t = T();
-  t.chkCol = +this.value;
-  t.chk = null; t.onlyNo = false;
-  syncChkBar(); apply();
-};
 
-/* ───────── กล่องรอ ───────── */
+/* ───────── กล่องรอแบบมีขั้นตอน (v4.1) ─────────
+   เดิมโผล่เฉพาะตอนเช็คโค้ด ตอนนี้ขึ้นตั้งแต่เริ่มอ่านไฟล์
+   แล้วไล่ติ๊กทีละขั้น ผู้ใช้จะได้รู้ว่าโปรแกรมกำลังทำอะไรอยู่ */
+const STEPS = [
+  ["read",  "อ่านไฟล์"],
+  ["split", "แยกเข้าแท็บ"],
+  ["check", "เช็คโค้ดกับ Supabase"],
+  ["fix",   "แก้ X เป็น Y"]
+];
+let _stepState = {};
+
+function busyRender(){
+  $("bsteps").innerHTML = STEPS.map(([id, label]) => {
+    const st = _stepState[id] || {};
+    const cls = st.done ? "done" : st.run ? "run" : "";
+    const mark = st.done ? "\u2713" : st.run ? "<span>\u25CC</span>" : "\u00B7";
+    return '<div class="bstep ' + cls + '"><span class="m">' + mark + "</span>" +
+      "<span>" + esc(label) + (st.note ? '<span class="d">' + esc(st.note) + "</span>" : "") +
+      "</span></div>";
+  }).join("");
+}
+function busyStart(title){
+  _stepState = {};
+  $("btitle").textContent = title || "กำลังเตรียมข้อมูล";
+  $("bnow").textContent = "0"; $("ball").textContent = "0";
+  $("bfill").className = "bfill idle"; $("bfill").style.width = "";
+  $("bsub").textContent = "";
+  busyRender();
+  $("busy").className = "on";
+}
+function busyRun(id, note){
+  Object.keys(_stepState).forEach(k => { if (_stepState[k].run) _stepState[k] = { done: true, note: _stepState[k].note }; });
+  _stepState[id] = { run: true, note: note || "" };
+  busyRender();
+}
+function busyDone(id, note){
+  _stepState[id] = { done: true, note: note !== undefined ? note : (_stepState[id] || {}).note };
+  busyRender();
+}
+function busySkip(id, note){ _stepState[id] = { done: false, note: note || "" }; busyRender(); }
+function busyNote(id, note){
+  if (!_stepState[id]) _stepState[id] = { run: true };
+  _stepState[id].note = note; busyRender();
+}
 function busyOpen(total, title){
-  $("btitle").textContent = title || "กำลังเช็คโค้ดกับ Supabase";
+  if ($("busy").className !== "on") busyStart(title);
+  else if (title) $("btitle").textContent = title;
   $("bnow").textContent = "0";
   $("ball").textContent = total.toLocaleString("th-TH");
-  $("bfill").className = "bfill idle";
-  $("bfill").style.width = "";
-  $("bsub").textContent = "กำลังเชื่อมต่อ\u2026";
-  $("busy").className = "on";
+  $("bfill").className = "bfill idle"; $("bfill").style.width = "";
 }
 function busyStep(done, total, note){
   $("bnow").textContent = done.toLocaleString("th-TH");
@@ -1225,19 +1363,30 @@ function busyStep(done, total, note){
 }
 function busyClose(){ $("busy").className = ""; }
 
-/* ───────── เช็คโค้ด — เรียกได้ทั้งจากปุ่มและตอน import ─────────
-   auto = true  -> ล้มเหลวแล้วเงียบ ไม่รบกวน แค่ปล่อยให้กดเช็คเองทีหลัง */
-async function runCheck(auto){
-  const t = T(), col = t.chkCol;
-  const codes = codesOf(t, col);
-  if (!codes.length){ if (!auto) toast("คอลัมน์นี้ไม่มีโค้ดให้เช็ค"); return; }
+/* ───────── เช็คโค้ด (v3.7) ─────────
+   ไม่มีปุ่มแล้ว เปิดไฟล์เสร็จเช็คให้เองทันที ทั้งแท็บไม้และแท็บ Fitting
+   รับ key ของแท็บมาตรง ๆ จะได้ไล่เช็คหลายแท็บได้โดยไม่ต้องสลับหน้าจอ
+   auto = true -> ล้มเหลวแล้วไม่ขึ้น toast รบกวน */
+async function runCheck(auto, key){
+  const k = key || cur, t = TABS[k];
+  /* v4.0: รวมค่าจากทุกคอลัมน์ที่เน้น แล้วยิงถามทีเดียว
+     การ์ดแต่ละใบจะได้เอาผลไปโชว์ได้หมด ไม่ต้องเช็คทีละคอลัมน์ */
+  const cols = checkCols(t);
+  const set = new Set();
+  cols.forEach(ci => t.rows.forEach(r => {
+    const v = String(r[ci] ?? "").trim();
+    if (v) set.add(v);
+  }));
+  const codes = [...set];
+  if (!codes.length){
+    if (!auto) toast(cols.length ? "ไม่มีค่าให้เช็ค" : "คอลัมน์ที่เน้นอยู่ไม่ได้ตั้งให้เช็คกับ Supabase");
+    return;
+  }
 
   const client = getSb();
   if (!client){ if (!auto) toast("ต่อ Supabase ไม่ได้ — ตรวจว่าเครื่องออกอินเทอร์เน็ตได้"); return; }
 
-  const btn = $("chkgo"), label = btn.textContent;
-  btn.disabled = true;
-  busyOpen(codes.length, auto ? "เปิดไฟล์เสร็จ กำลังเช็คโค้ดให้อัตโนมัติ" : "กำลังเช็คโค้ดกับ Supabase");
+  busyOpen(codes.length, $("busy").className === "on" ? null : "กำลังเช็คโค้ด \u00B7 " + t.label);
 
   const map = new Map();
   try{
@@ -1245,7 +1394,6 @@ async function runCheck(auto){
     for (let i = 0; i < codes.length; i += 200){
       const part = codes.slice(i, i + 200);
       const done = Math.min(i + part.length, codes.length);
-      btn.textContent = "กำลังเช็ค " + done + "/" + codes.length + "\u2026";
       busyStep(i, codes.length, "ก้อนที่ " + (i / 200 + 1) + " \u00B7 " + part[0] + " \u2026");
       const { data, error } = await client
         .from("fitting_global")
@@ -1256,22 +1404,74 @@ async function runCheck(auto){
       busyStep(done, codes.length, "พบแล้ว " + map.size + " รายการ");
     }
     const missing = codes.filter(c => !map.has(c));
-    t.chk = { map, col, at: new Date(), found: map.size, total: codes.length, missing };
+    t.chk = { map, cols, at: new Date(), found: map.size, total: codes.length, missing };
     t.onlyNo = false;
-    toast(missing.length
-      ? "เช็คเสร็จ \u2014 ยังไม่มีโค้ด " + missing.length + " รายการ"
-      : "เช็คเสร็จ \u2014 มีโค้ดครบทั้ง " + codes.length + " รายการ");
+    toast(t.label + ": " + (missing.length
+      ? "ยังไม่มีโค้ด " + missing.length + " จาก " + codes.length
+      : "มีโค้ดครบทั้ง " + codes.length + " รายการ"));
   }catch(e){
     if (!auto) toast("เช็คไม่สำเร็จ: " + e.message);
-    else toast("เช็คอัตโนมัติไม่สำเร็จ \u2014 กดปุ่มเช็คเองได้");
+    else toast(t.label + ": เช็คไม่สำเร็จ \u2014 " + e.message);
   }finally{
-    busyClose();
-    btn.disabled = false;
-    btn.textContent = label;
-    syncChkBar(); apply();
+    if (!_checking) busyClose();   // เรียกเดี่ยว ๆ ก็ปิดเอง · ถ้าอยู่ในไปป์ไลน์ให้ scheduleChecks ปิด
+    if (cur === k){ syncChkBar(); apply(); }
+    else syncTabs();
   }
 }
-$("chkgo").onclick = () => runCheck(false);
+
+/* v3.7: ไล่เช็คทุกแท็บที่เพิ่งโหลดไฟล์มา ทีละแท็บไม่ให้ชนกัน
+   ลากสองไฟล์พร้อมกันก็เช็คให้ทั้งคู่โดยไม่ต้องสลับหน้าจอไปกด */
+let _checkTimer = null, _checking = false;
+function scheduleChecks(){
+  clearTimeout(_checkTimer);
+  _checkTimer = setTimeout(async () => {
+    if (_checking) return;
+    _checking = true;
+    try{
+      /* 1) เช็คโค้ดทีละแท็บ */
+      const todo = ["wood", "fit"].filter(k =>
+        TABS[k].needCheck && TABS[k].rows.length && checkCols(TABS[k]).length);
+      if (todo.length){
+        busyRun("check");
+        for (const k of todo){
+          TABS[k].needCheck = false;
+          busyNote("check", TABS[k].label);
+          await runCheck(true, k);
+        }
+        const sum = todo.map(k => {
+          const c = TABS[k].chk;
+          return TABS[k].label + " " + (c ? c.found + " มี / " + c.missing.length + " ยังไม่มี" : "ไม่สำเร็จ");
+        }).join("  \u00B7  ");
+        busyDone("check", sum);
+      } else busySkip("check", "ไม่มีคอลัมน์ให้เช็ค");
+
+      /* 2) v4.1: แก้ X เป็น Y ให้เลย ไม่ต้องกดปุ่ม · ย้อนกลับได้ */
+      busyRun("fix");
+      const fixed = [];
+      ["wood", "fit"].forEach(k => {
+        const t = TABS[k];
+        if (!t.rows.length || t.xy) return;
+        const n = applyXY(t);
+        if (n) fixed.push(t.label + " " + n + " แถว");
+      });
+      busyDone("fix", fixed.length ? fixed.join("  \u00B7  ") : "ไม่มี X ต้องแก้");
+
+      syncChkBar(); apply();
+      if (fixed.length) toast("แก้ X เป็น Y ให้แล้ว \u2014 " + fixed.join("  \u00B7  ") + "  \u00B7  กดย้อนกลับได้ถ้าไม่ต้องการ");
+    } finally {
+      _checking = false;
+      setTimeout(busyClose, 550);   // ให้เห็นติ๊กครบก่อนปิด
+    }
+  }, 140);
+}
+
+/* ปุ่มย้อนกลับการแก้ X เป็น Y */
+$("undoxy").onclick = () => {
+  const t = T();
+  const n = undoXY(t);
+  syncFixBtn(); apply();
+  toast(n ? "ย้อนกลับแล้ว " + n + " แถว" : "ไม่มีอะไรให้ย้อน");
+};
 
 $("onlyno").onclick = function(){
   const t = T();
@@ -1307,17 +1507,20 @@ $("reqgo").onclick = async function(){
   await loadDepartments();
 
   /* หาแถวตัวอย่างของแต่ละโค้ด เพื่อเติมคำอธิบายตั้งต้นจากคอลัมน์อื่นในไฟล์ */
+  /* v4.0: โค้ดอาจมาจากคอลัมน์ไหนก็ได้ในกลุ่มที่เช็ค เก็บไว้ว่ามาจากคอลัมน์ไหน
+     จะได้เขียนคำอธิบายตั้งต้นให้ตรงบริบท */
   const sample = new Map();
-  t.rows.forEach(r => {
-    const v = String(r[t.chk.col] ?? "").trim();
-    if (v && !sample.has(v)) sample.set(v, r);
-  });
-  const other = t.cols.map((c, i) => i).filter(i => i !== t.chk.col);
+  t.rows.forEach(r => t.chk.cols.forEach(ci => {
+    const v = String(r[ci] ?? "").trim();
+    if (v && !sample.has(v)) sample.set(v, { row: r, col: ci });
+  }));
   const describe = code => {
-    const r = sample.get(code);
-    if (!r) return "";
-    return other.map(i => t.cols[i] + " " + String(r[i] ?? "").trim())
-                .filter(x => !/ $/.test(x)).join("  \u00B7  ");
+    const hit = sample.get(code);
+    if (!hit) return "";
+    const other = t.cols.map((c, i) => i).filter(i => i !== hit.col).slice(0, 4);
+    return t.cols[hit.col] + "  \u00B7  " +
+      other.map(i => t.cols[i] + " " + String(hit.row[i] ?? "").trim())
+           .filter(x => !/ $/.test(x)).join("  \u00B7  ");
   };
 
   $("mtitle").textContent = "ส่งขอตั้งโค้ด " + t.chk.missing.length + " รายการ";
