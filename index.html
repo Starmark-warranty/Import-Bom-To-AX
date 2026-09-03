@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<!--=====================================================================
+  IMOS BOM VIEWER · APP MANIFEST
+  >>> AI/DEV: อ่านบล็อกนี้ก่อนแก้โค้ดทุกครั้ง · แก้เสร็จให้บวกเลข VERSION
+      แล้วเพิ่มบรรทัด CHANGELOG ใหม่ไว้บนสุด (ห้ามลบของเก่า)
+
+  APP      : imos BOM Viewer
+  VERSION  : ดูที่ APP_META.version ในสคริปต์ (เลขที่แสดงบนหัวแอปอ่านจากที่นั่น)
+  BUILD    : ดูที่ APP_META.build
+  >>> บวกเลขที่ APP_META เท่านั้น อย่าบวกที่บล็อกนี้
+  FILE     : imos-viewer.html
+  STACK    : single-file HTML · ไม่มี build step · ไม่ต่อฐานข้อมูล อ่านไฟล์ในเครื่องล้วน
+  ENTRY    : ingest() -> apply() -> draw()
+  STATE    : TABS.wood / TABS.fit  คือ single source of truth
+             >>> ห้ามนิยาม $ / norm / esc / blank / isNum / T() ซ้ำอีก
+
+  --- CHANGELOG (ใหม่สุดอยู่บนสุด) -----------------------------------
+  >>> รายการที่ใช้จริงอยู่ที่ APP_META.changelog · ข้างล่างนี้เป็นสำเนา
+  v3.5  2026-09-03  FEAT ติดเลขเวอร์ชันบนหัวแอปและชื่อแท็บเบราว์เซอร์
+                         คลิกที่เลขเพื่อดู changelog ทั้งหมด จะได้รู้ว่าเปิดไฟล์ถูกตัว
+                    FEAT โหมดทดลองในกล่องส่งขอโค้ด — ติ๊กไว้ให้ตั้งแต่แรก
+                         กดแล้วโชว์ข้อมูลที่จะส่งจริงโดยยังไม่เขียนลง Supabase
+                         ปลดติ๊กเมื่อพร้อมส่งจริง · จำค่าไว้ในเครื่อง
+                         (ส่วนตัวส่งจริงเขียนเสร็จตั้งแต่ v3.0 แต่ทดสอบด้วย
+                          Supabase จำลองเท่านั้น ยังไม่เคยยิงของจริง)
+  v3.4  2026-09-03  CHANGE ย้ายผลเช็คโค้ดออกจากตาราง — เดิมแทรกสามคอลัมน์
+                           (มีโค้ด? ชื่อในระบบ หน่วย) เข้าไปปนกับข้อมูลจากไฟล์
+                           ทำให้แยกไม่ออกว่าอะไรมาจากไฟล์ อะไรมาจาก Supabase
+                           ย้ายไปเป็นการ์ด "ผลเช็คโค้ด" บนแถบสรุปแทน
+                           วางไว้ใบแรก กว้างกว่าใบอื่น ตัวที่ยังไม่มีโค้ดขึ้นก่อน
+                           คลิกที่โค้ดเพื่อกรองตารางเฉพาะโค้ดนั้นได้เหมือนการ์ดอื่น
+                           ตารางกลับไปมีเฉพาะคอลัมน์จากไฟล์ล้วน ๆ
+                           (ไฟล์ที่บันทึกออกยังติดสามคอลัมน์นี้ไว้ท้ายตารางเหมือนเดิม)
+  v3.3  2026-09-03  CHANGE ปุ่มแก้ X เป็น Y แก้เฉพาะ CutRiteMaterialCode
+                           สองคอลัมน์ผิว (SurfaceBeforeCutTop/BottomCode)
+                           ไม่ถูกแตะ เก็บ X ไว้ใช้ recheck ว่าแถวไหนเคยแก้
+                           ค่าใน CutRiteMaterialCode คือ prefix + โค้ดผิวบน +
+                           โค้ดผิวล่าง จึงขึ้นต้นด้วย PB/MD ไม่ใช่ G
+                           กฎ "ขึ้นต้น G ลงท้าย X" ใช้ตรง ๆ ไม่ได้
+                           -> ใช้ค่าในสองคอลัมน์ผิวของแถวนั้นเป็นตัวชี้ว่า
+                              ต้องแทนช่วงไหน ไม่ต้องเดาความยาวโค้ด
+                           ถ้าไม่มีคอลัมน์ผิว ตกไปใช้กฎเดิมกับตัวค่าเต็ม
+  v3.2  2026-09-03  FEAT เปิดไฟล์เสร็จเช็คโค้ดกับ Supabase ให้เลย ไม่ต้องกดเอง
+                         (ถ้าเน็ตไม่ได้หรือ error ก็เงียบ ๆ ให้กดเช็คเองทีหลัง)
+                    FEAT ดึงรายละเอียดจาก fitting_global มาโชว์เป็นคอลัมน์
+                         ชื่อในระบบ (product_name) และ หน่วย (unit)
+                         ติดไปกับไฟล์ที่บันทึกออกด้วย
+                    FEAT กล่องแสดงความคืบหน้าระหว่างเช็ค — บอกว่าเช็คถึงโค้ดที่เท่าไร
+                         จากทั้งหมดเท่าไร พร้อมแถบวิ่ง
+                    REFACTOR ย้ายตรรกะเช็คออกจาก onclick มาเป็น runCheck()
+                             จะได้เรียกได้ทั้งตอน import อัตโนมัติและตอนกดปุ่ม
+  v3.1  2026-09-03  FIX  เลือกสองไฟล์พร้อมกันแล้วเข้าแท็บเดียวกันทั้งคู่
+                         ไฟล์จริงชื่อ export_item_... กับ export_fitting_...
+                         ตัวแรกไม่มีคำว่า wood/part กฎเดาชื่อจึงตกไปเข้า fit
+                         ทับไฟล์ fitting ที่โหลดก่อนหน้า -> สองแท็บขึ้น 194 เท่ากัน
+                         เลิกเดาจากชื่อไฟล์เป็นหลัก อ่านทั้งสองไฟล์ให้จบก่อน
+                         แล้วให้คะแนนจากหัวคอลัมน์ ใครตรงกับแท็บไหนมากกว่าได้ไป
+                         ถ้าแย่งแท็บเดียวกัน คนคะแนนสูงกว่าได้ อีกคนไปอีกแท็บ
+                    FEAT ปุ่ม "แก้ X เป็น Y" — หาค่าที่ขึ้นต้น G ลงท้าย X
+                         ในคอลัมน์ที่เน้น แสดงตัวอย่างก่อนว่าจะเปลี่ยนอะไรเป็นอะไร
+                         กี่ช่อง แล้วค่อยยืนยัน · เลือกให้อัปเดต
+                         CutRiteMaterialCode ที่ประกอบจากโค้ดนั้นตามไปด้วยได้
+                    FEAT ส่งออกเป็น .xlsx แทน CSV (ไฟล์นำเข้าเป็น xlsx อยู่แล้ว)
+                         ถ้าตัวเขียน xlsx โหลดไม่ได้ ตกไปเป็น CSV ให้อัตโนมัติ
+  v3.0  2026-09-03  FEAT เช็คโค้ดกับ Supabase — ยิงถาม fitting_global.item_number
+                         ทีละก้อน 200 ตัวด้วย .in() แล้วทำเครื่องหมายว่าโค้ดไหน
+                         มีในระบบแล้ว โค้ดไหนยังไม่มี · อ่านอย่างเดียว ไม่เขียนทับ
+                    FEAT ตัวที่ยังไม่มี กดส่งขอโค้ดเข้า task_tickets ได้เลย
+                         รูปแบบ items:[{ref_code,description}] ตรงกับที่แอป
+                         "ส่งตั้ง Code AX" ใช้อยู่ คนตั้งโค้ดเห็นรายการทันที
+                    FEAT แท็บ Fitting ตั้งคอลัมน์เริ่มต้นเป็น ItemId ตามไฟล์จริง
+                    NOTE anon key เป็นคีย์สาธารณะชุดเดียวกับที่แอป Code AX
+                         ใช้อยู่บน GitHub Pages ไม่ใช่ความลับ
+  v2.0  2026-09-03  FEAT รับสองไฟล์ แยกเป็นสองแท็บ BOM ไม้ / BOM Fitting
+                    FEAT แผงสรุปค่าในคอลัมน์ที่เน้น — บอกว่ามีค่าอะไรบ้าง
+                         อย่างละกี่ชิ้น รวม Qty เท่าไร คิดเป็นกี่เปอร์เซ็นต์
+                         คลิกที่ค่าเพื่อกรองตารางเฉพาะค่านั้น
+                    FEAT เลือกเองได้ว่าจะเน้นคอลัมน์ไหน (แท็บ Fitting
+                         ยังไม่รู้โครงคอลัมน์ จึงเดาจากชื่อที่มีคำว่า code)
+                    FEAT ปุ่มคัดลอกรายการโค้ด เตรียมวางเข้าแอป ส่งตั้ง Code AX
+  v1.0  2026-09-03  ไฟล์แรก — อัปโหลด CSV/XLSX แล้วเน้นสามคอลัมน์วัสดุกับผิว
+=====================================================================-->
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>imos BOM Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1F3864; --navy-2:#2c4a7c; --orange:#E8901F;
+  --ink:#1d1d1f; --dim:#5f5f66; --faint:#9a9aa2;
+  --line:rgba(0,0,0,.10); --line-2:rgba(0,0,0,.20);
+  --page:#eef0f4; --card:#fff; --hover:#f5f7fb;
+  --hl-bg:#fdf1e0; --hl-line:#f0d5ac; --hl-ink:#7a4a08; --hl-hover:#fbe8cf;
+  --miss-bg:#fdecec; --miss-line:#f2c9c9; --miss-ink:#a32d2d;
+  --sans:"Sarabun",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono","SF Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--sans);background:var(--page);color:var(--ink);font-size:14px;
+     display:flex;flex-direction:column;overflow:hidden}
+
+/* ── แถบบน ── */
+header{flex:0 0 auto;height:50px;background:var(--navy);color:#fff;
+       display:flex;align-items:center;gap:8px;padding:0 12px}
+.brand{font-weight:600;font-size:15px;white-space:nowrap;margin-right:4px}
+.brand span{color:var(--orange)}
+.vbadge{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.2px;
+        background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);
+        color:rgba(255,255,255,.86);border-radius:20px;padding:3px 9px;cursor:pointer;
+        margin-right:2px;white-space:nowrap}
+.vbadge:hover{background:var(--orange);border-color:var(--orange);color:#3a2200}
+#clog{font-family:var(--mono);font-size:12px;line-height:1.75}
+#clog .cl{display:grid;grid-template-columns:52px 84px 1fr;gap:10px;padding:8px 2px;
+          border-bottom:1px solid var(--line);align-items:start}
+#clog .cl:last-child{border-bottom:0}
+#clog .cl.now{background:#fff6e7;box-shadow:inset 3px 0 0 var(--orange);
+              padding-left:9px;border-radius:4px}
+#clog b{color:var(--navy)}
+#clog time{color:var(--faint);font-size:11px}
+#clog p{font-family:var(--sans);font-size:12.5px;color:var(--dim);margin:0}
+.dryline{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;margin-top:12px;
+         padding:10px 12px;border:1px solid var(--hl-line);background:var(--hl-bg);
+         border-radius:9px;cursor:pointer;color:var(--hl-ink);line-height:1.6}
+.dryline input{accent-color:var(--orange);cursor:pointer;margin-top:2px}
+#drypre{font-family:var(--mono);font-size:11px;background:var(--page);border:1px solid var(--line-2);
+        border-radius:8px;padding:12px 14px;margin-top:12px;white-space:pre-wrap;word-break:break-all;
+        max-height:280px;overflow:auto;text-align:left;color:var(--ink)}
+header .sp{flex:1}
+.btn{font-family:var(--sans);font-size:13px;border-radius:7px;padding:7px 13px;cursor:pointer;
+     white-space:nowrap;background:none;border:1px solid rgba(255,255,255,.28);color:rgba(255,255,255,.92)}
+.btn:hover{background:rgba(255,255,255,.12)}
+.btn.go{background:var(--orange);border-color:var(--orange);color:#3a2200;font-weight:600}
+.btn.go:hover{filter:brightness(1.07)}
+.btn[aria-pressed="true"]{background:var(--orange);border-color:var(--orange);color:#3a2200;font-weight:600}
+.btn:disabled{opacity:.38;cursor:default}
+#find{font-family:var(--mono);font-size:13px;width:170px;padding:7px 10px;border-radius:7px;
+      background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;outline:0}
+#find::placeholder{color:rgba(255,255,255,.42);font-family:var(--sans)}
+#find:focus{border-color:var(--orange);background:rgba(255,255,255,.18)}
+:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+#pick{display:none}
+
+/* ── แท็บ ── */
+#tabs{flex:0 0 auto;display:flex;align-items:stretch;background:var(--navy);
+      padding:0 12px;gap:2px;border-bottom:1px solid rgba(0,0,0,.2)}
+.tab{font-family:var(--sans);font-size:13px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);
+     border:0;border-radius:8px 8px 0 0;padding:9px 18px;cursor:pointer;display:flex;
+     align-items:center;gap:8px;white-space:nowrap}
+.tab:hover{background:rgba(255,255,255,.16);color:#fff}
+.tab.on{background:var(--card);color:var(--ink);font-weight:600}
+.tab .n{font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.10);
+        border-radius:9px;padding:1px 7px;color:inherit;opacity:.75}
+.tab.on .n{background:var(--hl-bg);color:var(--hl-ink);opacity:1}
+.tab.empty .n{display:none}
+
+/* ── แถบสถิติ ── */
+#bar{flex:0 0 auto;display:none;align-items:center;gap:0;background:var(--card);
+     border-bottom:1px solid var(--line);padding:8px 12px;overflow-x:auto}
+#bar.on{display:flex}
+.stat{display:flex;flex-direction:column;padding:0 15px;border-right:1px solid var(--line);white-space:nowrap}
+.stat:first-child{padding-left:0}
+.stat:last-child{border-right:0}
+.stat b{font-family:var(--mono);font-size:15px;font-weight:600;line-height:1.3}
+.stat b.hl{color:var(--hl-ink)}
+.stat b.bad{color:var(--miss-ink)}
+.stat i{font-style:normal;font-size:10.5px;color:var(--faint);line-height:1.3}
+
+/* ── แผงสรุปค่าในคอลัมน์ที่เน้น (ข้อ 2) ── */
+#sum{flex:0 0 auto;display:none;background:var(--card);border-bottom:1px solid var(--line);
+     padding:10px 12px 12px;gap:10px;overflow-x:auto;max-height:34vh;overflow-y:auto}
+#sum.on{display:flex}
+.sumcard{flex:0 0 320px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+.sumcard>h3{font-size:11.5px;font-weight:600;padding:7px 11px;background:var(--hl-bg);
+            color:var(--hl-ink);border-bottom:1px solid var(--hl-line);
+            display:flex;justify-content:space-between;gap:8px;font-family:var(--mono)}
+.sumcard>h3 em{font-style:normal;font-weight:400;opacity:.75}
+.vrow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:9px;
+      padding:5px 11px;border-bottom:1px solid var(--line);cursor:pointer;position:relative}
+.vrow:last-child{border-bottom:0}
+.vrow:hover{background:var(--hover)}
+.vrow.sel{background:#fff6e7;box-shadow:inset 3px 0 0 var(--orange)}
+.vrow .v{font-family:var(--mono);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;z-index:1}
+.vrow .v.none{color:var(--miss-ink);font-weight:600}
+.vrow .c{font-family:var(--mono);font-size:11.5px;font-weight:600;z-index:1}
+.vrow .p{font-family:var(--mono);font-size:10px;color:var(--faint);width:38px;text-align:right;z-index:1}
+.vrow .bar{position:absolute;left:0;top:0;bottom:0;background:#f6efe4;z-index:0}
+.vrow.none-row .bar{background:#fbe6e6}
+
+/* ── ตาราง ── */
+#wrap{flex:1;overflow:auto;background:var(--card);position:relative}
+table{border-collapse:separate;border-spacing:0;font-size:12.5px;white-space:nowrap}
+thead th{position:sticky;top:0;z-index:3;background:var(--navy);color:#fff;font-weight:500;
+         text-align:left;padding:8px 10px;font-size:11.5px;
+         border-right:1px solid var(--navy-2);cursor:pointer;user-select:none}
+thead th:hover{background:var(--navy-2)}
+thead th.hl{background:var(--orange);color:#3a2200;font-weight:600;border-right-color:#c8790f}
+thead th .ar{opacity:.55;font-size:9px;margin-left:3px}
+tbody td{padding:6px 10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);
+         font-family:var(--mono);font-size:12px;max-width:330px;overflow:hidden;text-overflow:ellipsis}
+tbody tr:hover td{background:var(--hover)}
+td.hl{background:var(--hl-bg);color:var(--hl-ink);font-weight:600;
+      border-right:1px solid var(--hl-line);border-bottom-color:var(--hl-line)}
+tbody tr:hover td.hl{background:var(--hl-hover)}
+td.miss{background:var(--miss-bg);color:var(--miss-ink);font-weight:600;border-right-color:var(--miss-line)}
+tbody tr:hover td.miss{background:#fbe0e0}
+td.rn{position:sticky;left:0;z-index:2;background:var(--card);color:var(--faint);
+      text-align:right;border-right:1px solid var(--line-2)}
+thead th.rn{z-index:4;background:var(--navy);cursor:default}
+tbody tr:hover td.rn{background:var(--hover)}
+td.n{text-align:right}
+td.e{color:#c9c9cf}
+mark{background:#ffe8a3;color:inherit;border-radius:2px;padding:0 1px}
+
+/* ── หน้าเปล่า / ผิดพลาด ── */
+#drop{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:13px;background:var(--card);padding:36px;text-align:center}
+#drop.off{display:none}
+#drop.over{background:#fdf6ec;outline:2px dashed var(--orange);outline-offset:-14px}
+#drop h2{font-size:17px;font-weight:600}
+#drop p{font-size:13px;color:var(--dim);max-width:54ch;line-height:1.7}
+#drop code{font-family:var(--mono);background:var(--page);padding:2px 6px;border-radius:4px;font-size:11.5px}
+#drop .chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+#drop .chip{font-family:var(--mono);font-size:11px;background:var(--hl-bg);color:var(--hl-ink);
+            border:1px solid var(--hl-line);border-radius:5px;padding:3px 8px}
+#drop.err h2{color:#b3261e}
+
+/* ── แผงเลือกคอลัมน์ที่จะเน้น ── */
+#colpanel{position:absolute;right:12px;top:8px;z-index:20;display:none;background:var(--card);
+          border:1px solid var(--line-2);border-radius:10px;box-shadow:0 12px 32px -10px rgba(0,0,0,.3);
+          width:300px;max-height:60vh;overflow:auto;padding:6px}
+#colpanel.on{display:block}
+#colpanel h4{font-size:11.5px;color:var(--dim);font-weight:500;padding:7px 9px 6px}
+#colpanel label{display:flex;align-items:center;gap:8px;padding:5px 9px;border-radius:6px;
+                cursor:pointer;font-family:var(--mono);font-size:11.5px}
+#colpanel label:hover{background:var(--hover)}
+#colpanel input{accent-color:var(--orange);cursor:pointer}
+
+/* ── แถบเช็คโค้ด ── */
+#chkbar{flex:0 0 auto;display:none;align-items:center;gap:8px;background:var(--card);
+        border-bottom:1px solid var(--line);padding:7px 12px;overflow-x:auto;white-space:nowrap}
+#chkbar.on{display:flex}
+#chkbar label{font-size:11.5px;color:var(--dim)}
+#chkbar select{font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:6px;
+               border:1px solid var(--line-2);background:var(--card);color:var(--ink);cursor:pointer}
+.cbtn{font-family:var(--sans);font-size:12.5px;border-radius:7px;padding:6px 13px;cursor:pointer;
+      border:1px solid var(--line-2);background:var(--card);color:var(--ink);white-space:nowrap}
+.cbtn:hover{background:var(--hover)}
+.cbtn.primary{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:600}
+.cbtn.primary:hover{background:var(--navy-2)}
+.cbtn.warn{background:var(--miss-ink);border-color:var(--miss-ink);color:#fff;font-weight:600}
+.cbtn.warn:hover{filter:brightness(1.1)}
+.cbtn:disabled{opacity:.38;cursor:default;filter:none}
+.cbtn[aria-pressed="true"]{background:var(--orange);border-color:var(--orange);color:#3a2200;font-weight:600}
+.pill{font-family:var(--mono);font-size:11.5px;border-radius:20px;padding:4px 11px;font-weight:600}
+.pill.good{background:#e6f4ea;color:#1e6b38;border:1px solid #bfe3cb}
+.pill.bad{background:var(--miss-bg);color:var(--miss-ink);border:1px solid var(--miss-line)}
+.pill.wait{background:var(--page);color:var(--dim);border:1px solid var(--line-2)}
+#chkbar .sp{flex:1}
+
+/* ── ช่องสถานะในตาราง ── */
+td.st{font-family:var(--mono);font-size:11px;text-align:center;position:sticky;left:44px;z-index:2;
+      background:var(--card);border-right:1px solid var(--line-2)}
+thead th.st{position:sticky;left:44px;z-index:4;background:var(--navy);cursor:default}
+tbody tr:hover td.st{background:var(--hover)}
+td.st.yes{color:#1e6b38;background:#eef7f1}
+td.st.no{color:var(--miss-ink);background:var(--miss-bg);font-weight:600}
+tbody tr:hover td.st.yes{background:#e2f1e8}
+tbody tr:hover td.st.no{background:#fbe0e0}
+
+/* ── กล่องส่งขอโค้ด ── */
+#modal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+       background:rgba(20,25,40,.5);padding:20px}
+#modal.on{display:flex}
+.sheet{background:var(--card);border-radius:14px;width:min(760px,100%);max-height:88vh;
+       display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px -18px rgba(0,0,0,.45)}
+.sheet>h3{font-size:15px;font-weight:600;padding:15px 18px;border-bottom:1px solid var(--line);
+          display:flex;align-items:center;gap:10px}
+.sheet>h3 .x{margin-left:auto;cursor:pointer;color:var(--faint);font-size:20px;line-height:1;
+             background:none;border:0;padding:2px 6px;border-radius:6px}
+.sheet>h3 .x:hover{background:var(--page);color:var(--ink)}
+.sbody{padding:14px 18px;overflow:auto;flex:1}
+.frow{display:flex;gap:10px;margin-bottom:11px}
+.fld{flex:1;display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:11.5px;color:var(--dim)}
+.fld input,.fld select{font-family:var(--sans);font-size:13px;padding:8px 10px;border-radius:7px;
+                       border:1px solid var(--line-2);background:var(--card);color:var(--ink);outline:0;width:100%}
+.fld input:focus,.fld select:focus{border-color:var(--orange)}
+#mlist{border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:4px}
+#mlist .h{display:grid;grid-template-columns:26px 1fr 1.4fr;gap:8px;padding:7px 10px;
+          background:var(--page);font-size:11px;color:var(--dim);border-bottom:1px solid var(--line)}
+.mrow{display:grid;grid-template-columns:26px 1fr 1.4fr;gap:8px;padding:5px 10px;
+      border-bottom:1px solid var(--line);align-items:center}
+.mrow:last-child{border-bottom:0}
+.mrow .rc{font-family:var(--mono);font-size:12px;color:var(--miss-ink);font-weight:600;
+          overflow:hidden;text-overflow:ellipsis}
+.mrow input{font-family:var(--sans);font-size:12.5px;padding:5px 8px;border-radius:6px;
+            border:1px solid var(--line);outline:0;width:100%;background:var(--card);color:var(--ink)}
+.mrow input:focus{border-color:var(--orange)}
+.mrow input[type=checkbox]{width:auto;accent-color:var(--orange);cursor:pointer}
+.sfoot{padding:12px 18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.sfoot .sp{flex:1}
+.sfoot .note{font-size:11.5px;color:var(--faint)}
+/* ── กล่องรอระหว่างเช็คโค้ด ── */
+/* ── การ์ดผลเช็คโค้ด (v3.4) ── */
+.sumcard.wide{flex:0 0 430px}
+.sumcard.wide>h3{background:#e8eefa;color:#1c3866;border-bottom-color:#c6d5ee}
+.crow{display:grid;grid-template-columns:auto 128px 1fr 34px auto;gap:8px;align-items:center;
+      padding:5px 11px;border-bottom:1px solid var(--line);cursor:pointer}
+.crow:last-child{border-bottom:0}
+.crow:hover{background:var(--hover)}
+.crow.sel{background:#fff6e7;box-shadow:inset 3px 0 0 var(--orange)}
+.crow .ic{font-family:var(--mono);font-size:11px;width:15px;text-align:center}
+.crow.yes .ic{color:#1e6b38}
+.crow.no  .ic{color:var(--miss-ink);font-weight:700}
+.crow .cd{font-family:var(--mono);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow.no .cd{color:var(--miss-ink);font-weight:600}
+.crow .nm{font-size:11.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow.no .nm{color:var(--faint);font-style:italic}
+.crow .un{font-family:var(--mono);font-size:10.5px;color:var(--faint);text-align:center}
+.crow .qt{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:right;min-width:26px}
+.csplit{padding:5px 11px;background:var(--miss-bg);color:var(--miss-ink);font-size:10.5px;
+        font-weight:600;border-bottom:1px solid var(--miss-line)}
+.csplit.ok{background:#eef7f1;color:#1e6b38;border-bottom-color:#cfe6d8}
+
+#busy{position:absolute;inset:0;z-index:25;display:none;align-items:center;justify-content:center;
+      background:rgba(255,255,255,.72)}
+#busy.on{display:flex}
+.bcard{background:var(--card);border:1px solid var(--line-2);border-radius:14px;
+       box-shadow:0 20px 50px -18px rgba(0,0,0,.32);padding:22px 26px;width:min(340px,86vw);text-align:center}
+.bcard .bt{font-size:14px;font-weight:600;margin-bottom:3px}
+.bcard .bsub{font-size:11.5px;color:var(--faint);margin-top:9px;font-family:var(--mono);
+             min-height:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bnum{font-family:var(--mono);font-size:12.5px;color:var(--dim);margin-bottom:11px}
+.bnum b{font-size:20px;color:var(--navy);font-weight:600}
+.btrack{height:6px;border-radius:4px;background:var(--page);overflow:hidden;position:relative}
+.bfill{height:100%;width:0;border-radius:4px;background:var(--orange);transition:width .28s ease}
+.bfill.idle{width:35%;animation:slide 1.15s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}
+@media(prefers-reduced-motion:reduce){ .bfill.idle{animation:none;width:100%} }
+
+/* คอลัมน์รายละเอียดที่ดึงมาจาก Supabase */
+td.dt{color:var(--dim);font-size:11.5px;max-width:260px}
+thead th.dt{background:#2a4a7a;color:#dbe6f5;font-weight:500}
+tbody tr:hover td.dt{background:var(--hover)}
+
+#xylist{border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:8px}
+#xylist .h{display:grid;grid-template-columns:1.1fr 1.3fr 1.3fr auto;gap:9px;padding:7px 11px;
+           background:var(--page);font-size:11px;color:var(--dim);border-bottom:1px solid var(--line)}
+.xyrow{display:grid;grid-template-columns:1.1fr 1.3fr 1.3fr auto;gap:9px;padding:6px 11px;
+       border-bottom:1px solid var(--line);align-items:center;font-family:var(--mono);font-size:12px}
+.xyrow:last-child{border-bottom:0}
+.xyrow .col{color:var(--dim);font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.xyrow .from{color:var(--miss-ink);font-weight:600}
+.xyrow .to{color:#1e6b38;font-weight:600}
+.xyrow .cnt{color:var(--dim);font-size:11px}
+.chkline{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-top:11px;cursor:pointer}
+.chkline input{accent-color:var(--orange);cursor:pointer}
+#done{text-align:center;padding:30px 20px}
+#done h4{font-size:16px;font-weight:600;color:#1e6b38;margin-bottom:8px}
+#done p{font-size:13px;color:var(--dim);line-height:1.75;max-width:46ch;margin:0 auto}
+#done .tok{font-family:var(--mono);font-size:13px;background:var(--page);border:1px solid var(--line-2);
+           border-radius:7px;padding:8px 13px;display:inline-block;margin:12px 4px;cursor:pointer}
+#done a{color:var(--navy);font-weight:600}
+
+footer{flex:0 0 auto;height:29px;display:flex;align-items:center;gap:12px;padding:0 12px;
+       background:var(--card);border-top:1px solid var(--line);font-size:11.5px;color:var(--dim)}
+footer .sp{flex:1}
+footer .mono{font-family:var(--mono)}
+#toast{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);background:var(--navy);
+       color:#fff;font-size:13px;padding:10px 18px;border-radius:9px;opacity:0;pointer-events:none;
+       transition:opacity .18s;z-index:50}
+#toast.on{opacity:1}
+@media(max-width:820px){ .brand,.stat i{display:none} #find{width:110px} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">imos <span>BOM</span></div>
+  <button class="vbadge" id="vbadge" title="คลิกดูประวัติรุ่น">v?</button>
+  <button class="btn go" id="open">เปิดไฟล์เข้าแท็บนี้</button>
+  <input type="file" id="pick" accept=".xlsx,.xls,.csv,.txt,.tsv" multiple>
+  <input id="find" placeholder="ค้นหา" autocomplete="off" spellcheck="false">
+  <button class="btn" id="only" aria-pressed="false" title="แสดงเฉพาะแถวที่คอลัมน์เน้นยังว่าง">เฉพาะที่ยังว่าง</button>
+  <div class="sp"></div>
+  <button class="btn" id="colbtn" disabled>คอลัมน์ที่เน้น</button>
+  <button class="btn" id="copy" disabled title="คัดลอกรายการโค้ดไม่ซ้ำ ไว้วางในแอปส่งตั้ง Code AX">คัดลอกโค้ด</button>
+  <button class="btn" id="csv" disabled>บันทึก Excel</button>
+</header>
+
+<div id="tabs">
+  <button class="tab on empty" data-t="wood">BOM ไม้ <span class="n">0</span></button>
+  <button class="tab empty" data-t="fit">BOM Fitting <span class="n">0</span></button>
+</div>
+
+<div id="chkbar">
+  <label for="chkcol">เช็คคอลัมน์</label>
+  <select id="chkcol"></select>
+  <button class="cbtn primary" id="chkgo">เช็คกับ Supabase</button>
+  <span class="pill wait" id="chkres">ยังไม่ได้เช็ค</span>
+  <button class="cbtn warn" id="reqgo" disabled>ส่งขอโค้ด</button>
+  <button class="cbtn" id="onlyno" aria-pressed="false" disabled>เฉพาะที่ยังไม่มีโค้ด</button>
+  <button class="cbtn" id="fixxy" disabled title="ค่าที่ขึ้นต้นด้วย G และลงท้ายด้วย X ในคอลัมน์ที่เน้น">แก้ X เป็น Y</button>
+  <span class="sp"></span>
+  <span class="note" id="chkat" style="font-size:11px;color:var(--faint)"></span>
+</div>
+
+<div id="bar"></div>
+<div id="sum"></div>
+
+<div id="wrap">
+  <table><thead id="head"></thead><tbody id="body"></tbody></table>
+  <div id="colpanel"></div>
+  <div id="busy"><div class="bcard">
+    <div class="bt" id="btitle">กำลังเช็คโค้ดกับ Supabase</div>
+    <div class="bnum"><b id="bnow">0</b> / <span id="ball">0</span> โค้ด</div>
+    <div class="btrack"><div class="bfill idle" id="bfill"></div></div>
+    <div class="bsub" id="bsub">กำลังเชื่อมต่อ…</div>
+  </div></div>
+  <div id="drop"></div>
+</div>
+
+<footer>
+  <span id="state">ยังไม่ได้เปิดไฟล์</span>
+  <span class="sp"></span>
+  <span class="mono" id="meta"></span>
+</footer>
+<div id="toast"></div>
+
+<div id="modal">
+  <div class="sheet">
+    <h3><span id="mtitle">ส่งขอโค้ด</span><button class="x" id="mclose">&times;</button></h3>
+    <div class="sbody" id="mbody"></div>
+    <div class="sfoot" id="mfoot"></div>
+  </div>
+</div>
+
+<script>
+/* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
+const APP_META = {
+  name: "imos BOM Viewer",
+  version: "3.5",
+  build: "2026-09-03/version-badge",
+  changelog: [
+    ["3.5","2026-09-03","ติดเลขเวอร์ชันบนหัวแอปและชื่อแท็บ คลิกดู changelog ได้ · เพิ่มโหมดทดลองในกล่องส่งขอโค้ด ติ๊กไว้ให้ตั้งแต่แรก กดแล้วเห็นข้อมูลที่จะส่งโดยยังไม่เขียนลง Supabase"],
+    ["3.4","2026-09-03","ย้ายผลเช็คโค้ดออกจากตาราง ไปเป็นการ์ดบนแถบสรุป ตารางเหลือคอลัมน์จากไฟล์ล้วน ตัวที่ยังไม่มีโค้ดขึ้นก่อน คลิกกรองได้"],
+    ["3.3","2026-09-03","ปุ่มแก้ X เป็น Y แก้เฉพาะ CutRiteMaterialCode สองคอลัมน์ผิวไม่ถูกแตะ เก็บ X ไว้ใช้ recheck · ใช้ค่าในคอลัมน์ผิวเป็นตัวชี้ว่าต้องแทนช่วงไหน"],
+    ["3.2","2026-09-03","เปิดไฟล์เสร็จเช็คโค้ดให้อัตโนมัติ (เฉพาะแท็บ Fitting) · ดึง product_name กับ unit จาก fitting_global มาแสดง · กล่องแสดงความคืบหน้าระหว่างเช็ค"],
+    ["3.1","2026-09-03","แก้บั๊กเลือกสองไฟล์แล้วเข้าแท็บเดียวกันทั้งคู่ ตอนนี้อ่านให้จบก่อนแล้วแบ่งจากหัวคอลัมน์ · ส่งออกเป็น .xlsx"],
+    ["3.0","2026-09-03","เช็คโค้ดกับ Supabase (fitting_global) และส่งขอโค้ดเข้า task_tickets"],
+    ["2.0","2026-09-03","รับสองไฟล์ แยกเป็นสองแท็บ BOM ไม้ / BOM Fitting · แผงสรุปค่าในคอลัมน์ที่เน้น"],
+    ["1.0","2026-09-03","ไฟล์แรก อัปโหลด CSV/XLSX แล้วเน้นสามคอลัมน์วัสดุกับผิว"]
+  ]
+};
+try{ document.title = APP_META.name + " v" + APP_META.version; }catch(e){}
+
+const $ = id => document.getElementById(id);
+const norm = s => String(s).toLowerCase().replace(/[\s_\-.]/g, "");
+const esc = v => String(v).replace(/[&<>]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" }[c]));
+const blank = v => String(v ?? "").trim() === "";
+const isNum = v => !blank(v) && /^-?[\d.,]+$/.test(String(v).trim()) && !isNaN(String(v).replace(/,/g, ""));
+
+/* ───────── สถานะของสองแท็บ · single source of truth ─────────
+   แต่ละแท็บถือข้อมูลของตัวเองครบ สลับแท็บแล้วค่าค้นหา/เรียง/กรอง ไม่หายไป */
+const TABS = {
+  wood: {
+    label: "BOM ไม้",
+    want: ["CutRiteMaterialCode", "SurfaceBeforeCutTopCode", "SurfaceBeforeCutBottomCode"],
+    guess: null,
+    cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
+    chk: null, chkCol: -1, onlyNo: false
+  },
+  fit: {
+    label: "BOM Fitting",
+    want: ["ItemId"],
+    /* ยังไม่รู้โครงคอลัมน์ของ BOM Fitting จึงเดาเฉพาะชื่อที่ลงท้ายหรือมีคำว่า code
+       ไม่กวาด FittingName / FittingID มาด้วย เพราะนั่นไม่ใช่โค้ดที่ต้องเช็ค
+       ถ้าเดาผิด กดปุ่ม "คอลัมน์ที่เน้น" เลือกเองได้ */
+    guess: c => /code$|code[^a-z]|^code|รหัส/i.test(String(c).trim()),
+    cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
+    chk: null, chkCol: -1, onlyNo: false
+  }
+};
+let cur = "wood", view = [];
+const T = () => TABS[cur];
+
+/* ───────── ตัวอ่าน CSV/TSV — รองรับคำพูด คอมมาในค่า ขึ้นบรรทัดในเซลล์ ─────────
+   (v1.0 เขียนไว้แล้ว ไม่แตะ) */
+function parseDelimited(text, d){
+  text = text.replace(/^\uFEFF/, "");
+  const out = []; let row = [], cell = "", q = false, i = 0;
+  while (i < text.length){
+    const c = text[i];
+    if (q){
+      if (c === '"'){ if (text[i+1] === '"'){ cell += '"'; i += 2; continue; } q = false; i++; continue; }
+      cell += c; i++; continue;
+    }
+    if (c === '"'){ q = true; i++; continue; }
+    if (c === d){ row.push(cell); cell = ""; i++; continue; }
+    if (c === "\r"){ i++; continue; }
+    if (c === "\n"){ row.push(cell); out.push(row); row = []; cell = ""; i++; continue; }
+    cell += c; i++;
+  }
+  if (cell !== "" || row.length){ row.push(cell); out.push(row); }
+  return out.filter(r => r.some(v => String(v).trim() !== ""));
+}
+function detectDelim(text){
+  const first = text.split(/\r?\n/)[0] || "";
+  const n = ch => (first.match(new RegExp("\\" + ch, "g")) || []).length;
+  const cand = [["\t", n("\t")], [",", n(",")], [";", n(";")], ["|", n("|")]];
+  cand.sort((a, b) => b[1] - a[1]);
+  return cand[0][1] > 0 ? cand[0][0] : ",";
+}
+
+/* ───────── รับข้อมูลเข้าแท็บ ───────── */
+/* v3.0: เดาแท็บจากหัวคอลัมน์ — แม่นกว่าเดาจากชื่อไฟล์
+   นับว่าหัวตารางตรงกับคอลัมน์ที่แต่ละแท็บต้องการกี่ตัว ใครมากกว่าได้ไป */
+function pickTabByContent(cols){
+  const set = new Set(cols.map(norm));
+  const score = k => TABS[k].want.filter(x => set.has(norm(x))).length;
+  const w = score("wood"), f = score("fit");
+  if (w > f) return "wood";
+  if (f > w) return "fit";
+  return cur;
+}
+
+function ingest(matrix, name, tab){
+  if (!matrix.length || matrix[0].length < 2){
+    return fail("อ่านไฟล์ไม่ออก",
+      "ไม่พบหัวตาราง หรือมีคอลัมน์เดียว ตรวจว่าบรรทัดแรกของไฟล์เป็นหัวตาราง");
+  }
+  const head = matrix[0].map(h => String(h).trim());
+  if (!tab) tab = pickTabByContent(head);
+  const t = TABS[tab];
+  t.cols = head;
+  t.rows = matrix.slice(1).map(r => t.cols.map((_, i) => r[i] ?? ""));
+  t.file = name; t.sortCol = -1; t.sortDir = 1; t.q = ""; t.only = false; t.sel = null;
+  t.chk = null; t.chkCol = -1; t.onlyNo = false;   // ไฟล์ใหม่ = ผลเช็คเก่าใช้ไม่ได้แล้ว
+
+  const wantSet = new Set(t.want.map(norm));
+  t.hl = t.cols.map((c, i) => (wantSet.size && wantSet.has(norm(c))) ? i : -1).filter(i => i >= 0);
+  /* v3.0: หาคอลัมน์ที่ระบุไว้ไม่เจอ ค่อยใช้ตัวเดาสำรอง
+     แท็บ Fitting ตั้ง want เป็น ItemId ตามไฟล์จริง แต่ถ้าเจอไฟล์คนละแบบ
+     ก็ยังเดาคอลัมน์ที่ชื่อมีคำว่า code ให้ ไม่ปล่อยว่างเปล่า */
+  if (!t.hl.length && t.guess) t.hl = t.cols.map((c, i) => t.guess(c) ? i : -1).filter(i => i >= 0);
+
+  if (tab === "wood" && !t.hl.length){
+    return fail("ไม่พบสามคอลัมน์ที่ต้องเน้น",
+      "อ่านได้ " + t.rows.length + " แถว " + t.cols.length + " คอลัมน์ แต่ไม่มีหัวชื่อ " +
+      t.want.map(x => "<code>" + x + "</code>").join(" ") +
+      "<br><br>หัวที่พบ: <code>" + t.cols.slice(0, 8).map(esc).join("</code> <code>") + "</code>" +
+      (t.cols.length > 8 ? " …" : "") +
+      "<br><br>ถ้าไฟล์นี้คือ BOM Fitting ให้สลับไปแท็บนั้นก่อนแล้วเปิดใหม่");
+  }
+  cur = tab;
+  syncTabs();
+  render();
+  /* v3.2: เปิดไฟล์เสร็จเช็คให้เลย ไม่ต้องกดเอง · ล้มเหลวก็เงียบ ๆ
+     เฉพาะแท็บ Fitting เท่านั้น เพราะ fitting_global เก็บ item ของ AX
+     ส่วนโค้ดผิวไม้ (G01M0234Y) ไม่ได้อยู่ในนั้น เช็คไปก็ขึ้นแดงทั้งกระดาน
+     แท็บไม้ยังกดปุ่มเช็คเองได้ถ้าต้องการ */
+  if (tab === "fit" && t.hl.length)
+    setTimeout(() => { if (cur === tab && !t.chk) runCheck(true); }, 120);
+}
+
+function fail(title, body){
+  $("drop").className = "err";
+  $("drop").innerHTML = "<h2></h2><p></p><p style='font-size:12px;color:var(--faint)'>ลากไฟล์ใหม่มาวางเพื่อลองอีกครั้ง</p>";
+  $("drop").children[0].textContent = title;
+  $("drop").children[1].innerHTML = body;
+  $("bar").className = ""; $("sum").className = "";
+  $("state").textContent = "เปิดไฟล์ไม่สำเร็จ"; $("meta").textContent = "";
+}
+
+function emptyScreen(){
+  const t = T();
+  $("drop").className = "";
+  $("drop").innerHTML =
+    "<h2>" + esc(t.label) + " — ลากไฟล์มาวางตรงนี้</h2>" +
+    "<p>ลาก <b>export_item</b> กับ <b>export_fitting</b> มาพร้อมกันได้เลย " +
+    "ระบบดูหัวคอลัมน์แล้วแยกเข้าสองแท็บให้เอง<br>" +
+    "รองรับ <code>.xlsx</code> <code>.csv</code> <code>.tsv</code> " +
+    "หรือคัดลอกจาก Excel แล้วกด <b>Ctrl+V</b><br>" +
+    "ไฟล์เปิดในเครื่องคุณเท่านั้น ไม่มีการส่งข้อมูลออกไปไหน</p>" +
+    (t.want.length
+      ? '<div class="chips">' + t.want.map(x => '<span class="chip">' + esc(x) + "</span>").join("") +
+        '</div><p style="font-size:12px;color:var(--faint)">สามคอลัมน์นี้จะถูกเน้นให้อัตโนมัติ</p>'
+      : '<p style="font-size:12px;color:var(--faint)">จะเน้นคอลัมน์ที่ชื่อมีคำว่า code ให้ก่อน ' +
+        'แล้วเลือกเปลี่ยนเองได้ที่ปุ่ม “คอลัมน์ที่เน้น”</p>');
+}
+
+/* ───────── กรอง เรียง วาด ───────── */
+function apply(){
+  const t = T();
+  const q = t.q.trim().toLowerCase();
+
+  view = t.rows.filter(r => {
+    if (t.only && !t.hl.some(i => blank(r[i]))) return false;
+    if (t.onlyNo && t.chk && codeState(t, r) !== "no") return false;
+    if (t.sel){
+      const v = String(r[t.sel.col] ?? "").trim();
+      if (t.sel.val === "\u0000" ? v !== "" : v !== t.sel.val) return false;
+    }
+    if (q && !r.some(v => String(v).toLowerCase().includes(q))) return false;
+    return true;
+  });
+
+  if (t.sortCol >= 0){
+    const c = t.sortCol, d = t.sortDir;
+    view = view.slice().sort((a, b) => {
+      const x = a[c], y = b[c];
+      if (isNum(x) && isNum(y)) return (parseFloat(String(x).replace(/,/g,"")) - parseFloat(String(y).replace(/,/g,""))) * d;
+      return String(x).localeCompare(String(y), "th") * d;
+    });
+  }
+  drawTable(q);
+  drawSummary();
+}
+
+function drawTable(q){
+  const t = T();
+  const hi = s => {
+    const e = esc(s);
+    if (!q) return e;
+    const k = e.toLowerCase().indexOf(q.toLowerCase());
+    return k < 0 ? e : e.slice(0,k) + "<mark>" + e.slice(k,k+q.length) + "</mark>" + e.slice(k+q.length);
+  };
+  const ar = i => t.sortCol !== i ? "" : '<span class="ar">' + (t.sortDir > 0 ? "\u25B2" : "\u25BC") + "</span>";
+  const HL = new Set(t.hl);
+
+  /* v3.4: ผลเช็คย้ายไปการ์ดข้างบนแล้ว ตารางเหลือคอลัมน์จากไฟล์ล้วน ๆ */
+  $("head").innerHTML = '<tr><th class="rn">#</th>' + t.cols.map((c, i) =>
+    '<th class="' + (HL.has(i) ? "hl" : "") + '" data-i="' + i + '">' + esc(c) + ar(i) + "</th>").join("") + "</tr>";
+
+  const MAX = 4000;
+  $("body").innerHTML = view.slice(0, MAX).map((r, n) => {
+    return '<tr><td class="rn">' + (n+1) + "</td>" + r.map((v, i) => {
+      const cls = [];
+      if (HL.has(i)) cls.push(blank(v) ? "miss" : "hl");
+      else if (blank(v)) cls.push("e");
+      if (isNum(v)) cls.push("n");
+      return '<td class="' + cls.join(" ") + '">' + (blank(v) ? "\u2013" : hi(v)) + "</td>";
+    }).join("") + "</tr>";
+  }).join("");
+
+  $("head").querySelectorAll("th[data-i]").forEach(th => {
+    th.onclick = () => {
+      const i = +th.dataset.i;
+      if (t.sortCol === i) t.sortDir = -t.sortDir; else { t.sortCol = i; t.sortDir = 1; }
+      apply();
+    };
+  });
+
+  $("state").textContent = "แสดง " + Math.min(view.length, MAX).toLocaleString("th-TH") +
+    (view.length !== t.rows.length ? " จาก " + t.rows.length.toLocaleString("th-TH") : "") + " แถว" +
+    (view.length > MAX ? "  (จำกัด " + MAX.toLocaleString("th-TH") + " แถวเพื่อความลื่น)" : "") +
+    (t.sel ? "  \u00B7  กรองที่ " + t.cols[t.sel.col] + " = " +
+             (t.sel.val === "\u0000" ? "(ว่าง)" : t.sel.val) + "  \u2014 คลิกซ้ำเพื่อยกเลิก" : "");
+  $("meta").textContent = t.file + "  \u00B7  " + t.cols.length + " คอลัมน์";
+}
+
+/* ───────── แผงสรุปค่า (ข้อ 2) ─────────
+   ตอบคำถามว่า "คอลัมน์นี้มีค่าอะไรบ้าง อย่างละกี่ชิ้น รวม Qty เท่าไร" */
+function qtyIndex(t){
+  const i = t.cols.findIndex(c => norm(c) === "qty" || norm(c) === "quantity");
+  return i;
+}
+function drawSummary(){
+  const t = T();
+  if (!t.hl.length && !t.chk){ $("sum").className = ""; $("bar").className = ""; return; }
+  const qi = qtyIndex(t);
+
+  /* แถบสถิติบรรทัดเดียว */
+  let bar = '<div class="stat"><b>' + t.rows.length.toLocaleString("th-TH") + "</b><i>แถวทั้งหมด</i></div>";
+  if (qi >= 0){
+    const sq = t.rows.reduce((s, r) => s + (parseFloat(String(r[qi]).replace(/,/g,"")) || 0), 0);
+    bar += '<div class="stat"><b>' + sq.toLocaleString("th-TH") + "</b><i>รวม Qty</i></div>";
+  }
+  t.hl.forEach(i => {
+    const miss = t.rows.filter(r => blank(r[i])).length;
+    const uniq = new Set(t.rows.map(r => String(r[i]).trim()).filter(v => v !== "")).size;
+    bar += '<div class="stat"><b class="' + (miss ? "bad" : "hl") + '">' + uniq + " ค่า" +
+           (miss ? "  \u00B7  ว่าง " + miss : "") + "</b><i>" + esc(t.cols[i]) + "</i></div>";
+  });
+  $("bar").className = "on"; $("bar").innerHTML = bar;
+
+  /* v3.4: การ์ดผลเช็คโค้ด — ใบแรก กว้างกว่าใบอื่น
+     ตัวที่ยังไม่มีโค้ดขึ้นก่อนเพราะเป็นตัวที่ต้องลงมือทำ */
+  let checkCard = "";
+  if (t.chk){
+    const ci = t.chk.col;
+    const cnt = new Map();     // code -> จำนวนแถวในไฟล์
+    t.rows.forEach(r => {
+      const v = String(r[ci] ?? "").trim();
+      if (v) cnt.set(v, (cnt.get(v) || 0) + 1);
+    });
+    const codes = [...cnt.keys()];
+    const miss = codes.filter(c => !t.chk.map.has(c)).sort();
+    const have = codes.filter(c =>  t.chk.map.has(c)).sort();
+
+    const line = (c, isMiss) => {
+      const rec = t.chk.map.get(c);
+      const on = t.sel && t.sel.col === ci && t.sel.val === c;
+      return '<div class="crow ' + (isMiss ? "no" : "yes") + (on ? " sel" : "") +
+        '" data-c="' + ci + '" data-v="' + esc(c) + '">' +
+        '<span class="ic">' + (isMiss ? "\u2715" : "\u2713") + "</span>" +
+        '<span class="cd" title="' + esc(c) + '">' + esc(c) + "</span>" +
+        '<span class="nm" title="' + esc((rec && rec.search_name) || "") + '">' +
+          esc(isMiss ? "ยังไม่มีในระบบ" : ((rec && rec.product_name) || "\u2013")) + "</span>" +
+        '<span class="un">' + esc((rec && rec.unit) || "") + "</span>" +
+        '<span class="qt">' + cnt.get(c) + "</span></div>";
+    };
+
+    checkCard =
+      '<div class="sumcard wide"><h3><span>ผลเช็คโค้ด \u00B7 ' + esc(t.cols[ci]) + "</span><em>" +
+        have.length + " มี \u00B7 " + miss.length + " ยังไม่มี</em></h3>" +
+      (miss.length ? '<div class="csplit">ยังไม่มีในระบบ ' + miss.length + " โค้ด</div>" +
+                     miss.map(c => line(c, true)).join("") : "") +
+      (have.length ? '<div class="csplit ok">มีในระบบแล้ว ' + have.length + " โค้ด</div>" +
+                     have.map(c => line(c, false)).join("") : "") +
+      "</div>";
+  }
+
+  /* การ์ดสรุปต่อคอลัมน์ */
+  $("sum").className = "on";
+  $("sum").innerHTML = checkCard + t.hl.map(ci => {
+    const m = new Map();
+    t.rows.forEach(r => {
+      const raw = String(r[ci] ?? "").trim();
+      const key = raw === "" ? "\u0000" : raw;
+      const o = m.get(key) || { n: 0, q: 0 };
+      o.n++;
+      if (qi >= 0) o.q += parseFloat(String(r[qi]).replace(/,/g,"")) || 0;
+      m.set(key, o);
+    });
+    const list = [...m.entries()].sort((a, b) => b[1].n - a[1].n);
+    const top = list[0] ? list[0][1].n : 1;
+    const tot = t.rows.length || 1;
+
+    return '<div class="sumcard"><h3><span>' + esc(t.cols[ci]) + "</span><em>" +
+      list.length + " ค่า</em></h3>" +
+      list.map(([v, o]) => {
+        const isNone = v === "\u0000";
+        const on = t.sel && t.sel.col === ci && t.sel.val === v;
+        return '<div class="vrow' + (isNone ? " none-row" : "") + (on ? " sel" : "") +
+          '" data-c="' + ci + '" data-v="' + esc(v) + '">' +
+          '<span class="bar" style="width:' + (o.n / top * 100).toFixed(1) + '%"></span>' +
+          '<span class="v' + (isNone ? " none" : "") + '" title="' + esc(isNone ? "(ว่าง)" : v) + '">' +
+            esc(isNone ? "(ว่าง)" : v) + "</span>" +
+          '<span class="c">' + o.n + (qi >= 0 ? "  \u00B7  " + o.q.toLocaleString("th-TH") : "") + "</span>" +
+          '<span class="p">' + (o.n / tot * 100).toFixed(0) + "%</span></div>";
+      }).join("") + "</div>";
+  }).join("");
+
+  $("sum").querySelectorAll(".vrow, .crow").forEach(el => {
+    el.onclick = () => {
+      const c = +el.dataset.c, v = el.dataset.v;
+      t.sel = (t.sel && t.sel.col === c && t.sel.val === v) ? null : { col: c, val: v };
+      apply();
+    };
+  });
+}
+
+/* ───────── สลับแท็บ ───────── */
+function syncTabs(){
+  document.querySelectorAll(".tab").forEach(b => {
+    const t = TABS[b.dataset.t];
+    b.classList.toggle("on", b.dataset.t === cur);
+    b.classList.toggle("empty", t.rows.length === 0);
+    b.querySelector(".n").textContent = t.rows.length.toLocaleString("th-TH");
+  });
+}
+function render(){
+  const t = T();
+  const has = t.rows.length > 0;
+  $("csv").disabled = $("copy").disabled = $("colbtn").disabled = !has;
+  $("find").value = t.q;
+  $("only").setAttribute("aria-pressed", String(t.only));
+  $("colpanel").className = "";
+  if (!has){
+    $("head").innerHTML = ""; $("body").innerHTML = "";
+    $("bar").className = ""; $("sum").className = "";
+    $("state").textContent = "แท็บ " + t.label + " ยังไม่มีข้อมูล"; $("meta").textContent = "";
+    $("chkbar").className = "";
+    emptyScreen();
+    return;
+  }
+  $("drop").className = "off";
+  syncChkBar();
+  apply();
+}
+document.querySelectorAll(".tab").forEach(b => {
+  b.onclick = () => { cur = b.dataset.t; syncTabs(); render(); };
+});
+
+/* ───────── รับไฟล์ ─────────
+   ลากมาสองไฟล์พร้อมกัน -> เดาจากชื่อไฟล์ว่าอันไหนคือ fitting
+   เดาไม่ออกก็ใส่ไม้ก่อนแล้ว fitting ตามลำดับ */
+/* v3.1: คืนคำใบ้จากชื่อไฟล์เท่านั้น ไม่ตัดสินเอง — ตัวตัดสินจริงคือหัวคอลัมน์
+   (item = BOM ไม้ ตามที่โปรแกรม Export Ax ตั้งชื่อมา) */
+function guessTab(name){
+  const n = norm(name);
+  if (/fitting|hardware|accessor|อุปกรณ/.test(n)) return "fit";
+  if (/item|wood|board|part|ไม/.test(n)) return "wood";
+  return null;
+}
+/* v3.1: อ่านไฟล์เป็น Promise คืนตารางดิบ ยังไม่ตัดสินว่าเข้าแท็บไหน */
+function readMatrix(f){
+  return new Promise((res, rej) => {
+    const ext = (f.name.split(".").pop() || "").toLowerCase();
+    const fr = new FileReader();
+    fr.onerror = () => rej(new Error("อ่านไฟล์ไม่ได้"));
+    if (ext === "xlsx" || ext === "xls"){
+      if (typeof XLSX === "undefined")
+        return rej(new Error("ตัวอ่าน .xlsx โหลดจากอินเทอร์เน็ตไม่สำเร็จ"));
+      fr.onload = e => {
+        try{
+          const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+          const sh = wb.Sheets[wb.SheetNames[0]];
+          res({ name: f.name, m: XLSX.utils.sheet_to_json(sh, { header: 1, raw: false, defval: "" }) });
+        }catch(err){ rej(err); }
+      };
+      fr.readAsArrayBuffer(f);
+    } else {
+      fr.onload = e => {
+        const x = e.target.result;
+        res({ name: f.name, m: parseDelimited(x, detectDelim(x)) });
+      };
+      fr.readAsText(f, "UTF-8");
+    }
+  });
+}
+
+/* คะแนนความเข้ากันของหัวตารางกับแต่ละแท็บ */
+function tabScore(head, k){
+  const set = new Set(head.map(norm));
+  return TABS[k].want.filter(x => set.has(norm(x))).length;
+}
+
+/* v3.1: อ่านให้ครบก่อน แล้วค่อยแบ่งแท็บ
+   เดิมเดาจากชื่อไฟล์ทีละตัว ทำให้ export_item_... กับ export_fitting_...
+   วิ่งเข้าแท็บเดียวกันทั้งคู่ ตัวหลังทับตัวแรก */
+async function takeFiles(list){
+  const fs = [...list].slice(0, 2);
+  if (!fs.length) return;
+
+  let got;
+  try{
+    got = await Promise.all(fs.map(readMatrix));
+  }catch(e){
+    return fail("เปิดไฟล์ไม่สำเร็จ", esc(e.message) +
+      "<br><br>ถ้าเป็นไฟล์ Excel ลอง <b>Save As \u2192 CSV UTF-8</b> แล้วลากไฟล์นั้นมาแทน " +
+      "หรือคัดลอกทั้งตารางแล้วกด <b>Ctrl+V</b>");
+  }
+
+  got.forEach(g => {
+    const head = (g.m[0] || []).map(h => String(h).trim());
+    g.w = tabScore(head, "wood");
+    g.f = tabScore(head, "fit");
+    g.hint = guessTab(g.name);          // ชื่อไฟล์เป็นแค่ตัวช่วยตัดสินเวลาคะแนนเท่ากัน
+  });
+
+  if (got.length === 1){
+    const g = got[0];
+    const t = g.w > g.f ? "wood" : g.f > g.w ? "fit" : (g.hint || cur);
+    return ingest(g.m, g.name, t);
+  }
+
+  /* สองไฟล์: ให้คนที่เหมาะกับ wood มากกว่าไปอยู่ wood อีกคนไป fit */
+  const [a, b] = got;
+  const aWood = (a.w - a.f) + (a.hint === "wood" ? .5 : a.hint === "fit" ? -.5 : 0);
+  const bWood = (b.w - b.f) + (b.hint === "wood" ? .5 : b.hint === "fit" ? -.5 : 0);
+  const first = aWood >= bWood ? a : b, second = aWood >= bWood ? b : a;
+  ingest(first.m,  first.name,  "wood");
+  ingest(second.m, second.name, "fit");
+  cur = "wood"; syncTabs(); render();
+}
+
+$("open").onclick = () => $("pick").click();
+$("pick").onchange = e => takeFiles(e.target.files);
+
+["dragenter","dragover"].forEach(ev =>
+  document.addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave","drop"].forEach(ev =>
+  document.addEventListener(ev, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
+document.addEventListener("drop", e => {
+  if (e.dataTransfer && e.dataTransfer.files.length){ $("drop").className = ""; takeFiles(e.dataTransfer.files); }
+});
+document.addEventListener("paste", e => {
+  if (e.target === $("find")) return;
+  const x = (e.clipboardData || window.clipboardData).getData("text");
+  if (!x || x.indexOf("\n") < 0) return;
+  e.preventDefault();
+  $("drop").className = "";
+  ingest(parseDelimited(x, detectDelim(x)), "วางจากคลิปบอร์ด", null);
+});
+
+/* ───────── ปุ่มต่าง ๆ ───────── */
+let deb;
+$("find").oninput = function(){
+  T().q = this.value;
+  clearTimeout(deb); deb = setTimeout(() => T().rows.length && apply(), 180);
+};
+$("only").onclick = function(){
+  const on = this.getAttribute("aria-pressed") !== "true";
+  this.setAttribute("aria-pressed", String(on)); T().only = on;
+  if (T().rows.length) apply();
+};
+$("colbtn").onclick = () => {
+  const t = T(), p = $("colpanel");
+  if (p.className === "on"){ p.className = ""; return; }
+  p.innerHTML = "<h4>เลือกคอลัมน์ที่จะเน้นและสรุปค่า</h4>" + t.cols.map((c, i) =>
+    '<label><input type="checkbox" data-i="' + i + '"' + (t.hl.includes(i) ? " checked" : "") +
+    "> " + esc(c) + "</label>").join("");
+  p.className = "on";
+  p.querySelectorAll("input").forEach(cb => {
+    cb.onchange = () => {
+      const i = +cb.dataset.i;
+      t.hl = cb.checked ? [...t.hl, i].sort((a,b)=>a-b) : t.hl.filter(x => x !== i);
+      if (t.sel && !t.hl.includes(t.sel.col)) t.sel = null;
+      syncFixBtn();   // v3.1: เปลี่ยนคอลัมน์ที่เน้น จำนวน X ที่ต้องแก้ก็เปลี่ยนตาม
+      apply();
+    };
+  });
+};
+document.addEventListener("click", e => {
+  if (!$("colpanel").contains(e.target) && e.target !== $("colbtn")) $("colpanel").className = "";
+});
+
+function toast(msg){
+  $("toast").textContent = msg; $("toast").className = "on";
+  setTimeout(() => $("toast").className = "", 1700);
+}
+
+/* คัดลอกโค้ดไม่ซ้ำ — เตรียมวางลงช่อง "วางจาก Excel" ของแอปส่งตั้ง Code AX */
+$("copy").onclick = () => {
+  const t = T();
+  const set = new Set();
+  t.hl.forEach(i => t.rows.forEach(r => { const v = String(r[i]).trim(); if (v) set.add(v); }));
+  const txt = [...set].sort().join("\n");
+  if (!txt) return toast("ไม่มีโค้ดให้คัดลอก");
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject())
+    .then(() => toast("คัดลอก " + set.size + " โค้ดแล้ว — วางในแอปส่งตั้ง Code AX ได้เลย"))
+    .catch(() => {
+      const ta = document.createElement("textarea");
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); toast("คัดลอก " + set.size + " โค้ดแล้ว"); }
+      catch(_){ toast("คัดลอกไม่สำเร็จ"); }
+      ta.remove();
+    });
+};
+
+/* ───────── ส่งออกเป็น .xlsx (v3.1) — ไฟล์นำเข้าเป็น xlsx อยู่แล้ว
+   ถ้าตัวเขียนโหลดไม่ได้ (เครื่องออกเน็ตไม่ได้) ตกไปเป็น CSV ให้อัตโนมัติ */
+/* v3.2: ถ้าเช็คโค้ดแล้ว ให้ติดสามคอลัมน์ผลเช็คไปกับไฟล์ที่บันทึกด้วย */
+function exportRows(t){
+  if (!t.chk) return { head: t.cols, body: view };
+  const head = [...t.cols, "มีโค้ดในระบบ", "ชื่อในระบบ", "หน่วย"];
+  const body = view.map(r => {
+    const v = String(r[t.chk.col] ?? "").trim();
+    const rec = t.chk.map.get(v);
+    return [...r, !v ? "" : (rec ? "มี" : "ยังไม่มี"),
+            (rec && rec.product_name) || "", (rec && rec.unit) || ""];
+  });
+  return { head, body };
+}
+
+$("csv").onclick = () => {
+  const t = T();
+  const { head: xh, body: xb } = exportRows(t);
+  const base = (t.file.replace(/\.[^.]+$/, "") || t.label) + "_edited";
+  if (typeof XLSX !== "undefined"){
+    try{
+      const ws = XLSX.utils.aoa_to_sheet([xh, ...xb]);
+      ws["!cols"] = xh.map((c, i) => ({
+        wch: Math.min(38, Math.max(String(c).length + 2,
+             ...xb.slice(0, 300).map(r => String(r[i] ?? "").length + 2)))
+      }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, t.label.slice(0, 28));
+      XLSX.writeFile(wb, base + ".xlsx");
+      return toast("บันทึก " + xb.length.toLocaleString("th-TH") + " แถวเป็น .xlsx แล้ว" +
+                   (t.chk ? " (มีผลเช็คโค้ดติดไปด้วย)" : ""));
+    }catch(e){ /* ตกไปใช้ CSV ข้างล่าง */ }
+  }
+  const q = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
+  const csv = [xh.map(q).join(",")].concat(xb.map(r => r.map(q).join(","))).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
+  a.download = base + ".csv";
+  a.click(); URL.revokeObjectURL(a.href);
+  toast("เขียน .xlsx ไม่ได้ บันทึกเป็น CSV แทน");
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   แก้ X เป็น Y  (v3.1)
+   กฎ: ค่าที่ขึ้นต้นด้วย G และลงท้ายด้วย X  ->  เปลี่ยนตัวท้ายเป็น Y
+       เช่น G01M0234X -> G01M0234Y
+   ดูเฉพาะคอลัมน์ที่เน้นอยู่ ไม่ไล่ทั้งตาราง
+   CutRiteMaterialCode เป็นค่าที่ประกอบจากโค้ดผิว (PB19 + top + bottom)
+   จึงให้เลือกได้ว่าจะให้อัปเดตตามไปด้วยไหม
+   ═══════════════════════════════════════════════════════════════ */
+const RE_GX = /^G[0-9A-Za-z]*X$/;
+const toY = v => v.slice(0, -1) + "Y";
+
+/* หา index ของคอลัมน์จากชื่อ (ไม่สนตัวพิมพ์/ช่องว่าง/ขีด) */
+function colIdx(t, name){ return t.cols.findIndex(c => norm(c) === norm(name)); }
+
+/* คอลัมน์ผิวที่ใช้เป็นตัวชี้ — เก็บ X ไว้ตามเดิม ไม่ถูกแก้ */
+function surfaceCols(t){
+  return ["SurfaceBeforeCutTopCode", "SurfaceBeforeCutBottomCode"]
+    .map(n => colIdx(t, n)).filter(i => i >= 0);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   แก้ X เป็น Y  (v3.3) — เฉพาะคอลัมน์ CutRiteMaterialCode
+   ค่าในนั้นคือ prefix + โค้ดผิวบน + โค้ดผิวล่าง เช่น
+       PB19 + G01M0234X + G01M0234X  ->  PB19G01M0234XG01M0234X
+   จึงขึ้นต้นด้วย PB/MD ไม่ใช่ G กฎ "ขึ้นต้น G ลงท้าย X" ใช้กับตัวเต็มไม่ได้
+   -> อ่านค่าจากสองคอลัมน์ผิวของแถวนั้น ตัวไหนเข้ากฎ G...X ก็เอาไปแทนใน
+      material code ตรง ๆ ไม่ต้องเดาว่าโค้ดยาวกี่ตัว
+   สองคอลัมน์ผิวไม่ถูกแตะ เก็บ X ไว้ใช้ recheck ว่าแถวไหนเคยแก้
+   ═══════════════════════════════════════════════════════════════ */
+function scanXY(t){
+  const mat = colIdx(t, "CutRiteMaterialCode");
+  if (mat < 0) return { mat: -1, hits: [], cells: 0 };
+
+  const surf = surfaceCols(t);
+  const byPair = new Map();           // "from\u0000to" -> { from, to, rows[], src:Set }
+  let cells = 0;
+
+  t.rows.forEach((r, ri) => {
+    const cur = String(r[mat] ?? "").trim();
+    if (!cur) return;
+    let next = cur;
+    const used = [];
+
+    if (surf.length){
+      surf.forEach(si => {
+        const sv = String(r[si] ?? "").trim();
+        if (!RE_GX.test(sv)) return;
+        if (!next.includes(sv)) return;
+        next = next.split(sv).join(toY(sv));
+        used.push(t.cols[si]);
+      });
+    }
+    /* ไม่มีคอลัมน์ผิว หรือแทนแล้วไม่เปลี่ยน — ลองกฎเดิมกับตัวค่าเต็ม */
+    if (next === cur && RE_GX.test(cur)){ next = toY(cur); used.push("(ค่าเต็ม)"); }
+    if (next === cur) return;
+
+    cells++;
+    const k = cur + "\u0000" + next;
+    if (!byPair.has(k)) byPair.set(k, { from: cur, to: next, rows: [], src: new Set() });
+    const o = byPair.get(k);
+    o.rows.push(ri);
+    used.forEach(u => o.src.add(u));
+  });
+
+  const hits = [...byPair.values()].sort((a, b) => b.rows.length - a.rows.length);
+  return { mat, hits, cells };
+}
+
+function syncFixBtn(){
+  const t = T();
+  const btn = $("fixxy");
+  if (!t.rows.length){ btn.disabled = true; btn.textContent = "แก้ X เป็น Y"; return; }
+  const { mat, cells } = scanXY(t);
+  if (mat < 0){
+    btn.disabled = true;
+    btn.textContent = "ไม่มี CutRiteMaterialCode";
+    btn.title = "แท็บนี้ไม่มีคอลัมน์ CutRiteMaterialCode จึงไม่มีอะไรให้แก้";
+    return;
+  }
+  btn.title = "แก้เฉพาะ CutRiteMaterialCode \u00B7 สองคอลัมน์ผิวเก็บ X ไว้เป็นตัวเทียบ";
+  btn.disabled = cells === 0;
+  btn.textContent = cells ? "แก้ X เป็น Y (" + cells + ")" : "ไม่มี X ให้แก้";
+}
+
+$("fixxy").onclick = () => {
+  const t = T();
+  const { mat, hits, cells } = scanXY(t);
+  if (mat < 0) return toast("แท็บนี้ไม่มีคอลัมน์ CutRiteMaterialCode");
+  if (!hits.length) return toast("ไม่พบ X ที่ต้องแก้ใน CutRiteMaterialCode");
+
+  const surf = surfaceCols(t);
+  $("mtitle").textContent = "แก้ X เป็น Y ใน CutRiteMaterialCode";
+  $("mbody").innerHTML =
+    '<p style="font-size:13px;color:var(--dim);line-height:1.7">' +
+    "จะแก้เฉพาะคอลัมน์ <b>" + esc(t.cols[mat]) + "</b> รวม <b>" + cells +
+    "</b> แถว จาก <b>" + hits.length + "</b> รูปแบบ<br>" +
+    (surf.length
+      ? "ดูจากค่าใน " + surf.map(i => "<b>" + esc(t.cols[i]) + "</b>").join(" และ ") +
+        " ของแถวนั้นว่าต้องแทนช่วงไหน"
+      : "ไม่พบคอลัมน์ผิว จึงใช้กฎ ขึ้นต้น G ลงท้าย X กับค่าเต็ม") +
+    "</p>" +
+    '<div id="xylist"><div class="h"><span>ที่มา</span><span>จาก</span><span>เป็น</span><span>แถว</span></div>' +
+    hits.map(h =>
+      '<div class="xyrow"><span class="col" title="' + esc([...h.src].join(", ")) + '">' +
+        esc([...h.src].map(x => x.replace(/^SurfaceBeforeCut/, "").replace(/Code$/, "")).join(" + ")) + "</span>" +
+      '<span class="from" title="' + esc(h.from) + '">' + esc(h.from) + "</span>" +
+      '<span class="to" title="' + esc(h.to) + '">' + esc(h.to) + "</span>" +
+      '<span class="cnt">' + h.rows.length + "</span></div>").join("") +
+    "</div>" +
+    (surf.length
+      ? '<p style="font-size:12px;color:var(--faint);margin-top:11px;line-height:1.6">' +
+        surf.map(i => "<b>" + esc(t.cols[i]) + "</b>").join(" และ ") +
+        " จะไม่ถูกแตะ เก็บ X ไว้ตามเดิมเพื่อใช้ตรวจย้อนว่าแถวไหนเคยแก้</p>"
+      : "");
+
+  $("mfoot").innerHTML =
+    '<span class="note">แก้เฉพาะข้อมูลในหน้าจอนี้ ไม่แตะไฟล์ต้นฉบับและไม่แตะฐานข้อมูล</span>' +
+    '<span class="sp"></span>' +
+    '<button class="cbtn" id="xycancel">ยกเลิก</button>' +
+    '<button class="cbtn primary" id="xyok">แก้ ' + cells + " แถว</button>";
+
+  $("xycancel").onclick = closeModal;
+  $("xyok").onclick = () => {
+    let n = 0;
+    hits.forEach(h => h.rows.forEach(ri => { t.rows[ri][mat] = h.to; n++; }));
+    t.sel = null;
+    closeModal();
+    syncFixBtn(); apply();
+    toast("แก้ " + t.cols[mat] + " แล้ว " + n + " แถว  \u00B7  คอลัมน์ผิวคงเดิม  \u00B7  กดบันทึก Excel เพื่อเอาออก");
+  };
+  $("modal").className = "on";
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   เช็คโค้ดกับ Supabase + ส่งขอโค้ด  (v3.0)
+   ต่อโปรเจกต์เดียวกับแอป "ส่งตั้ง Code AX"
+     fitting_global : รายการ item ที่มีใน AX แล้ว (item_number คือคีย์)
+     task_tickets   : ใบขอตั้งโค้ด items:[{ref_code,description}]
+     app_config     : key='departments' -> รายชื่อแผนก
+   anon key เป็นคีย์สาธารณะชุดเดียวกับที่แอปนั้นเปิดไว้บน GitHub Pages
+   ═══════════════════════════════════════════════════════════════ */
+const SB_URL  = "https://auohdroxlhwwoljjwxxl.supabase.co";
+const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1b2hkcm94bGh3d29samp3eHhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1ODc5MTcsImV4cCI6MjA4ODE2MzkxN30.G350ZiXgzuKmCve7DAIMuB0G2s7ZfsgQcqqtmUPw6mg";
+const CODEAX_URL = "https://starmark-warranty.github.io/Code-AX/";
+
+let sb = null;
+function getSb(){
+  if (sb) return sb;
+  if (typeof supabase === "undefined" || !supabase.createClient) return null;
+  sb = supabase.createClient(SB_URL, SB_ANON);
+  return sb;
+}
+
+/* โค้ดของแถวนี้อยู่ในระบบแล้วหรือยัง — "yes" / "no" / "" (ไม่มีโค้ดให้เช็ค) */
+function codeState(t, r){
+  if (!t.chk || t.chkCol < 0) return "";
+  const v = String(r[t.chkCol] ?? "").trim();
+  if (!v) return "";
+  return t.chk.map.has(v) ? "yes" : "no";
+}
+
+/* รายการโค้ดไม่ซ้ำในคอลัมน์ที่เลือก */
+function codesOf(t, col){
+  const set = new Set();
+  t.rows.forEach(r => { const v = String(r[col] ?? "").trim(); if (v) set.add(v); });
+  return [...set];
+}
+
+function syncChkBar(){
+  const t = T();
+  const has = t.rows.length > 0;
+  $("chkbar").className = has ? "on" : "";
+  syncFixBtn();
+  if (!has) return;
+
+  const sel = $("chkcol");
+  if (t.chkCol < 0) t.chkCol = t.hl.length ? t.hl[0] : 0;
+  sel.innerHTML = t.cols.map((c, i) =>
+    '<option value="' + i + '"' + (i === t.chkCol ? " selected" : "") + ">" + esc(c) + "</option>").join("");
+
+  const p = $("chkres");
+  if (!t.chk){
+    p.className = "pill wait";
+    p.textContent = "ยังไม่ได้เช็ค \u00B7 " + codesOf(t, t.chkCol).length + " โค้ดไม่ซ้ำ";
+    $("reqgo").disabled = true;
+    $("onlyno").disabled = true;
+    $("onlyno").setAttribute("aria-pressed", "false");
+    $("chkat").textContent = "";
+  } else {
+    const { found, missing } = t.chk;
+    p.className = "pill " + (missing.length ? "bad" : "good");
+    p.textContent = missing.length
+      ? "มีแล้ว " + found + "  \u00B7  ยังไม่มี " + missing.length
+      : "มีครบทั้ง " + found + " โค้ด";
+    $("reqgo").disabled = missing.length === 0;
+    $("reqgo").textContent = missing.length ? "ส่งขอโค้ด " + missing.length + " รายการ" : "ส่งขอโค้ด";
+    $("onlyno").disabled = missing.length === 0;
+    $("onlyno").setAttribute("aria-pressed", String(t.onlyNo));
+    $("chkat").textContent = "เช็คเมื่อ " + t.chk.at.toLocaleTimeString("th-TH") +
+      "  \u00B7  คอลัมน์ " + t.cols[t.chk.col];
+  }
+}
+
+$("chkcol").onchange = function(){
+  const t = T();
+  t.chkCol = +this.value;
+  t.chk = null; t.onlyNo = false;
+  syncChkBar(); apply();
+};
+
+/* ───────── กล่องรอ ───────── */
+function busyOpen(total, title){
+  $("btitle").textContent = title || "กำลังเช็คโค้ดกับ Supabase";
+  $("bnow").textContent = "0";
+  $("ball").textContent = total.toLocaleString("th-TH");
+  $("bfill").className = "bfill idle";
+  $("bfill").style.width = "";
+  $("bsub").textContent = "กำลังเชื่อมต่อ\u2026";
+  $("busy").className = "on";
+}
+function busyStep(done, total, note){
+  $("bnow").textContent = done.toLocaleString("th-TH");
+  $("bfill").className = "bfill";
+  $("bfill").style.width = Math.round(done / Math.max(total, 1) * 100) + "%";
+  if (note) $("bsub").textContent = note;
+}
+function busyClose(){ $("busy").className = ""; }
+
+/* ───────── เช็คโค้ด — เรียกได้ทั้งจากปุ่มและตอน import ─────────
+   auto = true  -> ล้มเหลวแล้วเงียบ ไม่รบกวน แค่ปล่อยให้กดเช็คเองทีหลัง */
+async function runCheck(auto){
+  const t = T(), col = t.chkCol;
+  const codes = codesOf(t, col);
+  if (!codes.length){ if (!auto) toast("คอลัมน์นี้ไม่มีโค้ดให้เช็ค"); return; }
+
+  const client = getSb();
+  if (!client){ if (!auto) toast("ต่อ Supabase ไม่ได้ — ตรวจว่าเครื่องออกอินเทอร์เน็ตได้"); return; }
+
+  const btn = $("chkgo"), label = btn.textContent;
+  btn.disabled = true;
+  busyOpen(codes.length, auto ? "เปิดไฟล์เสร็จ กำลังเช็คโค้ดให้อัตโนมัติ" : "กำลังเช็คโค้ดกับ Supabase");
+
+  const map = new Map();
+  try{
+    /* ยิงทีละก้อน 200 ตัว กัน URL ยาวเกิน และกันเซิร์ฟเวอร์ทำงานหนักทีเดียว */
+    for (let i = 0; i < codes.length; i += 200){
+      const part = codes.slice(i, i + 200);
+      const done = Math.min(i + part.length, codes.length);
+      btn.textContent = "กำลังเช็ค " + done + "/" + codes.length + "\u2026";
+      busyStep(i, codes.length, "ก้อนที่ " + (i / 200 + 1) + " \u00B7 " + part[0] + " \u2026");
+      const { data, error } = await client
+        .from("fitting_global")
+        .select("item_number,product_name,unit,search_name")
+        .in("item_number", part);
+      if (error) throw new Error(error.message);
+      (data || []).forEach(d => map.set(String(d.item_number).trim(), d));
+      busyStep(done, codes.length, "พบแล้ว " + map.size + " รายการ");
+    }
+    const missing = codes.filter(c => !map.has(c));
+    t.chk = { map, col, at: new Date(), found: map.size, total: codes.length, missing };
+    t.onlyNo = false;
+    toast(missing.length
+      ? "เช็คเสร็จ \u2014 ยังไม่มีโค้ด " + missing.length + " รายการ"
+      : "เช็คเสร็จ \u2014 มีโค้ดครบทั้ง " + codes.length + " รายการ");
+  }catch(e){
+    if (!auto) toast("เช็คไม่สำเร็จ: " + e.message);
+    else toast("เช็คอัตโนมัติไม่สำเร็จ \u2014 กดปุ่มเช็คเองได้");
+  }finally{
+    busyClose();
+    btn.disabled = false;
+    btn.textContent = label;
+    syncChkBar(); apply();
+  }
+}
+$("chkgo").onclick = () => runCheck(false);
+
+$("onlyno").onclick = function(){
+  const t = T();
+  t.onlyNo = this.getAttribute("aria-pressed") !== "true";
+  this.setAttribute("aria-pressed", String(t.onlyNo));
+  apply();
+};
+
+/* ───────── กล่องส่งขอโค้ด ───────── */
+const LS_NAME = "imosviewer_sender_name";
+const LS_TOK  = "dispatch_tokens";          // คีย์เดียวกับแอป Code AX
+const LS_DRY  = "imosviewer_dryrun";        // จำว่าเลือกโหมดทดลองไว้ไหม
+let departments = [];
+
+async function loadDepartments(){
+  const client = getSb();
+  if (!client) return;
+  try{
+    const { data, error } = await client.from("app_config")
+      .select("value").eq("key", "departments").maybeSingle();
+    if (!error && Array.isArray(data && data.value)) departments = data.value;
+  }catch(e){}
+}
+
+function closeModal(){ $("modal").className = ""; }
+$("mclose").onclick = closeModal;
+$("modal").onclick = e => { if (e.target === $("modal")) closeModal(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+$("reqgo").onclick = async function(){
+  const t = T();
+  if (!t.chk || !t.chk.missing.length) return;
+  await loadDepartments();
+
+  /* หาแถวตัวอย่างของแต่ละโค้ด เพื่อเติมคำอธิบายตั้งต้นจากคอลัมน์อื่นในไฟล์ */
+  const sample = new Map();
+  t.rows.forEach(r => {
+    const v = String(r[t.chk.col] ?? "").trim();
+    if (v && !sample.has(v)) sample.set(v, r);
+  });
+  const other = t.cols.map((c, i) => i).filter(i => i !== t.chk.col);
+  const describe = code => {
+    const r = sample.get(code);
+    if (!r) return "";
+    return other.map(i => t.cols[i] + " " + String(r[i] ?? "").trim())
+                .filter(x => !/ $/.test(x)).join("  \u00B7  ");
+  };
+
+  $("mtitle").textContent = "ส่งขอตั้งโค้ด " + t.chk.missing.length + " รายการ";
+  $("mbody").innerHTML =
+    '<div class="frow">' +
+      '<div class="fld"><label for="mname">ชื่อผู้ส่ง</label>' +
+        '<input id="mname" placeholder="ชื่อคุณ" value="' + esc(localStorage.getItem(LS_NAME) || "") + '"></div>' +
+      '<div class="fld"><label for="mdept">แผนก</label><select id="mdept">' +
+        '<option value="">\u2014 เลือกแผนก \u2014</option>' +
+        departments.map(d => '<option value="' + esc(d) + '">' + esc(d) + "</option>").join("") +
+      "</select></div>" +
+    "</div>" +
+    '<div class="frow"><div class="fld"><label for="msubj">หัวเรื่อง</label>' +
+      '<input id="msubj" value="ขอตั้งโค้ด Fitting \u2014 ' + esc(t.file) + '"></div></div>' +
+    '<div id="mlist"><div class="h"><span></span><span>Code อ้างอิง (จาก BOM)</span><span>คำอธิบาย \u2014 แก้ได้</span></div>' +
+    t.chk.missing.map((c, i) =>
+      '<div class="mrow"><input type="checkbox" data-i="' + i + '" checked>' +
+      '<span class="rc" title="' + esc(c) + '">' + esc(c) + "</span>" +
+      '<input class="md" data-i="' + i + '" value="' + esc(describe(c)) + '" placeholder="อธิบายว่าเป็นอะไร"></div>').join("") +
+    "</div>";
+
+  /* v3.5: โหมดทดลอง — ติ๊กไว้ให้ตั้งแต่แรก กดแล้วเห็นข้อมูลที่จะส่งจริง
+     โดยยังไม่เขียนลง Supabase · ส่วนส่งจริงเขียนไว้ตั้งแต่ v3.0 แต่ยังไม่เคย
+     ทดสอบกับ Supabase ของจริง จึงกันพลาดไว้ก่อน */
+  const dryPref = localStorage.getItem(LS_DRY);
+  const dry = dryPref === null ? true : dryPref === "1";
+  $("mbody").insertAdjacentHTML("beforeend",
+    '<label class="dryline"><input type="checkbox" id="mdry"' + (dry ? " checked" : "") + ">" +
+    "<span><b>โหมดทดลอง — ยังไม่ส่งจริง</b><br>" +
+    "กดแล้วจะเห็นข้อมูลที่จะถูกเขียนลง <code>task_tickets</code> โดยไม่แตะฐานข้อมูล " +
+    "ตรวจว่าถูกต้องแล้วค่อยปลดติ๊กแล้วกดส่งอีกครั้ง</span></label>");
+
+  const foot = () => {
+    const isDry = $("mdry").checked;
+    $("mfoot").innerHTML =
+      '<span class="note">' + (isDry
+        ? "กำลังอยู่ในโหมดทดลอง ไม่มีอะไรถูกเขียนลงฐานข้อมูล"
+        : "รายการจะเข้าไปที่แอป ส่งตั้ง Code AX ให้คนตั้งโค้ดรับไปทำ") + "</span>" +
+      '<span class="sp"></span>' +
+      '<button class="cbtn" id="mcancel">ยกเลิก</button>' +
+      '<button class="cbtn ' + (isDry ? "primary" : "warn") + '" id="msend">' +
+        (isDry ? "ดูข้อมูลที่จะส่ง" : "ส่งรายการจริง") + "</button>";
+    $("mcancel").onclick = closeModal;
+    $("msend").onclick = () => sendRequest(t);
+  };
+  foot();
+  $("mdry").onchange = function(){
+    localStorage.setItem(LS_DRY, this.checked ? "1" : "0");
+    foot();
+  };
+  $("modal").className = "on";
+  setTimeout(() => $("mname").focus(), 60);
+};
+
+async function sendRequest(t){
+  const btn = $("msend");
+  const name = $("mname").value.trim();
+  const dept = $("mdept").value;
+  const subject = $("msubj").value.trim();
+  if (!name){ $("mname").focus(); return toast("ใส่ชื่อผู้ส่งก่อน"); }
+
+  const items = [...$("mlist").querySelectorAll(".mrow")].map((row, i) => {
+    if (!row.querySelector('input[type=checkbox]').checked) return null;
+    return {
+      ref_code: t.chk.missing[i],
+      description: row.querySelector(".md").value.trim() || t.chk.missing[i]
+    };
+  }).filter(Boolean);
+
+  if (!items.length) return toast("ยังไม่ได้เลือกรายการไหนเลย");
+
+  const token = "tk_" + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+  const payload = {
+    sender_name: name,
+    sender_token: token,
+    message: items.length + " รายการ",
+    items,
+    attachments: [],
+    status: "pending",
+    department: dept || null,
+    subject: subject || null
+  };
+
+  /* v3.5: โหมดทดลอง — โชว์ payload ที่จะเขียนลง task_tickets แล้วจบ ไม่แตะฐานข้อมูล */
+  const dryEl = $("mdry");
+  if (dryEl && dryEl.checked){
+    $("mtitle").textContent = "ทดลอง \u2014 ยังไม่ได้ส่ง";
+    $("mbody").innerHTML =
+      '<p style="font-size:13px;color:var(--dim);line-height:1.7">' +
+      "นี่คือข้อมูลที่จะถูกเขียนลงตาราง <code>task_tickets</code> ของ Supabase " +
+      "ถ้าปลดติ๊กโหมดทดลองแล้วกดส่ง<br><b>ตอนนี้ยังไม่มีอะไรถูกเขียนลงฐานข้อมูล</b></p>" +
+      '<div id="drypre">' + esc(JSON.stringify(payload, null, 2)) + "</div>";
+    $("mfoot").innerHTML =
+      '<span class="note">ตรวจแล้วถูกต้อง กดย้อนกลับแล้วปลดติ๊กเพื่อส่งจริง</span>' +
+      '<span class="sp"></span>' +
+      '<button class="cbtn" id="dryback">ย้อนกลับ</button>' +
+      '<button class="cbtn primary" id="dryclose">ปิด</button>';
+    $("dryclose").onclick = closeModal;
+    $("dryback").onclick = () => $("reqgo").click();
+    return;
+  }
+
+  const client = getSb();
+  if (!client) return toast("ต่อ Supabase ไม่ได้");
+
+  btn.disabled = true; btn.textContent = "กำลังส่ง\u2026";
+  try{
+    const { error } = await client.from("task_tickets").insert(payload);
+    if (error) throw new Error(error.message);
+
+    localStorage.setItem(LS_NAME, name);
+    try{
+      const arr = JSON.parse(localStorage.getItem(LS_TOK) || "[]");
+      arr.push(token);
+      localStorage.setItem(LS_TOK, JSON.stringify(arr));
+    }catch(e){}
+
+    $("mtitle").textContent = "ส่งเรียบร้อย";
+    $("mbody").innerHTML =
+      '<div id="done"><h4>ส่งขอตั้งโค้ด ' + items.length + ' รายการแล้ว</h4>' +
+      "<p>รายการเข้าคิวรอคนตั้งโค้ดรับไปทำแล้ว ติดตามสถานะได้ที่แอป ส่งตั้ง Code AX ด้วยรหัสติดตามนี้</p>" +
+      '<div class="tok" id="tok" title="คลิกเพื่อคัดลอก">' + esc(token) + "</div>" +
+      '<p><a href="' + CODEAX_URL + '" target="_blank" rel="noopener">เปิดแอป ส่งตั้ง Code AX</a></p></div>';
+    $("tok").onclick = () => {
+      (navigator.clipboard ? navigator.clipboard.writeText(token) : Promise.reject())
+        .then(() => toast("คัดลอกรหัสติดตามแล้ว")).catch(() => {});
+    };
+    $("mfoot").innerHTML = '<span class="sp"></span><button class="cbtn primary" id="mok">ปิด</button>';
+    $("mok").onclick = closeModal;
+    toast("ส่งขอโค้ด " + items.length + " รายการแล้ว");
+  }catch(e){
+    btn.disabled = false; btn.textContent = "ส่งรายการจริง";
+    toast("ส่งไม่สำเร็จ: " + e.message);
+  }
+}
+
+/* ───────── ป้ายเวอร์ชัน (v3.5) ─────────
+   ให้รู้ได้ทันทีว่าเปิดไฟล์ตัวไหนอยู่ ไม่ต้องเดาจากชื่อไฟล์ที่เบราว์เซอร์ต่อ (1) (2) ให้ */
+$("vbadge").textContent = "v" + APP_META.version;
+$("vbadge").title = APP_META.name + " v" + APP_META.version + " · build " + APP_META.build;
+$("vbadge").onclick = () => {
+  $("mtitle").textContent = APP_META.name + "  v" + APP_META.version;
+  $("mbody").innerHTML =
+    '<p style="font-size:12.5px;color:var(--dim);margin-bottom:10px">build ' +
+    esc(APP_META.build) + "</p>" +
+    '<div id="clog">' + APP_META.changelog.map((c, i) =>
+      '<div class="cl' + (i === 0 ? " now" : "") + '"><b>v' + esc(c[0]) + "</b>" +
+      "<time>" + esc(c[1]) + "</time><p>" + esc(c[2]) + "</p></div>").join("") + "</div>";
+  $("mfoot").innerHTML = '<span class="sp"></span><button class="cbtn primary" id="vok">ปิด</button>';
+  $("vok").onclick = closeModal;
+  $("modal").className = "on";
+};
+
+syncTabs();
+emptyScreen();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</body>
+</html>
