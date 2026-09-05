@@ -392,6 +392,13 @@ tbody tr:hover td.st.no{background:#fbe0e0}
 .drow .note{font-size:11.5px;color:var(--dim);line-height:1.5}
 .drow .note b{color:var(--hl-ink)}
 .dlab{font-size:11.5px;color:var(--dim);margin:2px 0 5px;display:block}
+/* v5.7: เรื่องตั้งค่าฐานข้อมูลเป็นงานผู้ดูแล ไม่ใช่งานคนหน้าเครื่อง พับไว้ก่อน */
+.dlink{font-family:var(--sans);font-size:11.5px;background:none;border:0;padding:0;
+       color:var(--navy);text-decoration:underline;cursor:pointer}
+.dlink:hover{color:var(--orange)}
+.dadmin{display:none;margin-top:9px;padding:10px 12px;border:1px solid var(--line-2);
+        border-radius:9px;background:var(--card)}
+.dadmin.on{display:block}
 #dtext{font-family:var(--mono);font-size:12px;width:100%;height:150px;padding:10px 12px;
        border:1px solid var(--line-2);border-radius:9px;outline:0;resize:vertical;
        background:var(--card);color:var(--ink);line-height:1.65}
@@ -532,9 +539,10 @@ footer .mono{font-family:var(--mono)}
 /* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
 const APP_META = {
   name: "ReCheck Bom",
-  version: "5.6",
-  build: "2026-09-05/drill-table-rename",
+  version: "5.7",
+  build: "2026-09-05/quiet-admin-notice",
   changelog: [
+    ["5.7","2026-09-05","เลิกเอา SQL ไปตั้งขวางหน้าคนหน้าเครื่อง ตอนต่อฐานข้อมูลไม่ได้จะเห็นแค่บรรทัดเดียวว่าหลักฐานเก็บในเครื่องนี้ ใช้งานได้ตามปกติ ส่วนวิธีสร้างตารางกับ SQL พับไว้หลังลิงก์ ผู้ดูแลระบบกดที่นี่ · เขียนให้ชัดว่าสร้างตารางครั้งเดียวจบ ทำแล้วข้อความหายไปเองทุกเครื่อง ไม่ใช่ต้องรันทุกรอบ"],
     ["5.6","2026-09-05","เปลี่ยนชื่อตารางหลักฐานจาก drill_scans เป็น recheck_drill_scans เพราะโปรเจกต์ Supabase นี้มีตาราง drill_scans ของระบบอื่นอยู่ก่อนแล้ว (station barcode barcode2 order_id cab_name) ชื่อชนกันทำให้ SQL ไปเพิ่มคอลัมน์ในตารางเขาและเปิด RLS ให้ตารางเขาโดยไม่ตั้งใจ · ชื่อตารางอยู่ที่ตัวแปร DRILL_TABLE ตัวเดียว SQL กับ index กับ policy ประกอบตามให้เอง เปลี่ยนอีกก็แก้ที่เดียว"],
     ["5.5","2026-09-05","แก้ SQL สร้างตาราง drill_scans ให้รันซ้ำได้ไม่พัง เดิมถ้าโปรเจกต์มีตารางชื่อนี้อยู่ก่อนแล้วคนละโครงสร้าง create table if not exists จะข้ามไปเงียบ ๆ แล้วไปพังตอนสร้าง index ด้วย error 42703 column job does not exist · ชุดใหม่แยกเป็น add column if not exists ทีละคอลัมน์ และ drop policy if exists ก่อนสร้างใหม่ · กล่องเตือนในแอปมีปุ่มคัดลอก SQL แล้ว ไม่ต้องลากเลือกเอง"],
     ["5.4","2026-09-05","ย้ายหลักฐานการสแกนไปเก็บบน Supabase ตาราง drill_scans เก็บได้ไม่จำกัดงาน ไม่ใช่ 20 งานในเครื่องเดียวอย่างเดิม และทุกเครื่องเห็นหลักฐานชุดเดียวกัน · แต่ละรอบเก็บ ชื่องาน เครื่องเจาะ ไฟล์ BOM ที่เปิด คนที่สแกน เวลา จำนวนไฟล์ และรายชื่อไฟล์พร้อมเวลาแก้ไข · มีช่องใส่ชื่อคนสแกนในกล่อง จำชื่อไว้ใช้ครั้งต่อไป · แสดงประวัติการสแกนงานนั้นย้อนหลัง 5 รอบว่าใครสแกนเมื่อไรเจอกี่ไฟล์ · ต่อฐานข้อมูลไม่ได้ก็ยังทำงานต่อได้ ตกไปใช้หลักฐานในเครื่องแทน และถ้ายังไม่ได้สร้างตาราง จะแสดง SQL ให้ก็อปไปรันใน Supabase ได้เลย · ไฟล์เกิน 5000 เก็บแค่จำนวนไม่เก็บรายชื่อ กันแถวบวม"],
@@ -2167,18 +2175,28 @@ $("drill").onclick = () => {
     }
 
     html += remoteErr
-      ? '<div class="dmiss"><b>เก็บขึ้น Supabase ไม่ได้ ใช้หลักฐานในเครื่องนี้แทน</b><br>' +
-        esc(remoteErr) +
-        (/(does not exist|relation|schema cache|404)/i.test(remoteErr)
-          ? "<br><br>ยังไม่ได้สร้างตาราง <code>" + esc(DRILL_TABLE) +
-            "</code> หรือตารางที่มีอยู่คนละโครงสร้าง " +
-            "เอา SQL ข้างล่างไปรันใน SQL Editor ของ Supabase (รันซ้ำได้ ไม่พัง)" +
-            '<div id="drypre" style="max-height:170px">' + esc(DRILL_SQL) + "</div>" +
-            '<button class="cbtn" id="dsql" style="margin-top:8px">คัดลอก SQL</button>' 
-          : "") + "</div>"
+      /* v5.7: คนหน้าเครื่องเห็นแค่บรรทัดเดียวว่าเก็บที่ไหน วิธีตั้งค่าเป็นเรื่องผู้ดูแล
+         พับไว้หลังลิงก์ ไม่ต้องเอา SQL ไปตั้งขวางหน้าคนที่ไม่ได้ดูแลฐานข้อมูล */
+      ? '<p class="dnote">หลักฐานรอบนี้เก็บไว้<b>ในเครื่องนี้</b> ยังไม่ได้ขึ้นฐานข้อมูลกลาง ' +
+        "\u2014 ใช้งานได้ตามปกติ แต่เครื่องอื่นจะไม่เห็นหลักฐานชุดนี้  " +
+        '<button class="dlink" id="dadmbtn">ผู้ดูแลระบบกดที่นี่</button></p>' +
+        '<div class="dadmin" id="dadm">' +
+          '<p style="font-size:12px;color:var(--dim);line-height:1.7">' +
+          "ต้องสร้างตาราง <code>" + esc(DRILL_TABLE) + "</code> ใน Supabase " +
+          "<b>ครั้งเดียวจบ</b> ทำแล้วข้อความนี้จะหายไปเองทุกเครื่อง<br>" +
+          "สาเหตุที่ระบบแจ้งมา: " + esc(remoteErr) + "</p>" +
+          '<div id="drypre" style="max-height:150px">' + esc(DRILL_SQL) + "</div>" +
+          '<button class="cbtn" id="dsql" style="margin-top:8px">คัดลอก SQL</button>' +
+        "</div>"
       : '<p class="dnote" style="color:#1e6b38">' + esc(saved) + "</p>";
 
     $("dwatch").innerHTML = html;
+    if ($("dadmbtn")) $("dadmbtn").onclick = () => {
+      const box = $("dadm");
+      const on = box.className !== "dadmin on";
+      box.className = on ? "dadmin on" : "dadmin";
+      $("dadmbtn").textContent = on ? "ซ่อนรายละเอียด" : "ผู้ดูแลระบบกดที่นี่";
+    };
     if ($("dsql")) $("dsql").onclick = () => {
       if (navigator.clipboard && navigator.clipboard.writeText){
         navigator.clipboard.writeText(DRILL_SQL)
