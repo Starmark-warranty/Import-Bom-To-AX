@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <!--=====================================================================
-  IMOS BOM VIEWER · APP MANIFEST
+  RECHECK BOM · APP MANIFEST
   >>> AI/DEV: อ่านบล็อกนี้ก่อนแก้โค้ดทุกครั้ง · แก้เสร็จให้บวกเลข VERSION
       แล้วเพิ่มบรรทัด CHANGELOG ใหม่ไว้บนสุด (ห้ามลบของเก่า)
 
-  APP      : imos BOM Viewer
+  APP      : ReCheck Bom   (เดิมชื่อ imos BOM Viewer เปลี่ยนชื่อที่ v4.8)
   VERSION  : ดูที่ APP_META.version ในสคริปต์ (เลขที่แสดงบนหัวแอปอ่านจากที่นั่น)
   BUILD    : ดูที่ APP_META.build
   >>> บวกเลขที่ APP_META เท่านั้น อย่าบวกที่บล็อกนี้
@@ -84,7 +84,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>imos BOM Viewer</title>
+<title>ReCheck Bom</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
@@ -143,7 +143,7 @@ header .sp{flex:1}
 #find::placeholder{color:rgba(255,255,255,.42);font-family:var(--sans)}
 #find:focus{border-color:var(--orange);background:rgba(255,255,255,.18)}
 :focus-visible{outline:2px solid var(--orange);outline-offset:2px}
-#pick{display:none}
+#pick,#dpick{display:none}
 
 /* ── แท็บ ── */
 #tabs{flex:0 0 auto;display:flex;align-items:stretch;background:var(--navy);
@@ -382,6 +382,34 @@ tbody tr:hover td.st.no{background:#fbe0e0}
 .bstep.run .m span{display:inline-block;animation:spin 1s linear infinite}
 @media(prefers-reduced-motion:reduce){ .bstep.run .m span{animation:none} }
 
+/* ── เช็คไฟล์เจาะ (v4.9 · เลือกโฟลเดอร์ v5.0) ── */
+.dsrc{border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+      background:var(--page);margin-bottom:13px}
+.dsrc.over{border-color:var(--orange);background:var(--hl-bg)}
+.dsrc .frow{margin-bottom:0}
+#dpath{font-family:var(--mono);font-size:12px}
+.drow{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+.drow .note{font-size:11.5px;color:var(--dim);line-height:1.5}
+.drow .note b{color:var(--hl-ink)}
+.dlab{font-size:11.5px;color:var(--dim);margin:2px 0 5px;display:block}
+#dtext{font-family:var(--mono);font-size:12px;width:100%;height:150px;padding:10px 12px;
+       border:1px solid var(--line-2);border-radius:9px;outline:0;resize:vertical;
+       background:var(--card);color:var(--ink);line-height:1.65}
+#dtext:focus{border-color:var(--orange)}
+.dstat{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.dstat>div{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:var(--page)}
+.dstat b{display:block;font-family:var(--mono);font-size:17px;font-weight:600;color:var(--navy);line-height:1.3}
+.dstat b.cut{color:var(--miss-ink)}
+.dstat b.keep{color:#1e6b38}
+.dstat i{font-style:normal;font-size:10.5px;color:var(--faint);line-height:1.35;display:block;margin-top:2px}
+.dnote{font-size:12px;color:var(--dim);line-height:1.65;margin-top:11px}
+.dmiss{font-family:var(--mono);font-size:11.5px;background:var(--miss-bg);border:1px solid var(--miss-line);
+       color:var(--miss-ink);border-radius:9px;padding:9px 11px;margin-top:10px;
+       max-height:120px;overflow:auto;word-break:break-all;line-height:1.7}
+/* ช่องที่ถูกล้างเพราะไม่มีเจาะ — เอาเมาส์ชี้เพื่อดูเลขเดิม */
+tbody tr td.cleared{background:var(--miss-bg);color:var(--miss-ink);font-weight:600}
+tbody tr:hover td.cleared{background:#fadfdf}
+
 /* ปุ่มย้อนกลับการแก้ X เป็น Y */
 .undo{background:var(--hl-bg);border-color:var(--hl-line);color:var(--hl-ink);font-weight:600}
 .undo:hover{background:#fbe8cf}
@@ -431,10 +459,11 @@ footer .mono{font-family:var(--mono)}
 <body>
 
 <header>
-  <div class="brand">imos <span>BOM</span></div>
+  <div class="brand">ReCheck <span>Bom</span></div>
   <button class="vbadge" id="vbadge" title="คลิกดูประวัติรุ่น">v?</button>
   <button class="btn go" id="open">เปิดไฟล์เข้าแท็บนี้</button>
   <input type="file" id="pick" accept=".xlsx,.xls,.csv,.txt,.tsv" multiple>
+  <input type="file" id="dpick" webkitdirectory directory multiple>
   <input id="find" placeholder="ค้นหา" autocomplete="off" spellcheck="false">
   <button class="btn" id="only" aria-pressed="false" title="แสดงเฉพาะแถวที่คอลัมน์เน้นยังว่าง">เฉพาะที่ยังว่าง</button>
   <div class="sp"></div>
@@ -459,6 +488,8 @@ footer .mono{font-family:var(--mono)}
   <button class="cbtn" id="fixxy" disabled title="ค่าที่ขึ้นต้นด้วย G และลงท้ายด้วย X ในคอลัมน์ที่เน้น">แก้ X เป็น Y</button>
   <button class="cbtn" id="onlyed" aria-pressed="false" style="display:none">เฉพาะแถวที่แก้</button>
   <button class="cbtn undo" id="undoxy" style="display:none">ย้อนกลับ</button>
+  <button class="cbtn" id="drill" disabled title="วางเลข Barcode จากไฟล์เจาะ แล้วล้างช่องที่ไม่มีเจาะจริง">เช็คไฟล์เจาะ</button>
+  <button class="cbtn undo" id="undodr" style="display:none">ย้อนกลับเจาะ</button>
   <span class="sp"></span>
   <span class="note" id="chkat" style="font-size:11px;color:var(--faint)"></span>
 </div>
@@ -500,10 +531,19 @@ footer .mono{font-family:var(--mono)}
 <script>
 /* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
 const APP_META = {
-  name: "imos BOM Viewer",
-  version: "4.7",
-  build: "2026-09-05/save-as-source-format",
+  name: "ReCheck Bom",
+  version: "5.6",
+  build: "2026-09-05/drill-table-rename",
   changelog: [
+    ["5.6","2026-09-05","เปลี่ยนชื่อตารางหลักฐานจาก drill_scans เป็น recheck_drill_scans เพราะโปรเจกต์ Supabase นี้มีตาราง drill_scans ของระบบอื่นอยู่ก่อนแล้ว (station barcode barcode2 order_id cab_name) ชื่อชนกันทำให้ SQL ไปเพิ่มคอลัมน์ในตารางเขาและเปิด RLS ให้ตารางเขาโดยไม่ตั้งใจ · ชื่อตารางอยู่ที่ตัวแปร DRILL_TABLE ตัวเดียว SQL กับ index กับ policy ประกอบตามให้เอง เปลี่ยนอีกก็แก้ที่เดียว"],
+    ["5.5","2026-09-05","แก้ SQL สร้างตาราง drill_scans ให้รันซ้ำได้ไม่พัง เดิมถ้าโปรเจกต์มีตารางชื่อนี้อยู่ก่อนแล้วคนละโครงสร้าง create table if not exists จะข้ามไปเงียบ ๆ แล้วไปพังตอนสร้าง index ด้วย error 42703 column job does not exist · ชุดใหม่แยกเป็น add column if not exists ทีละคอลัมน์ และ drop policy if exists ก่อนสร้างใหม่ · กล่องเตือนในแอปมีปุ่มคัดลอก SQL แล้ว ไม่ต้องลากเลือกเอง"],
+    ["5.4","2026-09-05","ย้ายหลักฐานการสแกนไปเก็บบน Supabase ตาราง drill_scans เก็บได้ไม่จำกัดงาน ไม่ใช่ 20 งานในเครื่องเดียวอย่างเดิม และทุกเครื่องเห็นหลักฐานชุดเดียวกัน · แต่ละรอบเก็บ ชื่องาน เครื่องเจาะ ไฟล์ BOM ที่เปิด คนที่สแกน เวลา จำนวนไฟล์ และรายชื่อไฟล์พร้อมเวลาแก้ไข · มีช่องใส่ชื่อคนสแกนในกล่อง จำชื่อไว้ใช้ครั้งต่อไป · แสดงประวัติการสแกนงานนั้นย้อนหลัง 5 รอบว่าใครสแกนเมื่อไรเจอกี่ไฟล์ · ต่อฐานข้อมูลไม่ได้ก็ยังทำงานต่อได้ ตกไปใช้หลักฐานในเครื่องแทน และถ้ายังไม่ได้สร้างตาราง จะแสดง SQL ให้ก็อปไปรันใน Supabase ได้เลย · ไฟล์เกิน 5000 เก็บแค่จำนวนไม่เก็บรายชื่อ กันแถวบวม"],
+    ["5.3","2026-09-05","ตรวจย้อนหลังได้ว่าทีมเจาะเติมไฟล์ทีหลังไหม · สแกนโฟลเดอร์แล้วอ่านเวลาแก้ไขไฟล์มาด้วย จัดกลุ่มตามวัน ถ้ามีไฟล์ที่ทำหลังกลุ่มหลักจะขึ้นเตือนพร้อมจำนวนและวันที่ ตั้งแต่สแกนครั้งแรกเลยไม่ต้องรอรอบสอง · เก็บรายชื่อไฟล์ของแต่ละงานไว้เป็นหลักฐาน (ย้อนหลัง 20 งาน) สแกนซ้ำครั้งหน้าบอกได้ว่าเพิ่มมากี่ไฟล์ หายไปกี่ไฟล์ ถูกแก้ไขกี่ไฟล์ พร้อมบอกว่าแต่ละไฟล์เป็นชิ้นไหน PartId อะไร · เพิ่มการเทียบกับข้อมูลในบรรทัด ชิ้นที่ไม่มีไฟล์เจาะแต่ระบุว่ามีร่อง groove จะถูกยกขึ้นมาเตือนว่าน่าสงสัย เพราะชิ้นแบบนั้นต้องขึ้นเครื่อง CNC อยู่แล้ว ไฟล์อาจยังไม่ถูกทำ"],
+    ["5.2","2026-09-05","ประกอบพาธโฟลเดอร์เจาะให้เองจากชื่อไฟล์ BOM เพราะชื่อโฟลเดอร์งานคือท่อนท้ายของชื่อไฟล์อยู่แล้ว (export_item_2609012001_BO69_0766.xlsx -> โฟลเดอร์ 2609012001_BO69_0766) กดคัดลอกพาธเต็มแล้ววางในหน้าต่างเลือกโฟลเดอร์ได้เลย ไม่ต้องไล่หาเอง · ช่องบนเปลี่ยนเป็นพาธหลักของเครื่องเจาะ ใส่ค่าเริ่มต้น \\\\10.11.0.6\\imos AG\\Factory\\NCData\\Weeke_BHX055 ไว้ให้ ตั้งครั้งเดียวจำตลอด แก้ได้ถ้าย้ายเครื่อง · ชื่อไฟล์ที่ไม่มีเลขงานติดมา จะบอกเลขงานที่อ่านได้จากบาร์โค้ดในไฟล์แทน"],
+    ["5.1","2026-09-05","กันเลือกโฟลเดอร์ผิดให้แน่นขึ้น · ระหว่างไล่อ่านชื่อไฟล์บอกจำนวนที่อ่านไปแล้วเป็นตัวเลข ไม่ใช่ค้างอยู่ที่ กำลังไล่อ่าน เฉย ๆ · มีเพดาน 20000 ไฟล์ ถึงแล้วหยุดพร้อมบอกว่าน่าจะเลือกโฟลเดอร์กว้างเกินไป · อ่านเสร็จบอกว่าเจอเลขงานอะไรในโฟลเดอร์บ้างพร้อมจำนวนไฟล์ เทียบกับเลขงานของ BOM ที่เปิดอยู่ได้ทันที · ถ้าเป็นงานคนละใบ ขึ้นเตือนว่าไฟล์เจาะเป็นงานไหน BOM เป็นงานไหน แทนที่จะบอกแค่ว่าไม่ตรง"],
+    ["5.0","2026-09-05","เช็คไฟล์เจาะจากโฟลเดอร์ NCData ได้ตรง ๆ แล้ว ไม่ต้องก็อปเลขมาวางเอง กดเลือกโฟลเดอร์หรือลากโฟลเดอร์จาก File Explorer มาวางในกล่อง โปรแกรมอ่านชื่อไฟล์ .mpr เป็นรายการบาร์โค้ดที่มีเจาะจริง (ชื่อไฟล์คือเลขบาร์โค้ดอยู่แล้ว ไม่ต้องเปิดอ่านข้างใน) ไล่โฟลเดอร์ย่อยให้ลึก 4 ชั้น · มีช่องเก็บพาธ \\\\10.11.0.6\\imos AG\\... จำไว้ข้ามครั้ง กดคัดลอกแล้ววางในหน้าต่างเลือกโฟลเดอร์ได้เลย เพราะเบราว์เซอร์อ่านจากพาธที่พิมพ์เองไม่ได้ · ช่องเลขบาร์โค้ดยังวางเองได้เหมือนเดิม โฟลเดอร์แค่มาเติมให้ · กล่องสรุปบอกที่มาของรายการว่ามาจากโฟลเดอร์ไหน"],
+    ["4.9","2026-09-05","เพิ่มปุ่มเช็คไฟล์เจาะ วางเลข Barcode ที่มีเจาะจริงจากไฟล์เจาะเข้ามา ช่อง Barcode และ Barcode2 ที่เลขไม่อยู่ในรายการจะถูกล้างเป็นว่าง ใช้กฎเดียวจึงครอบทั้งเคสไม่มีเจาะเลยและเคสที่เจาะอยู่หน้าสอง (Barcode ถูกล้าง เหลือแต่ Barcode2) · เห็นตัวเลขก่อนกดล้างว่าจะล้างกี่ช่อง เก็บกี่ช่อง และมีเลขในไฟล์เจาะกี่ตัวที่ไม่พบใน BOM นี้ · ช่องที่ล้างขึ้นพื้นแดง เอาเมาส์ชี้ดูเลขเดิมได้ ย้อนกลับได้ทั้งชุด · ตั้งค่าเริ่มต้นให้ไม่แตะช่องที่เป็น Manual · ถ้าเลขที่วางมาไม่ตรงกับไฟล์นี้สักตัว ล็อกปุ่มไว้ก่อนกันวางผิดใบแล้วล้างทิ้งทั้งไฟล์ · ปุ่มเฉพาะแถวที่แก้ ตอนนี้ครอบทั้งการแก้ X เป็น Y และการเช็คเจาะ"],
+    ["4.8","2026-09-05","เปลี่ยนชื่อโปรแกรมจาก imos BOM Viewer เป็น ReCheck Bom ทั้งหัวแอป ชื่อแท็บเบราว์เซอร์ และบล็อก MANIFEST บนหัวไฟล์ · ชื่อไฟล์ imos-viewer.html กับคีย์ที่จำไว้ใน localStorage (ชื่อผู้ส่ง โหมดทดลอง) ยังเป็นชื่อเดิม จะได้ไม่ต้องกรอกชื่อใหม่และลิงก์เดิมยังเปิดได้"],
     ["4.7","2026-09-05","ตอนบันทึกเลือกได้ว่าจะออกเป็น .csv หรือ .xlsx · เปิดไฟล์มาเป็น CSV ตัวเลือก CSV จะถูกตั้งไว้ให้ก่อน แก้ X เป็น Y เสร็จก็บันทึกกลับเป็น CSV ได้เลย ไม่ต้องแวะ Excel · CSV ที่เขียนออกยึดรูปแบบไฟล์ต้นฉบับทุกอย่าง ตัวคั่น เครื่องหมายคำพูดรายคอลัมน์ BOM และการขึ้นบรรทัดแบบ CRLF ไฟล์ที่ได้จึงต่างจากไฟล์เดิมเฉพาะช่องที่แก้จริง · ถ้ากำลังกรองแถวอยู่ เมนูบันทึกจะบอกจำนวนแถวที่จะออก และสลับเป็นบันทึกทุกแถวได้"],
     ["4.6","2026-09-03","ไฟล์ที่บันทึกออกมีคอลัมน์เท่ากับไฟล์ที่นำเข้าเป๊ะ เลิกต่อท้ายสามคอลัมน์ผลเช็ค (มีโค้ดในระบบ ชื่อในระบบ หน่วย) เพราะปลายทางต้องการโครงเดิม · เปลี่ยนคำต่อท้ายชื่อไฟล์จาก _edited เป็น _Pass ทั้งสองแท็บ · ตารางฝั่งซ้ายแน่นขึ้น ตัวอักษร 12 เหลือ 11 ระยะขอบในเซลล์ลดลง เห็นคอลัมน์ได้มากขึ้นราว 25% ต่อความกว้างเท่าเดิม · ปรับค่าประมาณความกว้างต่อตัวอักษรตามฟอนต์ที่เล็กลง"],
     ["4.5","2026-09-03","ตัดบรรทัดสีเทาใต้ชื่อสินค้าในการ์ดออก เพราะ search_name ในฐานข้อมูลเป็นข้อความชุดเดียวกับ product_name แทบทุกแถว อ่านซ้ำสองรอบเปล่า ๆ · ย้ายหน่วยไปต่อท้ายสถานะแทน เช่น มีโค้ด EA · แถวในการ์ดเตี้ยลงครึ่งหนึ่ง เห็นได้มากขึ้นต่อหน้าจอ · search_name ยังดูได้จากการเอาเมาส์ชี้ที่ชื่อ เผื่อวันไหนมันต่างจาก product_name จริง"],
@@ -546,7 +586,8 @@ const TABS = {
     noCheck: ["SurfaceBeforeCutTopCode", "SurfaceBeforeCutBottomCode"],
     guess: null,
     cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
-    chk: null, onlyNo: false, paneW: null, src: null, saveAll: false
+    chk: null, onlyNo: false, paneW: null, src: null, saveAll: false,
+    drill: null, drillText: ""
   },
   fit: {
     label: "BOM Fitting",
@@ -557,7 +598,8 @@ const TABS = {
        ถ้าเดาผิด กดปุ่ม "คอลัมน์ที่เน้น" เลือกเองได้ */
     guess: c => /code$|code[^a-z]|^code|รหัส/i.test(String(c).trim()),
     cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
-    chk: null, onlyNo: false, paneW: null, src: null, saveAll: false
+    chk: null, onlyNo: false, paneW: null, src: null, saveAll: false,
+    drill: null, drillText: ""
   }
 };
 let cur = "wood", view = [];
@@ -632,6 +674,7 @@ function ingest(matrix, name, tab, src){
   t.saveAll = false;
   t.chk = null; t.onlyNo = false;   // ไฟล์ใหม่ = ผลเช็คเก่าใช้ไม่ได้แล้ว
   t.needCheck = false; t.xy = null; t.onlyEd = false;
+  t.drill = null; t.drillText = "";   // v4.9: ไฟล์ใหม่ = ผลเช็คเจาะเก่าใช้ไม่ได้
 
   const wantSet = new Set(t.want.map(norm));
   t.hl = t.cols.map((c, i) => (wantSet.size && wantSet.has(norm(c))) ? i : -1).filter(i => i >= 0);
@@ -687,11 +730,13 @@ function emptyScreen(){
 function apply(){
   const t = T();
   const q = t.q.trim().toLowerCase();
+  /* v4.9: แถวที่ถูกแก้มาได้จากสองทาง (แก้ X เป็น Y และเช็คไฟล์เจาะ) รวมเป็นชุดเดียว */
+  const edSet = t.onlyEd ? editedRows(t) : null;
 
   view = t.rows.filter(r => {
     if (t.only && !t.hl.some(i => blank(r[i]))) return false;
     if (t.onlyNo && t.chk && codeState(t, r) !== "no") return false;
-    if (t.onlyEd && t.xy && !t.xy.rows.has(r)) return false;
+    if (edSet && !edSet.has(r)) return false;
     if (t.sel){
       const v = String(r[t.sel.col] ?? "").trim();
       if (t.sel.val === BLANK ? v !== "" : v !== t.sel.val) return false;
@@ -728,15 +773,21 @@ function drawTable(q){
     '<th class="' + (HL.has(i) ? "hl" : "") + '" data-i="' + i + '">' + esc(c) + ar(i) + "</th>").join("") + "</tr>";
 
   const MAX = 4000;
-  const ed = t.xy ? t.xy.rows : null;
+  const ed = editedRows(t);
+  const dcm = t.drill ? t.drill.cells : null;   // v4.9: แถว -> { คอลัมน์: เลขเดิมที่ถูกล้าง }
   $("body").innerHTML = view.slice(0, MAX).map((r, n) => {
+    const dc = dcm ? dcm.get(r) : null;
     return '<tr' + (ed && ed.has(r) ? ' class="ed"' : "") + '><td class="rn">' + (n+1) + "</td>" +
       r.map((v, i) => {
       const cls = [];
+      const old = dc && dc[i] !== undefined ? dc[i] : null;
       if (HL.has(i)) cls.push(blank(v) ? "miss" : "hl");
       else if (blank(v)) cls.push("e");
       if (isNum(v)) cls.push("n");
-      return '<td class="' + cls.join(" ") + '">' + (blank(v) ? "\u2013" : hi(v)) + "</td>";
+      if (old !== null) cls.push("cleared");
+      return '<td class="' + cls.join(" ") + '"' +
+             (old !== null ? ' title="ล้างแล้ว \u00B7 เดิมคือ ' + esc(old) + ' \u00B7 ไม่มีในไฟล์เจาะ"' : "") +
+             ">" + (blank(v) ? "\u2013" : hi(v)) + "</td>";
     }).join("") + "</tr>";
   }).join("");
 
@@ -1368,7 +1419,8 @@ function undoXY(t){
   const { col, undo } = t.xy;
   undo.forEach(([ri, v]) => { t.rows[ri][col] = v; });
   const n = undo.length;
-  t.xy = null; t.sel = null; t.onlyEd = false;
+  t.xy = null; t.sel = null;
+  if (!t.drill) t.onlyEd = false;   // v4.9: ยังมีผลเช็คเจาะอยู่ ก็คงตัวกรองไว้
   return n;
 }
 
@@ -1473,9 +1525,817 @@ $("fixxy").onclick = () => {
     const n = applyXY(t);
     closeModal();
     syncFixBtn(); apply();
-    toast("แก้ " + t.cols[mat] + " แล้ว " + n + " แถว  \u00B7  คอลัมน์ผิวคงเดิม  \u00B7  กดบันทึก Excel เพื่อเอาออก");
+    toast("แก้ " + t.cols[mat] + " แล้ว " + n + " แถว  \u00B7  คอลัมน์ผิวคงเดิม  \u00B7  กดบันทึกไฟล์เพื่อเอาออก");
   };
   $("modal").className = "on";
+};
+
+
+/* ═══════════════════════════════════════════════════════════════
+   เช็คไฟล์เจาะ  (v4.9)
+   ปัญหา: ไฟล์ BOM ใส่เลขในช่อง Barcode มาทุกแถว แต่ของจริงบางชิ้นไม่มีเจาะ
+          และบางชิ้นเจาะอยู่หน้าที่สอง ซึ่งเลขจะไปอยู่ช่อง Barcode2
+   วิธี  : วางเลข Barcode ทั้งหมดจากไฟล์เจาะเข้ามา แล้วยึดกฎเดียว
+          "ช่องไหนเลขไม่อยู่ในรายการ = ชิ้นนั้นหน้านั้นไม่มีเจาะ ล้างเป็นว่าง"
+          กฎเดียวนี้ครอบทั้งสองเคส เจาะอยู่ Barcode2 อย่างเดียว
+          ก็คือ Barcode ถูกล้าง เหลือแต่ Barcode2 ตามที่ต้องการ
+   หมายเหตุ: แถวที่ Barcode เป็นคำว่า Manual ไม่ใช่เลข ตั้งค่าเริ่มต้นให้ข้ามไว้
+   ═══════════════════════════════════════════════════════════════ */
+
+/* คู่คอลัมน์บาร์โค้ด — ไม่เจอคืน -1 */
+function drillCols(t){
+  return { b1: colIdx(t, "Barcode"), b2: colIdx(t, "Barcode2") };
+}
+
+/* แยกข้อความที่วางมาเป็นรายการเลข · รับทั้งขึ้นบรรทัด เว้นวรรค คอมมา แท็บ
+   เอาเฉพาะตัวเลข 6 หลักขึ้นไปก่อน ถ้าไม่เจอเลยค่อยรับทุกคำ (เผื่อรูปแบบอื่น) */
+function parseDrillList(text){
+  const tok = String(text || "").split(/[\s,;|]+/).map(v => v.trim()).filter(Boolean);
+  const num = tok.filter(v => /^\d{6,}$/.test(v));
+  const use = num.length ? num : tok;
+  return { codes: new Set(use), read: use.length, skipped: tok.length - use.length };
+}
+
+/* ดูว่าถ้าใช้รายการนี้ จะล้างช่องไหนบ้าง — ยังไม่แก้ข้อมูลจริง */
+function scanDrill(t, set, keepManual){
+  const { b1, b2 } = drillCols(t);
+  const plan = { b1, b2, cut: [], keep1: 0, keep2: 0, manual: 0, rows: 0,
+                 hit: new Set(), suspect: [] };
+  if (b1 < 0 && b2 < 0) return plan;
+
+  /* v5.3: ชิ้นที่มีร่อง (groove) ต้องขึ้นเครื่อง CNC อยู่แล้ว
+     ถ้าหาไฟล์เจาะของชิ้นนั้นไม่เจอเลย แปลว่าไฟล์อาจยังไม่ถูกทำ ไม่ใช่ว่าไม่มีเจาะ */
+  const gcs = t.cols.map((c, i) => /^groove/i.test(String(c).trim()) ? i : -1).filter(i => i >= 0);
+  const hasGroove = r => gcs.some(i => {
+    const v = String(r[i] ?? "").trim();
+    return v && !/^nogroove$/i.test(v) && v !== "0";
+  });
+
+  t.rows.forEach((r, ri) => {
+    let touched = false, kept = 0;
+    [b1, b2].forEach(ci => {
+      if (ci < 0) return;
+      const v = String(r[ci] ?? "").trim();
+      if (!v) return;
+      if (keepManual && !/^\d+$/.test(v)){ plan.manual++; kept++; return; }
+      if (set.has(v)){
+        plan.hit.add(v);
+        kept++;
+        if (ci === b1) plan.keep1++; else plan.keep2++;
+        return;
+      }
+      plan.cut.push([ri, ci, v]);
+      touched = true;
+    });
+    if (touched) plan.rows++;
+    if (touched && !kept && hasGroove(r)) plan.suspect.push(ri);
+  });
+
+  /* เลขในไฟล์เจาะที่หาไม่เจอในไฟล์ BOM — สัญญาณว่าสองไฟล์คนละชุดกัน */
+  plan.orphan = [...set].filter(c => !plan.hit.has(c));
+  return plan;
+}
+
+/* ลงมือล้าง · เก็บของเดิมไว้ย้อนกลับได้ และจำว่าช่องไหนถูกล้างเพื่อไฮไลต์ */
+function applyDrill(t, plan, meta){
+  const cells = new Map();      // reference ของแถว -> { คอลัมน์: เลขเดิม }
+  const marked = new Set();
+  plan.cut.forEach(([ri, ci, v]) => {
+    const row = t.rows[ri];
+    if (!cells.has(row)) cells.set(row, {});
+    cells.get(row)[ci] = v;
+    marked.add(row);
+    row[ci] = "";
+  });
+  t.drill = {
+    undo: plan.cut.slice(), cells, rows: marked, at: new Date(),
+    n: plan.cut.length, nrows: plan.rows,
+    b1: plan.b1, b2: plan.b2,
+    cut1: plan.cut.filter(c => c[1] === plan.b1).length,
+    cut2: plan.cut.filter(c => c[1] === plan.b2).length,
+    keep1: plan.keep1, keep2: plan.keep2, manual: plan.manual,
+    codes: meta.read, from: meta.from || "", orphan: plan.orphan.slice()
+  };
+  t.sel = null;
+  return t.drill.n;
+}
+
+function undoDrill(t){
+  if (!t.drill) return 0;
+  t.drill.undo.forEach(([ri, ci, v]) => { t.rows[ri][ci] = v; });
+  const n = t.drill.n;
+  t.drill = null; t.sel = null;
+  if (!t.xy) t.onlyEd = false;
+  return n;
+}
+
+/* ชุดแถวที่ถูกแก้ รวมทั้งจาก X→Y และจากเช็คเจาะ ใช้ไฮไลต์กับตัวกรอง */
+function editedRows(t){
+  if (t.xy && t.drill){
+    const s = new Set(t.xy.rows);
+    t.drill.rows.forEach(r => s.add(r));
+    return s;
+  }
+  if (t.xy) return t.xy.rows;
+  if (t.drill) return t.drill.rows;
+  return null;
+}
+
+function syncDrillBtn(){
+  const t = T();
+  const btn = $("drill"), un = $("undodr");
+  un.style.display = "none";
+  /* ไม่เหลือการแก้ค้างไว้เลย ปุ่มกรองเฉพาะแถวที่แก้ก็ไม่ต้องมี */
+  if (!t.xy && !t.drill){ $("onlyed").style.display = "none"; t.onlyEd = false; }
+  if (!t.rows.length){ btn.disabled = true; btn.textContent = "เช็คไฟล์เจาะ"; return; }
+
+  const { b1, b2 } = drillCols(t);
+  if (b1 < 0 && b2 < 0){
+    btn.disabled = true;
+    btn.textContent = "ไม่มีคอลัมน์ Barcode";
+    btn.title = "แท็บนี้ไม่มีคอลัมน์ Barcode / Barcode2 จึงไม่มีอะไรให้เช็ค";
+    return;
+  }
+  btn.disabled = false;
+  if (t.drill){
+    btn.textContent = "\u2713 เช็คเจาะแล้ว \u00B7 ล้าง " + t.drill.n + " ช่อง";
+    btn.title = "คลิกเพื่อดูว่าล้างอะไรไปบ้าง";
+    un.style.display = "";
+    $("onlyed").style.display = "";
+    $("onlyed").setAttribute("aria-pressed", String(!!t.onlyEd));
+    return;
+  }
+  btn.textContent = "เช็คไฟล์เจาะ";
+  btn.title = "วางเลข Barcode จากไฟล์เจาะ แล้วล้างช่องที่ไม่มีเจาะจริง";
+}
+
+/* กล่องสรุปตัวเลขในหน้าต่าง */
+function drillStatHTML(t, plan, meta){
+  const box = (v, cls, cap) => "<div><b" + (cls ? ' class="' + cls + '"' : "") + ">" +
+    v.toLocaleString("th-TH") + "</b><i>" + cap + "</i></div>";
+  const cut1 = plan.cut.filter(c => c[1] === plan.b1).length;
+  const cut2 = plan.cut.filter(c => c[1] === plan.b2).length;
+  return '<div class="dstat">' +
+      box(meta.read, "", "เลขที่อ่านได้จากที่วาง") +
+      box(cut1, "cut", "จะล้าง Barcode") +
+      box(cut2, "cut", "จะล้าง Barcode2") +
+      box(plan.keep1 + plan.keep2, "keep", "ช่องที่มีเจาะจริง เก็บไว้") +
+    "</div>" +
+    '<p class="dnote">จะแตะทั้งหมด ' + plan.rows.toLocaleString("th-TH") + " แถว จาก " +
+      t.rows.length.toLocaleString("th-TH") + " แถว" +
+      (plan.manual ? "  \u00B7  ข้ามแถวที่ไม่ใช่ตัวเลข (เช่น Manual) " + plan.manual + " ช่อง" : "") +
+      (meta.skipped ? "  \u00B7  ข้อความที่ไม่ใช่เลขบาร์โค้ดในที่วาง " + meta.skipped + " ตัว" : "") +
+    "</p>" +
+    (plan.orphan.length
+      ? '<div class="dmiss"><b>มี ' + plan.orphan.length +
+        " เลขในไฟล์เจาะที่ไม่พบใน BOM นี้</b> \u2014 เช็คว่าเปิดไฟล์คู่กันถูกตัวไหม<br>" +
+        plan.orphan.slice(0, 40).map(esc).join("  ") +
+        (plan.orphan.length > 40 ? "  \u2026" : "") + "</div>"
+      : "") +
+    (plan.suspect.length
+      ? '<div class="dmiss"><b>' + plan.suspect.length +
+        " ชิ้นน่าสงสัย \u2014 ไม่มีไฟล์เจาะ แต่ในบรรทัดระบุว่ามีร่อง (groove)</b><br>" +
+        "ชิ้นแบบนี้ต้องขึ้นเครื่อง CNC อยู่แล้ว ไฟล์อาจยังไม่ถูกทำ ควรถามทีมเจาะก่อนล้าง<br>" +
+        plan.suspect.slice(0, 12).map(ri => {
+          const r = t.rows[ri];
+          const pid = colIdx(t, "PartId"), pn = colIdx(t, "PartName");
+          return esc((pid >= 0 ? String(r[pid] ?? "") : "แถว " + (ri + 1)) +
+                     (pn >= 0 ? " " + String(r[pn] ?? "") : ""));
+        }).join("  \u00B7  ") +
+        (plan.suspect.length > 12 ? "  \u2026 อีก " + (plan.suspect.length - 12) : "") + "</div>"
+      : "");
+}
+
+/* ───────── อ่านรายชื่อไฟล์เจาะจากโฟลเดอร์ (v5.0) ─────────
+   ไฟล์เจาะคือ .mpr ที่ตั้งชื่อด้วยเลข Barcode ตรง ๆ (เช่น 26090120012056.mpr)
+   จึงไม่ต้องเปิดอ่านเนื้อในไฟล์เลย เอาแค่ชื่อไฟล์ก็ได้รายการเลขที่มีเจาะจริง
+   หมายเหตุ: เบราว์เซอร์อ่านจากพาธที่พิมพ์เองไม่ได้ (กันเว็บแอบอ่านไฟล์ในเครื่อง)
+   ช่องพาธจึงเป็นแค่ที่จำไว้ให้ก็อปไปวางในหน้าต่างเลือกโฟลเดอร์ */
+const LS_DPATH = "imosviewer_drill_path";
+/* พาธเครื่องเจาะที่ใช้ประจำ ใส่ไว้ให้ตั้งแต่แรก แก้ได้ถ้าย้ายเครื่อง */
+const DPATH_DEF = "\\\\10.11.0.6\\imos AG\\Factory\\NCData\\Weeke_BHX055";
+
+/* v5.2: ชื่อโฟลเดอร์งานเจาะ = ท่อนท้ายของชื่อไฟล์ BOM
+   export_item_2609012001_BO69_0766.xlsx  ->  2609012001_BO69_0766
+   จึงประกอบพาธเต็มให้ก็อปได้เลย ไม่ต้องให้คนไปไล่หาโฟลเดอร์เอง */
+function jobFolderName(t, bomJobs){
+  const base = String(t.file || "").replace(/\.[^.]+$/, "").replace(/_Pass$/i, "");
+  const m = base.match(/\d{9,}(?:_[A-Za-z0-9]+)*/);
+  if (m) return { name: m[0], from: "ชื่อไฟล์ BOM" };
+  /* ชื่อไฟล์ไม่มีเลขงาน ใช้เลขงานจากบาร์โค้ดในไฟล์บอกใบ้แทน (ไม่รู้ท่อนท้าย) */
+  if (bomJobs && bomJobs.length) return { name: "", jobs: bomJobs.slice(0, 3) };
+  return { name: "" };
+}
+
+/* ต่อพาธแบบ Windows ไม่ให้มีแบ็กสแลชซ้อน */
+function joinWin(root, sub){
+  const r = String(root || "").replace(/[\\/]+$/, "");
+  if (!sub) return r;
+  return r ? r + "\\" + sub : sub;
+}
+
+/* ชื่อไฟล์ -> เลขบาร์โค้ด · ตัดนามสกุลแล้วดึงเฉพาะกลุ่มตัวเลข 6 หลักขึ้นไป */
+function codesFromNames(names){
+  const out = [], seen = new Set();
+  names.forEach(f => {
+    const base = String(f && f.n !== undefined ? f.n : f).replace(/\.[^.]+$/, "");
+    (base.match(/\d{6,}/g) || []).forEach(c => {
+      if (!seen.has(c)){ seen.add(c); out.push(c); }
+    });
+  });
+  return out;
+}
+
+/* v5.3: จำรายชื่อ+เวลาไฟล์ของแต่ละงานไว้ สแกนรอบหน้าจะได้บอกได้ว่ามีอะไรเพิ่ม
+   ใช้ตอบคำถามว่า "ทีมเจาะแอบทำไฟล์เพิ่มทีหลังไหม" ได้ตรง ๆ */
+const LS_DSNAP = "imosviewer_drill_snap";
+const SNAP_KEEP = 20;                     // เก็บย้อนหลังกี่งาน
+const TIME_MAX  = 3000;                   // ไฟล์เยอะกว่านี้ไม่ไล่ถามเวลาทีละไฟล์ จะช้า
+
+function snapLoad(){
+  try{ return JSON.parse(localStorage.getItem(LS_DSNAP) || "{}"); }catch(_){ return {}; }
+}
+function snapSave(all){
+  try{
+    const keys = Object.keys(all).sort((a, b) => (all[b].at || 0) - (all[a].at || 0));
+    const trim = {};
+    keys.slice(0, SNAP_KEEP).forEach(k => trim[k] = all[k]);
+    localStorage.setItem(LS_DSNAP, JSON.stringify(trim));
+  }catch(_){}
+}
+
+/* จัดกลุ่มไฟล์ตามวันที่แก้ไข — ถ้ามีมากกว่าหนึ่งกลุ่ม แปลว่ามีไฟล์ทำคนละวันปนอยู่ */
+function timeGroups(files){
+  const by = new Map();
+  files.forEach(f => {
+    if (!f.t) return;
+    const k = new Date(f.t).toLocaleDateString("th-TH");
+    if (!by.has(k)) by.set(k, { day: k, n: 0, min: f.t, max: f.t });
+    const g = by.get(k);
+    g.n++;
+    if (f.t < g.min) g.min = f.t;
+    if (f.t > g.max) g.max = f.t;
+  });
+  return [...by.values()].sort((a, b) => a.min - b.min);
+}
+const hhmm = ms => new Date(ms).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+
+/* v5.1: เพดานกันเผลอชี้ไปโฟลเดอร์แม่ที่มีเป็นหมื่นไฟล์แล้วค้างยาว
+   ถึงเพดานก็หยุดอ่านแล้วเตือน ไม่ปล่อยให้หน้าจอนิ่งจนไม่รู้ว่าเจ๊งหรือยัง */
+const SCAN_MAX = 20000;
+
+/* เดินโฟลเดอร์แบบ File System Access API (Chrome/Edge) */
+async function walkDirHandle(dir, out, depth, tick){
+  for await (const [name, h] of dir.entries()){
+    if (out.length >= SCAN_MAX) return;
+    if (h.kind === "file"){
+      let mt = 0;
+      /* เวลาแก้ไขไฟล์คือหลักฐานว่าไฟล์ไหนทำทีหลัง ยอมเสียเวลาถามทีละไฟล์
+         เฉพาะตอนไฟล์ไม่เยอะ ถ้าเป็นหมื่นไฟล์ข้ามไป ไม่งั้นรอกันนาน */
+      if (out.length < TIME_MAX){
+        try{ mt = (await h.getFile()).lastModified || 0; }catch(_){}
+      }
+      out.push({ n: name, t: mt });
+      if (tick && out.length % 100 === 0) await tick(out.length);
+    } else if (depth < 4){
+      await walkDirHandle(h, out, depth + 1, tick);
+    }
+  }
+}
+
+/* เดินโฟลเดอร์ที่ลากมาวาง (DataTransfer entry) */
+async function walkDropEntry(entry, out, depth, tick){
+  if (!entry || out.length >= SCAN_MAX) return;
+  if (entry.isFile){
+    let mt = 0;
+    if (out.length < TIME_MAX){
+      mt = await new Promise(res =>
+        entry.file(f => res(f.lastModified || 0), () => res(0)));
+    }
+    out.push({ n: entry.name, t: mt });
+    if (tick && out.length % 100 === 0) await tick(out.length);
+    return;
+  }
+  if (!entry.isDirectory || depth >= 4) return;
+  const rd = entry.createReader();
+  const batch = () => new Promise(res => rd.readEntries(res, () => res([])));
+  let items;
+  while ((items = await batch()).length){
+    for (const e of items){
+      if (out.length >= SCAN_MAX) return;
+      await walkDropEntry(e, out, depth + 1, tick);
+    }
+  }
+}
+
+/* เลขงานคือ 10 ตัวหน้าของบาร์โค้ด 14 หลัก (เช่น 2609012001)
+   ใช้เทียบว่าโฟลเดอร์ที่เลือกเป็นงานใบเดียวกับ BOM ที่เปิดอยู่ไหม */
+function jobsOf(codes){
+  const m = new Map();
+  codes.forEach(c => {
+    if (String(c).length >= 12){
+      const k = String(c).slice(0, 10);
+      m.set(k, (m.get(k) || 0) + 1);
+    }
+  });
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+/* ───────── หลักฐานการสแกนบน Supabase (v5.4) ─────────
+   localStorage จำได้แค่เครื่องเดียวและเก็บได้จำกัด ย้ายไปเก็บบนฐานข้อมูล
+   จะได้เห็นตรงกันทุกเครื่อง ย้อนได้ไม่จำกัดงาน และรู้ว่าใครสแกนไว้เมื่อไร
+   ตารางที่ต้องมี (รันใน SQL Editor ของ Supabase ครั้งเดียว) ดูที่ DRILL_SQL */
+/* v5.6: ใช้ชื่อ recheck_drill_scans ไม่ใช่ drill_scans เพราะโปรเจกต์นี้มีตาราง
+   drill_scans ของระบบอื่นอยู่ก่อนแล้ว (station / barcode / order_id / cab_name)
+   ชื่อชนกันแล้วจะไปแปะคอลัมน์ทับตารางเขา · SQL ข้างล่างประกอบจากตัวแปรนี้ทั้งชุด
+   ถ้าจะเปลี่ยนชื่อตารางอีก แก้ที่นี่ที่เดียวพอ */
+const DRILL_TABLE = "recheck_drill_scans";
+const DRILL_SQL =
+  "-- รันซ้ำได้ ไม่ว่าตารางจะมีอยู่แล้วหรือยัง\n" +
+  "create table if not exists public." + DRILL_TABLE + " (\n" +
+  "  id bigint generated always as identity primary key\n" +
+  ");\n\n" +
+  "alter table public." + DRILL_TABLE + "\n" +
+  "  add column if not exists job        text,\n" +
+  "  add column if not exists machine    text,\n" +
+  "  add column if not exists bom_file   text,\n" +
+  "  add column if not exists scanned_by text,\n" +
+  "  add column if not exists scanned_at timestamptz not null default now(),\n" +
+  "  add column if not exists file_count int  not null default 0,\n" +
+  "  add column if not exists files      jsonb not null default '{}'::jsonb;\n\n" +
+  "create index if not exists " + DRILL_TABLE + "_job_idx\n" +
+  "  on public." + DRILL_TABLE + " (job, scanned_at desc);\n\n" +
+  "alter table public." + DRILL_TABLE + " enable row level security;\n\n" +
+  "drop policy if exists \"anon read " + DRILL_TABLE + "\"  on public." + DRILL_TABLE + ";\n" +
+  "drop policy if exists \"anon write " + DRILL_TABLE + "\" on public." + DRILL_TABLE + ";\n" +
+  "create policy \"anon read " + DRILL_TABLE + "\"  on public." + DRILL_TABLE + "\n" +
+  "  for select to anon using (true);\n" +
+  "create policy \"anon write " + DRILL_TABLE + "\" on public." + DRILL_TABLE + "\n" +
+  "  for insert to anon with check (true);";
+
+/* ไฟล์เยอะเกินนี้ไม่เก็บรายชื่อขึ้นฐานข้อมูล เก็บแค่จำนวน แถวจะได้ไม่บวม */
+const SNAP_FILES_MAX = 5000;
+
+async function drillScanLoad(job, n){
+  const client = getSb();
+  if (!client) return null;
+  const { data, error } = await client
+    .from(DRILL_TABLE)
+    .select("scanned_at,scanned_by,machine,bom_file,file_count,files")
+    .eq("job", job)
+    .order("scanned_at", { ascending: false })
+    .limit(n || 6);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+async function drillScanSave(row){
+  const client = getSb();
+  if (!client) return false;
+  const { error } = await client.from(DRILL_TABLE).insert(row);
+  if (error) throw new Error(error.message);
+  return true;
+}
+
+$("drill").onclick = () => {
+  const t = T();
+
+  /* เช็คไปแล้ว — กดปุ่มคือขอดูผลย้อนหลัง */
+  if (t.drill){
+    const d = t.drill;
+    $("mtitle").textContent = "เช็คไฟล์เจาะไปแล้ว";
+    $("mbody").innerHTML =
+      '<p style="font-size:13px;color:var(--dim);line-height:1.7">' +
+      "ล้างช่องที่ไม่มีเจาะไปแล้ว <b>" + d.n + "</b> ช่อง ใน <b>" + d.nrows + "</b> แถว " +
+      "เมื่อ " + d.at.toLocaleTimeString("th-TH") +
+      (d.from ? "<br>ที่มาของรายการ: <b>" + esc(d.from) + "</b>" : "") + "</p>" +
+      '<div class="dstat">' +
+        "<div><b>" + d.codes + "</b><i>เลขจากไฟล์เจาะ</i></div>" +
+        '<div><b class="cut">' + d.cut1 + "</b><i>ล้าง Barcode</i></div>" +
+        '<div><b class="cut">' + d.cut2 + "</b><i>ล้าง Barcode2</i></div>" +
+        '<div><b class="keep">' + (d.keep1 + d.keep2) + "</b><i>เก็บไว้</i></div>" +
+      "</div>" +
+      '<p class="dnote">ช่องที่ถูกล้างขึ้นพื้นแดงในตาราง เอาเมาส์ชี้เพื่อดูเลขเดิม \u00B7 ' +
+      "กดปุ่ม เฉพาะแถวที่แก้ เพื่อไล่ดูเฉพาะแถวที่โดน</p>" +
+      (d.orphan.length
+        ? '<div class="dmiss"><b>' + d.orphan.length +
+          " เลขในไฟล์เจาะที่ไม่พบใน BOM นี้</b><br>" +
+          d.orphan.slice(0, 40).map(esc).join("  ") +
+          (d.orphan.length > 40 ? "  \u2026" : "") + "</div>"
+        : "");
+    $("mfoot").innerHTML =
+      '<span class="note">แก้เฉพาะข้อมูลในหน้าจอนี้ ไม่แตะไฟล์ต้นฉบับ</span><span class="sp"></span>' +
+      '<button class="cbtn undo" id="drundo">ย้อนกลับทั้งหมด</button>' +
+      '<button class="cbtn primary" id="drclose">ปิด</button>';
+    $("drclose").onclick = closeModal;
+    $("drundo").onclick = () => {
+      const n = undoDrill(t); closeModal(); syncDrillBtn(); apply();
+      toast("คืนเลขบาร์โค้ดกลับแล้ว " + n + " ช่อง");
+    };
+    $("modal").className = "on";
+    return;
+  }
+
+  const { b1, b2 } = drillCols(t);
+  if (b1 < 0 && b2 < 0) return toast("แท็บนี้ไม่มีคอลัมน์ Barcode");
+
+  const nMan = t.rows.filter(r =>
+    [b1, b2].some(ci => ci >= 0 && String(r[ci] ?? "").trim() && !/^\d+$/.test(String(r[ci]).trim()))
+  ).length;
+
+  /* เลขงานของ BOM ที่เปิดอยู่ ใช้ทั้งประกอบพาธและเทียบกับโฟลเดอร์ที่เลือกมา */
+  const bomCodes = [];
+  t.rows.forEach(r => [b1, b2].forEach(ci => {
+    if (ci < 0) return;
+    const v = String(r[ci] ?? "").trim();
+    if (/^\d+$/.test(v)) bomCodes.push(v);
+  }));
+  const bomJobs = jobsOf(bomCodes).map(j => j[0]);
+  const job = jobFolderName(t, bomJobs);
+  const root0 = localStorage.getItem(LS_DPATH) || DPATH_DEF;
+
+  $("mtitle").textContent = "เช็คไฟล์เจาะ";
+  $("mbody").innerHTML =
+    '<p style="font-size:13px;color:var(--dim);line-height:1.7">' +
+    "ชี้ไปที่โฟลเดอร์ไฟล์เจาะ โปรแกรมจะอ่าน <b>ชื่อไฟล์</b> เป็นรายการบาร์โค้ดที่มีเจาะจริง " +
+    "(ไฟล์ <code>.mpr</code> ตั้งชื่อด้วยเลขบาร์โค้ดอยู่แล้ว ไม่ต้องเปิดอ่านข้างใน)<br>" +
+    "ช่อง <b>Barcode</b> และ <b>Barcode2</b> ที่ไม่มีไฟล์เจาะ จะถูกล้างเป็นว่าง " +
+    "\u2014 ชิ้นที่เจาะอยู่หน้าสอง จึงเหลือเฉพาะ Barcode2 ให้เอง</p>" +
+    '<div class="dsrc" id="dsrc">' +
+      '<div class="frow"><div class="fld">' +
+        '<label for="dpath">พาธหลักของเครื่องเจาะ \u2014 จำไว้ให้ ตั้งครั้งเดียวใช้ได้ตลอด</label>' +
+        '<input id="dpath" spellcheck="false" placeholder="' + esc(DPATH_DEF) + '" value="' +
+        esc(root0) + '"></div></div>' +
+      '<div class="frow" style="margin-top:9px"><div class="fld">' +
+        '<label for="dfull">พาธเต็มของงานใบนี้ \u2014 ก็อปไปวางในหน้าต่างเลือกโฟลเดอร์ได้เลย</label>' +
+        '<input id="dfull" readonly spellcheck="false" value=""></div></div>' +
+      '<p class="dnote" id="dhint" style="margin-top:6px;font-size:11.5px"></p>' +
+      '<div class="drow">' +
+        '<button class="cbtn primary" id="dopen">เลือกโฟลเดอร์\u2026</button>' +
+        '<button class="cbtn" id="dcopy">คัดลอกพาธเต็ม</button>' +
+        '<input id="dwho" spellcheck="false" placeholder="ชื่อคนสแกน" ' +
+          'style="font-size:12px;padding:5px 9px;border-radius:6px;border:1px solid var(--line-2);' +
+          'background:var(--card);color:var(--ink);width:130px" value="' +
+          esc(localStorage.getItem(LS_NAME) || "") + '">' +
+        '<span class="note" id="dfrom">หรือลากโฟลเดอร์จาก File Explorer มาวางในกรอบนี้</span>' +
+      "</div>" +
+      '<div id="dwatch"></div>' +
+      '<p class="dnote" style="margin-top:9px;font-size:11.5px">' +
+      "เบราว์เซอร์อ่านไฟล์จากพาธที่พิมพ์เองไม่ได้ (กันเว็บแอบอ่านไฟล์ในเครื่อง) " +
+      "กด <b>คัดลอกพาธ</b> แล้วกด <b>เลือกโฟลเดอร์</b> วางพาธในช่องบนของหน้าต่างที่เปิดมา กด Enter " +
+      "\u00B7 อ่านแค่ชื่อไฟล์ ไม่มีการส่งอะไรออกนอกเครื่อง</p>" +
+    "</div>" +
+    '<label class="dlab" for="dtext">เลขบาร์โค้ดที่มีเจาะจริง \u2014 แก้เองหรือวางเองก็ได้</label>' +
+    '<textarea id="dtext" spellcheck="false" placeholder="26083120011215&#10;26083120012215&#10;26083120011216">' +
+    esc(t.drillText || "") + "</textarea>" +
+    (nMan
+      ? '<label class="dryline"><input type="checkbox" id="dman" checked> ' +
+        "ไม่แตะช่องที่ไม่ใช่ตัวเลข เช่น <b>Manual</b> (พบ " + nMan + " แถว) \u2014 " +
+        "พวกนี้ทำมือ ไม่ได้อยู่ในไฟล์เจาะอยู่แล้ว</label>"
+      : "") +
+    '<div id="dstat"></div>';
+  $("mfoot").innerHTML =
+    '<span class="note">แก้เฉพาะข้อมูลในหน้าจอนี้ ไม่แตะไฟล์ต้นฉบับ</span><span class="sp"></span>' +
+    '<button class="cbtn" id="drcancel">ยกเลิก</button>' +
+    '<button class="cbtn primary" id="drok" disabled>ล้างช่องที่ไม่มีเจาะ</button>';
+
+  let plan = null, meta = null, deb2, force = false, srcLabel = "";
+  const recalc = () => {
+    const t2 = T();
+    t2.drillText = $("dtext").value;
+    meta = parseDrillList(t2.drillText);
+    const keepMan = !$("dman") || $("dman").checked;
+    if (!meta.read){
+      plan = null;
+      $("dstat").innerHTML = '<p class="dnote">ยังไม่ได้วางเลขบาร์โค้ด</p>';
+      $("drok").disabled = true;
+      $("drok").textContent = "ล้างช่องที่ไม่มีเจาะ";
+      return;
+    }
+    plan = scanDrill(t2, meta.codes, keepMan);
+    /* กันพลาด: วางมาแล้วไม่ตรงกับไฟล์นี้สักเลขเดียว = แทบจะแน่ว่าวางผิดไฟล์
+       ถ้าปล่อยผ่านจะล้างบาร์โค้ดทิ้งทั้งไฟล์ จึงล็อกปุ่มไว้ก่อน ปลดได้ถ้ายืนยัน */
+    const noHit = plan.cut.length > 0 && (plan.keep1 + plan.keep2) === 0;
+    /* v5.1: บอกให้ชัดว่าเลือกผิดใบตรงไหน ไม่ใช่แค่บอกว่าไม่ตรง */
+    const inJobs = jobsOf([...meta.codes]).map(j => j[0]);
+    const clash = inJobs.length && bomJobs.length && !inJobs.some(j => bomJobs.includes(j));
+    $("dstat").innerHTML = drillStatHTML(t2, plan, meta) +
+      (noHit
+        ? '<div class="dmiss"><b>ไม่มีเลขไหนตรงกับไฟล์นี้เลยสักตัว</b><br>' +
+          (clash
+            ? "ไฟล์เจาะเป็นงาน <b>" + esc(inJobs.slice(0, 2).join(", ")) +
+              "</b> แต่ BOM ที่เปิดอยู่เป็นงาน <b>" + esc(bomJobs.slice(0, 2).join(", ")) +
+              "</b> \u2014 คนละใบกัน<br>"
+            : "น่าจะวางมาจากงานคนละใบ หรือรูปแบบเลขคนละแบบ<br>") +
+          "ถ้ากดต่อจะล้างบาร์โค้ดทิ้งทั้งไฟล์" +
+          '<label class="dryline" style="margin-top:8px"><input type="checkbox" id="dforce"> ' +
+          "ตรวจแล้ว ยืนยันว่าวางถูกไฟล์ ให้ล้างได้เลย</label></div>"
+        : "");
+    if (noHit && $("dforce")){
+      $("dforce").checked = force;
+      $("dforce").onchange = () => { force = $("dforce").checked; $("drok").disabled = !force; };
+    }
+    $("drok").disabled = plan.cut.length === 0 || (noHit && !force);
+    $("drok").textContent = plan.cut.length
+      ? "ล้าง " + plan.cut.length + " ช่อง"
+      : "ไม่มีช่องไหนต้องล้าง";
+  };
+  $("dtext").oninput = () => { srcLabel = ""; clearTimeout(deb2); deb2 = setTimeout(recalc, 150); };
+  if ($("dman")) $("dman").onchange = recalc;
+
+  /* ---- รับรายชื่อไฟล์จากโฟลเดอร์ แล้วเทลงช่องข้อความ ใช้ทางเดินเดิมทั้งหมด ---- */
+  /* บาร์โค้ด -> ชิ้นงานในไฟล์ ใช้บอกว่าไฟล์ที่เพิ่มมาเป็นชิ้นไหน */
+  const pidCol = colIdx(t, "PartId"), pnCol = colIdx(t, "PartName");
+  const codeRow = new Map();
+  t.rows.forEach(r => [b1, b2].forEach(ci => {
+    if (ci < 0) return;
+    const v = String(r[ci] ?? "").trim();
+    if (v && !codeRow.has(v)){
+      codeRow.set(v, (pidCol >= 0 ? String(r[pidCol] ?? "").trim() : "") +
+                     (pnCol >= 0 ? " " + String(r[pnCol] ?? "").trim() : ""));
+    }
+  }));
+  const whose = c => (codeRow.get(c) || "").trim();
+
+  const nameList = arr => arr.slice(0, 15).map(n => {
+    const c = String(n).replace(/\.[^.]+$/, "");
+    const w = whose(c);
+    return esc(c) + (w ? " (" + esc(w) + ")" : "");
+  }).join("<br>") + (arr.length > 15 ? "<br>\u2026 อีก " + (arr.length - 15) : "");
+
+  /* เทียบไฟล์รอบนี้กับหลักฐานรอบก่อน */
+  const diffHTML = (files, prev) => {
+    const when = new Date(prev.at).toLocaleString("th-TH");
+    const who = prev.by ? " โดย <b>" + esc(prev.by) + "</b>" : "";
+    const old = new Map(Object.entries(prev.files || {}));
+    if (!old.size){
+      return '<p class="dnote">รอบก่อนสแกนเมื่อ ' + esc(when) + who +
+        " (" + (prev.count || 0) + " ไฟล์) แต่ไม่ได้เก็บรายชื่อไว้ เทียบทีละไฟล์ไม่ได้</p>";
+    }
+    const now = new Map(files.map(f => [f.n, f.t]));
+    const added = [...now.keys()].filter(n => !old.has(n));
+    const gone  = [...old.keys()].filter(n => !now.has(n));
+    const edit  = [...now.keys()].filter(n => old.has(n) && old.get(n) && now.get(n) && old.get(n) !== now.get(n));
+    if (!added.length && !gone.length && !edit.length){
+      return '<p class="dnote" style="color:#1e6b38">เทียบกับรอบก่อนเมื่อ ' + esc(when) + who +
+        " \u2014 เหมือนเดิมทุกไฟล์ ไม่มีอะไรเพิ่มหรือหาย</p>";
+    }
+    return '<div class="dmiss"><b>เทียบกับรอบก่อนเมื่อ ' + esc(when) + who + "</b><br>" +
+      (added.length ? "<b>เพิ่มมาใหม่ " + added.length + " ไฟล์</b><br>" + nameList(added) + "<br>" : "") +
+      (gone.length  ? "<b>หายไป " + gone.length + " ไฟล์</b><br>" + nameList(gone) + "<br>" : "") +
+      (edit.length  ? "<b>ถูกแก้ไข " + edit.length + " ไฟล์</b><br>" + nameList(edit) : "") +
+      "</div>";
+  };
+
+  /* v5.3/v5.4: รายงานว่าโฟลเดอร์นี้ถูกแตะเมื่อไร และมีอะไรเพิ่มจากรอบก่อน */
+  const renderWatch = async (files, label) => {
+    const groups = timeGroups(files);
+    let html = "";
+
+    if (groups.length){
+      html += '<p class="dnote" style="margin-top:9px">เวลาที่ไฟล์ถูกทำ: ' +
+        groups.map(g => "<b>" + esc(g.day) + "</b> " + hhmm(g.min) +
+          (g.max - g.min > 60000 ? "\u2013" + hhmm(g.max) : "") +
+          " (" + g.n + " ไฟล์)").join("  \u00B7  ") + "</p>";
+      if (groups.length > 1){
+        const main = groups.slice().sort((a, b) => b.n - a.n)[0];
+        const late = groups.filter(g => g !== main && g.min > main.max);
+        if (late.length){
+          html += '<div class="dmiss"><b>มีไฟล์ที่ทำหลังกลุ่มหลัก ' +
+            late.reduce((n, g) => n + g.n, 0) + " ไฟล์</b> (" +
+            late.map(g => esc(g.day)).join(", ") + ") \u2014 กลุ่มหลักทำวันที่ " +
+            esc(main.day) + " ถ้างานนี้ควรจบในรอบเดียว แปลว่ามีการเติมทีหลัง</div>";
+        }
+      }
+    }
+
+    $("dwatch").innerHTML = html + '<p class="dnote">กำลังดึงหลักฐานจากฐานข้อมูล\u2026</p>';
+
+    /* ภาพถ่ายรอบนี้ · ไฟล์เยอะเกินก็เก็บแค่จำนวน */
+    const fileMap = {};
+    if (files.length <= SNAP_FILES_MAX) files.forEach(f => fileMap[f.n] = f.t || 0);
+    const who = ($("dwho") && $("dwho").value.trim()) || "";
+    if (who) localStorage.setItem(LS_NAME, who);
+
+    /* 1) หาหลักฐานรอบก่อน — เอาจาก Supabase ก่อน ไม่ได้ค่อยใช้ของในเครื่อง */
+    let prev = null, hist = null, remoteErr = "";
+    try{
+      const rows = await drillScanLoad(label, 6);
+      if (rows){
+        hist = rows;
+        if (rows[0]) prev = { at: rows[0].scanned_at, files: rows[0].files || {},
+                              by: rows[0].scanned_by, count: rows[0].file_count };
+      } else {
+        remoteErr = "ตัวต่อ Supabase ยังไม่พร้อม (เครื่องออกเน็ตไม่ได้?)";
+      }
+    }catch(e){ remoteErr = e.message || String(e); }
+
+    const snapAll = snapLoad();
+    const local = snapAll[label];
+    if (!prev && local) prev = { at: local.at, files: local.files || {}, by: "", count: null };
+
+    html += prev
+      ? diffHTML(files, prev)
+      : '<p class="dnote">ยังไม่เคยมีหลักฐานของงานนี้ เก็บรอบนี้ไว้เป็นรอบแรกแล้ว ' +
+        "สแกนซ้ำครั้งหน้าจะบอกได้ว่ามีไฟล์เพิ่มหรือหายไปกี่ไฟล์</p>";
+
+    /* 2) บันทึกรอบนี้ · ขึ้นฐานข้อมูลเป็นหลัก เก็บในเครื่องเป็นสำรองด้วย */
+    let saved = "";
+    try{
+      const ok = await drillScanSave({
+        job: label,
+        machine: ($("dpath").value.trim().split(/[\\/]/).filter(Boolean).pop() || ""),
+        bom_file: t.file,
+        scanned_by: who || null,
+        file_count: files.length,
+        files: fileMap
+      });
+      if (ok) saved = "เก็บหลักฐานรอบนี้ขึ้น Supabase แล้ว" +
+        (files.length > SNAP_FILES_MAX ? " (ไฟล์เยอะเกิน เก็บแค่จำนวน ไม่เก็บรายชื่อ)" : "");
+    }catch(e){ remoteErr = remoteErr || e.message || String(e); }
+
+    snapAll[label] = { at: Date.now(), files: fileMap };
+    snapSave(snapAll);
+
+    /* 3) ประวัติการสแกนงานนี้ */
+    if (hist && hist.length){
+      html += '<p class="dnote">ประวัติการสแกนงานนี้: ' +
+        hist.slice(0, 5).map(r =>
+          new Date(r.scanned_at).toLocaleString("th-TH") +
+          (r.scanned_by ? " \u00B7 " + esc(r.scanned_by) : "") +
+          " \u00B7 " + r.file_count + " ไฟล์").join("<br>") + "</p>";
+    }
+
+    html += remoteErr
+      ? '<div class="dmiss"><b>เก็บขึ้น Supabase ไม่ได้ ใช้หลักฐานในเครื่องนี้แทน</b><br>' +
+        esc(remoteErr) +
+        (/(does not exist|relation|schema cache|404)/i.test(remoteErr)
+          ? "<br><br>ยังไม่ได้สร้างตาราง <code>" + esc(DRILL_TABLE) +
+            "</code> หรือตารางที่มีอยู่คนละโครงสร้าง " +
+            "เอา SQL ข้างล่างไปรันใน SQL Editor ของ Supabase (รันซ้ำได้ ไม่พัง)" +
+            '<div id="drypre" style="max-height:170px">' + esc(DRILL_SQL) + "</div>" +
+            '<button class="cbtn" id="dsql" style="margin-top:8px">คัดลอก SQL</button>' 
+          : "") + "</div>"
+      : '<p class="dnote" style="color:#1e6b38">' + esc(saved) + "</p>";
+
+    $("dwatch").innerHTML = html;
+    if ($("dsql")) $("dsql").onclick = () => {
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(DRILL_SQL)
+          .then(() => toast("คัดลอก SQL แล้ว วางใน SQL Editor ของ Supabase"),
+                () => toast("คัดลอกไม่สำเร็จ"));
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = DRILL_SQL; document.body.appendChild(ta); ta.select();
+        try{ document.execCommand("copy"); toast("คัดลอก SQL แล้ว"); }catch(_){}
+        ta.remove();
+      }
+    };
+  };
+
+  const takeNames = (names, label) => {
+    /* โฟลเดอร์งานมักมีไฟล์อื่นปนอยู่ (log, รายการงาน) ที่ชื่อมีตัวเลขยาวเหมือนกัน
+       ถ้าเจอ .mpr ก็เอาเฉพาะ .mpr ไม่งั้นรับหมดเผื่อโรงงานใช้นามสกุลอื่น */
+    const mpr = names.filter(f => /\.mpr$/i.test(f.n));
+    const use = mpr.length ? mpr : names;
+    const codes = codesFromNames(use);
+    if (!codes.length){
+      $("dfrom").innerHTML = "<b>ไม่พบชื่อไฟล์ที่เป็นเลขบาร์โค้ดใน " + esc(label) + "</b>";
+      return;
+    }
+    srcLabel = label;
+    $("dtext").value = codes.join("\n");
+    const jobs = jobsOf(codes);
+    $("dfrom").innerHTML = "อ่านจาก <b>" + esc(label) + "</b> \u00B7 " +
+      use.length.toLocaleString("th-TH") + " ไฟล์" +
+      (mpr.length && mpr.length !== names.length
+        ? " .mpr (ข้ามไฟล์อื่น " + (names.length - mpr.length) + ")" : "") +
+      " \u00B7 ได้เลข " + codes.length.toLocaleString("th-TH") + " ตัว" +
+      (jobs.length
+        ? "<br>งานที่เจอในโฟลเดอร์: " +
+          jobs.slice(0, 3).map(j => "<b>" + esc(j[0]) + "</b> (" + j[1] + ")").join("  \u00B7  ") +
+          (jobs.length > 3 ? "  \u00B7  และอีก " + (jobs.length - 3) + " งาน" : "")
+        : "") +
+      (names.length >= SCAN_MAX
+        ? '<br><b style="color:var(--miss-ink)">อ่านถึงเพดาน ' + SCAN_MAX.toLocaleString("th-TH") +
+          " ไฟล์แล้วหยุด โฟลเดอร์ที่เลือกน่าจะกว้างเกินไป ลองเลือกเฉพาะโฟลเดอร์งานใบนี้</b>"
+        : "");
+    recalc();
+    renderWatch(use, label).catch(e => {
+      $("dwatch").innerHTML = '<div class="dmiss">เทียบหลักฐานไม่สำเร็จ: ' + esc(e.message || e) + "</div>";
+    });
+  };
+  /* บอกความคืบหน้าระหว่างไล่อ่าน แล้วคายจังหวะให้หน้าจอวาดใหม่
+     ไม่งั้นชี้ไปโฟลเดอร์ใหญ่แล้วหน้าค้างอยู่ที่ กำลังไล่อ่าน… เฉย ๆ */
+  const tick = n => {
+    $("dfrom").textContent = "กำลังไล่อ่านชื่อไฟล์\u2026 " + n.toLocaleString("th-TH") + " ไฟล์";
+    return new Promise(r => setTimeout(r, 0));
+  };
+
+  /* ประกอบพาธเต็ม = พาธหลัก + ชื่อโฟลเดอร์งานที่ได้จากชื่อไฟล์ BOM */
+  const syncPath = () => {
+    const root = $("dpath").value.trim().replace(/[\\/]+$/, "");   // ตัดสแลชท้ายทิ้ง
+    if (root) localStorage.setItem(LS_DPATH, root);
+    $("dfull").value = joinWin(root, job.name);
+    $("dhint").innerHTML = job.name
+      ? "โฟลเดอร์งานนี้คือ <b>" + esc(job.name) + "</b> \u2014 ได้จาก" + esc(job.from) +
+        " <code>" + esc(t.file) + "</code>"
+      : (job.jobs && job.jobs.length
+          ? "ชื่อไฟล์ BOM ไม่มีเลขงานติดมา เลยเดาชื่อโฟลเดอร์ให้ไม่ได้ \u2014 " +
+            "บาร์โค้ดในไฟล์นี้เป็นงาน <b>" + esc(job.jobs.join(", ")) +
+            "</b> เปิดพาธหลักแล้วมองหาโฟลเดอร์ที่ขึ้นต้นด้วยเลขนี้"
+          : "ยังบอกไม่ได้ว่าเป็นงานใบไหน เปิดพาธหลักแล้วเลือกโฟลเดอร์เอง");
+  };
+
+  $("dcopy").onclick = () => {
+    const v = ($("dfull").value || $("dpath").value).trim();
+    if (!v) return toast("ยังไม่ได้ใส่พาธ");
+    const done = () => toast(job.name
+      ? "คัดลอกพาธเต็มแล้ว วางในช่องบนของหน้าต่างเลือกโฟลเดอร์ได้เลย"
+      : "คัดลอกพาธหลักแล้ว วางแล้วเลือกโฟลเดอร์งานเอง");
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(v).then(done, () => toast("คัดลอกไม่สำเร็จ"));
+    } else {
+      $("dfull").removeAttribute("readonly");
+      $("dfull").select(); document.execCommand("copy");
+      $("dfull").setAttribute("readonly", "readonly"); done();
+    }
+  };
+  $("dpath").oninput = syncPath;
+  $("dfull").onclick = function(){ this.select(); };
+  syncPath();
+
+  $("dopen").onclick = async () => {
+    syncPath();
+    /* Chrome/Edge มี showDirectoryPicker อ่านทั้งโฟลเดอร์ย่อยได้ในทีเดียว
+       เบราว์เซอร์อื่นตกไปใช้ input webkitdirectory ซึ่งได้ผลเหมือนกัน */
+    if (window.showDirectoryPicker){
+      try{
+        const dir = await window.showDirectoryPicker({ id: "drillnc", mode: "read" });
+        $("dfrom").textContent = "กำลังไล่อ่านชื่อไฟล์\u2026";
+        const names = [];
+        await walkDirHandle(dir, names, 0, tick);
+        return takeNames(names, dir.name);
+      }catch(err){
+        if (err && err.name === "AbortError") return;   // ผู้ใช้กดยกเลิก
+        /* บางที่เปิดไฟล์ตรงจากดิสก์ (file://) API นี้ใช้ไม่ได้ ตกไปทางสำรอง */
+      }
+    }
+    $("dpick").value = "";
+    $("dpick").click();
+  };
+  $("dpick").onchange = e => {
+    const fs2 = [...e.target.files];
+    if (!fs2.length) return;
+    const first = fs2[0].webkitRelativePath || "";
+    takeNames(fs2.map(f => ({ n: f.name, t: f.lastModified || 0 })),
+              first.split("/")[0] || "โฟลเดอร์ที่เลือก");
+  };
+
+  /* ---- ลากโฟลเดอร์มาวางในกรอบ ---- */
+  const box = $("dsrc");
+  $("mbody").ondragover = e => {
+    e.preventDefault(); e.stopPropagation();
+    $("drop").classList.remove("over");
+    box.classList.add("over");
+  };
+  $("mbody").ondragleave = () => box.classList.remove("over");
+  $("mbody").ondrop = async e => {
+    e.preventDefault(); e.stopPropagation();
+    box.classList.remove("over");
+    $("drop").classList.remove("over");
+    const dt = e.dataTransfer;
+    const entries = [...(dt.items || [])]
+      .map(it => it.webkitGetAsEntry && it.webkitGetAsEntry()).filter(Boolean);
+    const names = [];
+    let label = "ที่ลากมาวาง";
+    if (entries.length){
+      if (entries.length === 1 && entries[0].isDirectory) label = entries[0].name;
+      $("dfrom").textContent = "กำลังไล่อ่านชื่อไฟล์\u2026";
+      for (const en of entries) await walkDropEntry(en, names, 0, tick);
+    } else {
+      [...(dt.files || [])].forEach(f => names.push({ n: f.name, t: f.lastModified || 0 }));
+    }
+    if (names.length) takeNames(names, label);
+    else $("dfrom").textContent = "อ่านชื่อไฟล์จากที่ลากมาไม่ได้ ลองกดปุ่มเลือกโฟลเดอร์แทน";
+  };
+  $("drcancel").onclick = closeModal;
+  $("drok").onclick = () => {
+    if (!plan || !plan.cut.length) return;
+    const n = applyDrill(t, plan, { read: meta.read, from: srcLabel });
+    closeModal(); syncDrillBtn(); apply();
+    toast("ล้างช่องที่ไม่มีเจาะแล้ว " + n + " ช่อง  \u00B7  กดบันทึกไฟล์เพื่อเอาออก");
+  };
+  recalc();
+  $("modal").className = "on";
+  setTimeout(() => $("dtext").focus(), 30);
+};
+
+$("undodr").onclick = () => {
+  const t = T();
+  const n = undoDrill(t);
+  syncDrillBtn(); apply();
+  toast(n ? "คืนเลขบาร์โค้ดกลับแล้ว " + n + " ช่อง" : "ไม่มีอะไรให้ย้อน");
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1526,6 +2386,7 @@ function syncChkBar(){
   const has = t.rows.length > 0;
   $("chkbar").className = has ? "on" : "";
   syncFixBtn();
+  syncDrillBtn();
   if (!has) return;
 
   const p = $("chkres");
@@ -1756,7 +2617,14 @@ async function loadDepartments(){
   }catch(e){}
 }
 
-function closeModal(){ $("modal").className = ""; }
+function closeModal(){
+  $("modal").className = "";
+  /* v5.0: กล่องเช็คเจาะผูกตัวรับลากวางไว้ที่ mbody ปิดแล้วต้องปลดออก
+     ไม่งั้นกล่องอื่นที่ใช้ mbody ร่วมกันจะกลืนไฟล์ที่ลากมาแทนตัวเปิดไฟล์หลัก */
+  $("mbody").ondrop = null;
+  $("mbody").ondragover = null;
+  $("mbody").ondragleave = null;
+}
 $("mclose").onclick = closeModal;
 $("modal").onclick = e => { if (e.target === $("modal")) closeModal(); };
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
