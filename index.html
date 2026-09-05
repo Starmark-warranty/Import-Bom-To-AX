@@ -271,6 +271,29 @@ tbody tr.ed:hover td.hl{background:#fae2c2}
 #colpanel label:hover{background:var(--hover)}
 #colpanel input{accent-color:var(--orange);cursor:pointer}
 
+/* ── เมนูบันทึกไฟล์ (v4.7) ── เลือกนามสกุลก่อนเขียนไฟล์ */
+.menuwrap{position:relative;display:flex}
+.btn .cv{font-size:10px;opacity:.7;margin-left:3px}
+#savemenu{position:absolute;right:0;top:calc(100% + 7px);z-index:30;display:none;
+          background:var(--card);color:var(--ink);border:1px solid var(--line-2);border-radius:10px;
+          box-shadow:0 12px 32px -10px rgba(0,0,0,.35);width:268px;padding:6px;text-align:left}
+#savemenu.on{display:block}
+#savemenu h4{font-size:11.5px;color:var(--dim);font-weight:500;padding:7px 9px 6px}
+#savemenu .mi{display:flex;align-items:center;gap:9px;width:100%;padding:8px 9px;border:0;
+              border-radius:7px;background:none;cursor:pointer;text-align:left;font-family:var(--sans)}
+#savemenu .mi:hover{background:var(--hover)}
+#savemenu .mi b{font-family:var(--mono);font-size:12.5px;color:var(--navy);min-width:44px}
+#savemenu .mi i{font-style:normal;font-size:11.5px;color:var(--dim);line-height:1.45;flex:1}
+#savemenu .mi .tag{font-size:10px;font-weight:600;border-radius:20px;padding:2px 7px;
+                   background:var(--hl-bg);color:var(--hl-ink);border:1px solid var(--hl-line);white-space:nowrap}
+#savemenu .foot{border-top:1px solid var(--line);margin-top:5px;padding:8px 9px 4px;
+                font-size:11.5px;color:var(--dim);line-height:1.6}
+#savemenu .scope{display:flex;gap:5px;margin-top:7px}
+#savemenu .scope button{flex:1;font-family:var(--sans);font-size:11.5px;padding:5px 6px;border-radius:6px;
+                        border:1px solid var(--line-2);background:var(--card);color:var(--ink);cursor:pointer}
+#savemenu .scope button[aria-pressed="true"]{background:var(--orange);border-color:var(--orange);
+                                             color:#3a2200;font-weight:600}
+
 /* ── แถบเช็คโค้ด ── */
 #chkbar{flex:0 0 auto;display:none;align-items:center;gap:8px;background:var(--card);
         border-bottom:1px solid var(--line);padding:7px 12px;overflow-x:auto;white-space:nowrap}
@@ -417,7 +440,11 @@ footer .mono{font-family:var(--mono)}
   <div class="sp"></div>
   <button class="btn" id="colbtn" disabled>คอลัมน์ที่เน้น</button>
   <button class="btn" id="copy" disabled title="คัดลอกรายการโค้ดไม่ซ้ำ ไว้วางในแอปส่งตั้ง Code AX">คัดลอกโค้ด</button>
-  <button class="btn" id="csv" disabled>บันทึก Excel</button>
+  <div class="menuwrap">
+    <button class="btn" id="csv" disabled aria-haspopup="true" aria-expanded="false"
+            title="เลือกได้ว่าจะบันทึกเป็น .csv หรือ .xlsx">บันทึกไฟล์ <span class="cv">&#9662;</span></button>
+    <div id="savemenu"></div>
+  </div>
 </header>
 
 <div id="tabs">
@@ -475,9 +502,9 @@ footer .mono{font-family:var(--mono)}
 const APP_META = {
   name: "imos BOM Viewer",
   version: "4.7",
-  build: "2026-09-03/csv-roundtrip",
+  build: "2026-09-05/save-as-source-format",
   changelog: [
-    ["4.7","2026-09-03","นำเข้า CSV แล้วส่งออกกลับเป็น CSV หน้าตาเหมือนต้นฉบับ ไม่แปลงเป็น xlsx · จำรูปแบบไฟล์ต้นทางไว้ตอนอ่าน แล้วเขียนคืนด้วยรูปแบบเดียวกัน ตัวคั่น (คอมมา/แท็บ/อัฒภาค) ตัวจบบรรทัด (CRLF/LF) มี BOM หรือไม่ และครอบเครื่องหมายคำพูดทุกช่องหรือเฉพาะช่องที่จำเป็น · ไฟล์จริงที่เจอครอบทุกช่องและใช้ CRLF ไม่มี BOM ถ้าเขียนคืนแบบมาตรฐานเครื่องปลายทางอาจอ่านไม่ตรง · ปุ่มเปลี่ยนชื่อตามชนิดไฟล์ บันทึก CSV หรือ บันทึก Excel"],
+    ["4.7","2026-09-05","ตอนบันทึกเลือกได้ว่าจะออกเป็น .csv หรือ .xlsx · เปิดไฟล์มาเป็น CSV ตัวเลือก CSV จะถูกตั้งไว้ให้ก่อน แก้ X เป็น Y เสร็จก็บันทึกกลับเป็น CSV ได้เลย ไม่ต้องแวะ Excel · CSV ที่เขียนออกยึดรูปแบบไฟล์ต้นฉบับทุกอย่าง ตัวคั่น เครื่องหมายคำพูดรายคอลัมน์ BOM และการขึ้นบรรทัดแบบ CRLF ไฟล์ที่ได้จึงต่างจากไฟล์เดิมเฉพาะช่องที่แก้จริง · ถ้ากำลังกรองแถวอยู่ เมนูบันทึกจะบอกจำนวนแถวที่จะออก และสลับเป็นบันทึกทุกแถวได้"],
     ["4.6","2026-09-03","ไฟล์ที่บันทึกออกมีคอลัมน์เท่ากับไฟล์ที่นำเข้าเป๊ะ เลิกต่อท้ายสามคอลัมน์ผลเช็ค (มีโค้ดในระบบ ชื่อในระบบ หน่วย) เพราะปลายทางต้องการโครงเดิม · เปลี่ยนคำต่อท้ายชื่อไฟล์จาก _edited เป็น _Pass ทั้งสองแท็บ · ตารางฝั่งซ้ายแน่นขึ้น ตัวอักษร 12 เหลือ 11 ระยะขอบในเซลล์ลดลง เห็นคอลัมน์ได้มากขึ้นราว 25% ต่อความกว้างเท่าเดิม · ปรับค่าประมาณความกว้างต่อตัวอักษรตามฟอนต์ที่เล็กลง"],
     ["4.5","2026-09-03","ตัดบรรทัดสีเทาใต้ชื่อสินค้าในการ์ดออก เพราะ search_name ในฐานข้อมูลเป็นข้อความชุดเดียวกับ product_name แทบทุกแถว อ่านซ้ำสองรอบเปล่า ๆ · ย้ายหน่วยไปต่อท้ายสถานะแทน เช่น มีโค้ด EA · แถวในการ์ดเตี้ยลงครึ่งหนึ่ง เห็นได้มากขึ้นต่อหน้าจอ · search_name ยังดูได้จากการเอาเมาส์ชี้ที่ชื่อ เผื่อวันไหนมันต่างจาก product_name จริง"],
     ["4.4","2026-09-03","ไฮไลต์แถวที่ตัวแก้ X เป็น Y ไปแตะ พื้นเหลืองอ่อนกับแถบส้มที่ขอบซ้าย เห็นได้ทันทีว่าแถวไหนถูกแก้ · เก็บเป็น reference ของแถวไม่ใช่เลขลำดับ ไฮไลต์จึงติดไปกับแถวแม้จะเรียงใหม่หรือกรอง · เพิ่มปุ่มกรองเฉพาะแถวที่แก้ ไว้ไล่ตรวจ · กดย้อนกลับแล้วไฮไลต์หายไปพร้อมกัน"],
@@ -519,7 +546,7 @@ const TABS = {
     noCheck: ["SurfaceBeforeCutTopCode", "SurfaceBeforeCutBottomCode"],
     guess: null,
     cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
-    chk: null, onlyNo: false, paneW: null, fmt: null
+    chk: null, onlyNo: false, paneW: null, src: null, saveAll: false
   },
   fit: {
     label: "BOM Fitting",
@@ -530,7 +557,7 @@ const TABS = {
        ถ้าเดาผิด กดปุ่ม "คอลัมน์ที่เน้น" เลือกเองได้ */
     guess: c => /code$|code[^a-z]|^code|รหัส/i.test(String(c).trim()),
     cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
-    chk: null, onlyNo: false, paneW: null, fmt: null
+    chk: null, onlyNo: false, paneW: null, src: null, saveAll: false
   }
 };
 let cur = "wood", view = [];
@@ -538,56 +565,36 @@ const T = () => TABS[cur];
 
 /* ───────── ตัวอ่าน CSV/TSV — รองรับคำพูด คอมมาในค่า ขึ้นบรรทัดในเซลล์ ─────────
    (v1.0 เขียนไว้แล้ว ไม่แตะ) */
+/* v4.7: จำด้วยว่าเซลล์ไหนในไฟล์ต้นฉบับถูกครอบด้วยเครื่องหมายคำพูด
+   เก็บเป็นระดับคอลัมน์ (qcols สำหรับแถวข้อมูล · qhead สำหรับหัวตาราง)
+   ตอนบันทึกกลับเป็น CSV จะได้เขียนให้เหมือนไฟล์ที่รับมาเป๊ะ
+   ไฟล์จาก imos ครอบไม่ครบทุกช่อง เช่น Qty กับ CutWidth ปล่อยเปล่า
+   ถ้าเราครอบให้หมดหรือไม่ครอบเลย ไฟล์จะต่างจากเดิมทั้งไฟล์โดยไม่จำเป็น */
 function parseDelimited(text, d){
   text = text.replace(/^\uFEFF/, "");
-  const out = []; let row = [], cell = "", q = false, i = 0;
+  const out = [], qcols = [], qhead = [];
+  let row = [], cell = "", q = false, i = 0, cq = false;
+  const push = () => {
+    if (cq) (out.length === 0 ? qhead : qcols)[row.length] = true;
+    row.push(cell); cell = ""; cq = false;
+  };
   while (i < text.length){
     const c = text[i];
     if (q){
       if (c === '"'){ if (text[i+1] === '"'){ cell += '"'; i += 2; continue; } q = false; i++; continue; }
       cell += c; i++; continue;
     }
-    if (c === '"'){ q = true; i++; continue; }
-    if (c === d){ row.push(cell); cell = ""; i++; continue; }
+    if (c === '"'){ q = true; cq = true; i++; continue; }
+    if (c === d){ push(); i++; continue; }
     if (c === "\r"){ i++; continue; }
-    if (c === "\n"){ row.push(cell); out.push(row); row = []; cell = ""; i++; continue; }
+    if (c === "\n"){ push(); out.push(row); row = []; i++; continue; }
     cell += c; i++;
   }
-  if (cell !== "" || row.length){ row.push(cell); out.push(row); }
-  return out.filter(r => r.some(v => String(v).trim() !== ""));
+  if (cell !== "" || row.length){ push(); out.push(row); }
+  const rows = out.filter(r => r.some(v => String(v).trim() !== ""));
+  rows.qcols = qcols; rows.qhead = qhead;
+  return rows;
 }
-/* v4.7: ไฟล์จริงครอบเครื่องหมายคำพูด "รายคอลัมน์" ไม่ใช่ทุกช่องหรือเฉพาะที่จำเป็น
-   เช่น ME15... ครอบ แต่ Qty กับ CutWidth ไม่ครอบ และสม่ำเสมอทุกแถว
-   ถ้าเขียนคืนแบบมาตรฐาน ไฟล์จะต่างจากต้นฉบับเกือบทุกบรรทัด
-   -> อ่านรูปแบบจากไฟล์แล้วเขียนคืนให้ตรง
-   คืน { head:[bool], data:[bool] } แยกกัน เพราะหัวตารางมักครอบครบแม้ข้อมูลไม่ครอบ */
-function detectQuotes(text, d){
-  const scan = line => {
-    const out = []; let q = false, was = false, i = 0;
-    while (i < line.length){
-      const c = line[i];
-      if (q){
-        if (c === '"'){
-          if (line[i+1] === '"'){ i += 2; continue; }
-          q = false; i++; continue;
-        }
-        i++; continue;
-      }
-      if (c === '"'){ q = true; was = true; i++; continue; }
-      if (c === d){ out.push(was); was = false; i++; continue; }
-      i++;
-    }
-    out.push(was);
-    return out;
-  };
-  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l !== "");
-  if (!lines.length) return { head: [], data: [] };
-  const head = scan(lines[0]);
-  const data = [];
-  lines.slice(1, 60).forEach(l => scan(l).forEach((q, i) => { data[i] = data[i] || q; }));
-  return { head, data };
-}
-
 function detectDelim(text){
   const first = text.split(/\r?\n/)[0] || "";
   const n = ch => (first.match(new RegExp("\\" + ch, "g")) || []).length;
@@ -608,7 +615,7 @@ function pickTabByContent(cols){
   return cur;
 }
 
-function ingest(matrix, name, tab, fmt){
+function ingest(matrix, name, tab, src){
   if (!matrix.length || matrix[0].length < 2){
     return fail("อ่านไฟล์ไม่ออก",
       "ไม่พบหัวตาราง หรือมีคอลัมน์เดียว ตรวจว่าบรรทัดแรกของไฟล์เป็นหัวตาราง");
@@ -618,8 +625,11 @@ function ingest(matrix, name, tab, fmt){
   const t = TABS[tab];
   t.cols = head;
   t.rows = matrix.slice(1).map(r => t.cols.map((_, i) => r[i] ?? ""));
-  t.file = name; t.fmt = fmt || { kind: "xlsx" };
-  t.sortCol = -1; t.sortDir = 1; t.q = ""; t.only = false; t.sel = null;
+  t.file = name; t.sortCol = -1; t.sortDir = 1; t.q = ""; t.only = false; t.sel = null;
+  /* v4.7: จำรูปแบบไฟล์ที่รับมา ใช้ตั้งค่าเริ่มต้นของเมนูบันทึกและเขียน CSV กลับให้เหมือนเดิม */
+  t.src = src || { kind: "csv", delim: ",", bom: false, crlf: true, eof: false,
+                   qcols: matrix.qcols || [], qhead: matrix.qhead || [] };
+  t.saveAll = false;
   t.chk = null; t.onlyNo = false;   // ไฟล์ใหม่ = ผลเช็คเก่าใช้ไม่ได้แล้ว
   t.needCheck = false; t.xy = null; t.onlyEd = false;
 
@@ -938,11 +948,10 @@ function render(){
   const t = T();
   const has = t.rows.length > 0;
   $("csv").disabled = $("copy").disabled = $("colbtn").disabled = !has;
-  /* v4.7: บอกให้ชัดว่าจะได้ไฟล์ชนิดไหนออกมา */
-  $("csv").textContent = (has && t.fmt && t.fmt.kind === "csv") ? "บันทึก CSV" : "บันทึก Excel";
   $("find").value = t.q;
   $("only").setAttribute("aria-pressed", String(t.only));
   $("colpanel").className = "";
+  $("savemenu").className = ""; $("csv").setAttribute("aria-expanded", "false");
   if (!has){
     $("head").innerHTML = ""; $("body").innerHTML = "";
     $("bar").className = ""; $("sum").className = "";
@@ -983,32 +992,30 @@ function readMatrix(f){
         try{
           const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
           const sh = wb.Sheets[wb.SheetNames[0]];
-          res({ name: f.name, fmt: { kind: "xlsx" },
-                m: XLSX.utils.sheet_to_json(sh, { header: 1, raw: false, defval: "" }) });
+          res({ name: f.name, m: XLSX.utils.sheet_to_json(sh, { header: 1, raw: false, defval: "" }),
+                src: { kind: "xlsx" } });
         }catch(err){ rej(err); }
       };
       fr.readAsArrayBuffer(f);
     } else {
+      /* v4.7: อ่านเป็นไบต์เพื่อดูว่าไฟล์มี BOM ไหม (readAsText กลืน BOM ไปเงียบ ๆ)
+         แล้วเก็บลายเซ็นของไฟล์ไว้ให้ตอนบันทึกเขียนกลับได้เหมือนเดิม */
       fr.onload = e => {
-        const x = e.target.result;
-        const delim = detectDelim(x);
-        /* v4.7: จำรูปแบบไฟล์ต้นทางไว้ จะได้เขียนคืนให้เหมือนเดิมเป๊ะ
-           ไฟล์จริงที่เจอครอบเครื่องหมายคำพูดทุกช่องและใช้ CRLF ไม่มี BOM
-           ถ้าเขียนคืนแบบมาตรฐาน เครื่องปลายทางอาจอ่านไม่ตรง */
-        res({
-          name: f.name,
-          m: parseDelimited(x, delim),
-          fmt: {
-            kind: "csv",
-            delim,
-            bom: x.charCodeAt(0) === 0xFEFF,
-            eol: /\r\n/.test(x) ? "\r\n" : "\n",
-            trail: /\r?\n$/.test(x),   // ต้นฉบับปิดท้ายด้วยบรรทัดว่างไหม ต่างกัน 2 ไบต์
-            q: detectQuotes(x, delim)
-          }
-        });
+        const buf = new Uint8Array(e.target.result);
+        const bom = buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF;
+        let x;
+        try{ x = new TextDecoder("utf-8").decode(buf); }
+        catch(_){ x = String.fromCharCode.apply(null, buf); }
+        const d = detectDelim(x);
+        const m = parseDelimited(x, d);
+        res({ name: f.name, m, src: {
+          kind: "csv", delim: d, bom,
+          crlf: /\r\n/.test(x),
+          eof: /[\r\n]$/.test(x),
+          qcols: m.qcols || [], qhead: m.qhead || []
+        }});
       };
-      fr.readAsText(f, "UTF-8");
+      fr.readAsArrayBuffer(f);
     }
   });
 }
@@ -1052,7 +1059,7 @@ async function takeFiles(list){
   if (got.length === 1){
     const g = got[0];
     const t = g.w > g.f ? "wood" : g.f > g.w ? "fit" : (g.hint || cur);
-    ingest(g.m, g.name, t, g.fmt);
+    ingest(g.m, g.name, t, g.src);
     busyDone("split", TABS[t].label + "  \u00B7  " + TABS[t].rows.length + " แถว");
     return;
   }
@@ -1062,8 +1069,8 @@ async function takeFiles(list){
   const aWood = (a.w - a.f) + (a.hint === "wood" ? .5 : a.hint === "fit" ? -.5 : 0);
   const bWood = (b.w - b.f) + (b.hint === "wood" ? .5 : b.hint === "fit" ? -.5 : 0);
   const first = aWood >= bWood ? a : b, second = aWood >= bWood ? b : a;
-  ingest(first.m,  first.name,  "wood", first.fmt);
-  ingest(second.m, second.name, "fit",  second.fmt);
+  ingest(first.m,  first.name,  "wood", first.src);
+  ingest(second.m, second.name, "fit",  second.src);
   cur = "wood"; syncTabs(); render();
   busyDone("split", "BOM ไม้ " + TABS.wood.rows.length + "  \u00B7  Fitting " + TABS.fit.rows.length + " แถว");
 }
@@ -1084,9 +1091,8 @@ document.addEventListener("paste", e => {
   if (!x || x.indexOf("\n") < 0) return;
   e.preventDefault();
   $("drop").className = "";
-  { const dl = detectDelim(x);
-    ingest(parseDelimited(x, dl), "วางจากคลิปบอร์ด", null,
-           { kind: "csv", delim: dl, bom: false, eol: "\r\n", q: detectQuotes(x, dl) }); }
+  ingest(parseDelimited(x, detectDelim(x)), "วางจากคลิปบอร์ด", null,
+         { kind: "xlsx" });   /* v4.7: วางมาจาก Excel ตั้งค่าเริ่มต้นเป็น .xlsx */
 });
 
 /* ───────── ปุ่มต่าง ๆ ───────── */
@@ -1121,6 +1127,11 @@ $("colbtn").onclick = () => {
 };
 document.addEventListener("click", e => {
   if (!$("colpanel").contains(e.target) && e.target !== $("colbtn")) $("colpanel").className = "";
+  /* v4.7: เมนูบันทึกก็ปิดเมื่อคลิกที่อื่น (ปุ่มมีลูกศรข้างใน จึงเช็คด้วย closest) */
+  if (!$("savemenu").contains(e.target) && !e.target.closest("#csv")){
+    $("savemenu").className = "";
+    $("csv").setAttribute("aria-expanded", "false");
+  }
 });
 
 function toast(msg){
@@ -1152,66 +1163,116 @@ $("copy").onclick = () => {
    เดิม (v3.2-v4.5) ต่อท้ายสามคอลัมน์ผลเช็ค แต่ปลายทางต้องการโครงเดิม
    ผลเช็คดูได้จากการ์ดฝั่งขวาอยู่แล้ว ไม่ต้องติดไปกับไฟล์ */
 function exportRows(t){
-  return { head: t.cols, body: view };
+  /* v4.7: t.saveAll = true คือไม่สนตัวกรอง เอาทุกแถวตามลำดับในไฟล์ */
+  return { head: t.cols, body: t.saveAll ? t.rows : view };
 }
 
-/* ───────── ส่งออก (v4.7) ─────────
-   นำเข้าเป็นอะไรก็ส่งออกเป็นอย่างนั้น คอลัมน์เท่าไฟล์เข้าเป๊ะ
-   CSV: รักษาตัวคั่น ตัวจบบรรทัด BOM และวิธีครอบเครื่องหมายคำพูดของต้นฉบับ */
-function csvText(head, body, fmt){
-  const D = fmt.delim || ",";
-  const EOL = fmt.eol || "\r\n";
-  const QH = (fmt.q && fmt.q.head) || [];
-  const QD = (fmt.q && fmt.q.data) || [];
-  /* ครอบเมื่อคอลัมน์นั้นเคยครอบในต้นฉบับ หรือเมื่อจำเป็นจริง ๆ (มีตัวคั่น/คำพูด/ขึ้นบรรทัด) */
-  const cell = (v, i, pat) => {
-    const x = v === null || v === undefined ? "" : String(v);
-    const need = x.indexOf(D) >= 0 || /["\r\n]/.test(x);
-    return (pat[i] || need) ? '"' + x.replace(/"/g, '""') + '"' : x;
+/* ───────── เขียน CSV โดยยึดรูปแบบไฟล์ต้นฉบับ (v4.7) ─────────
+   ตัวคั่น · การครอบคำพูดรายคอลัมน์ · BOM · CRLF · มีบรรทัดว่างท้ายไฟล์ไหม
+   ไฟล์ที่ได้จึงต่างจากไฟล์ที่เปิดมาเฉพาะช่องที่แก้จริง เทียบ diff ได้สบาย
+   ถ้าต้นทางเป็น .xlsx ไม่มีรูปแบบให้ยึด ใช้ค่ามาตรฐาน + BOM ให้ Excel อ่านไทยไม่เพี้ยน */
+function toCSV(t, head, body){
+  const s = t.src && t.src.kind === "csv" ? t.src : null;
+  const d = (s && s.delim) || ",";
+  const eol = (!s || s.crlf !== false) ? "\r\n" : "\n";
+  const qc = (s && s.qcols) || [], qh = (s && s.qhead) || [];
+  const cell = (v, forced) => {
+    const x = String(v ?? "");
+    return (forced || x.indexOf(d) >= 0 || x.indexOf('"') >= 0 || /[\r\n]/.test(x))
+      ? '"' + x.replace(/"/g, '""') + '"' : x;
   };
-  const lines = [head.map((v, i) => cell(v, i, QH)).join(D)]
-    .concat(body.map(r => r.map((v, i) => cell(v, i, QD)).join(D)));
-  return (fmt.bom ? "\uFEFF" : "") + lines.join(EOL) + (fmt.trail === false ? "" : EOL);
+  const line = (r, mask) => r.map((v, i) => cell(v, !!mask[i])).join(d);
+  const text = [line(head, qh)].concat(body.map(r => line(r, qc))).join(eol);
+  return (s ? (s.bom ? "\uFEFF" : "") : "\uFEFF") + text + (s && s.eof ? eol : "");
 }
 
-function saveFile(name, blob){
+function download(name, blob){
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = name;
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* fmt: "csv" | "xlsx" — ถ้าไม่ส่งมา ใช้รูปแบบเดียวกับไฟล์ที่เปิด */
+function saveFile(fmt){
+  const t = T();
+  if (!t.rows.length) return;
+  fmt = fmt || (t.src && t.src.kind === "csv" ? "csv" : "xlsx");
+  const { head: xh, body: xb } = exportRows(t);
+  const base = (t.file.replace(/\.[^.]+$/, "") || t.label) + "_Pass";
+  const n = xb.length.toLocaleString("th-TH");
+
+  if (fmt === "xlsx"){
+    if (typeof XLSX === "undefined"){
+      toast("ตัวเขียน .xlsx โหลดไม่ได้ บันทึกเป็น .csv แทน");
+      fmt = "csv";
+    } else {
+      try{
+        const ws = XLSX.utils.aoa_to_sheet([xh, ...xb]);
+        ws["!cols"] = xh.map((c, i) => ({
+          wch: Math.min(38, Math.max(String(c).length + 2,
+               ...xb.slice(0, 300).map(r => String(r[i] ?? "").length + 2)))
+        }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, t.label.slice(0, 28));
+        XLSX.writeFile(wb, base + ".xlsx");
+        return toast("บันทึก " + n + " แถวเป็น .xlsx แล้ว");
+      }catch(e){
+        toast("เขียน .xlsx ไม่สำเร็จ บันทึกเป็น .csv แทน");
+        fmt = "csv";
+      }
+    }
+  }
+
+  const ext = t.src && t.src.kind === "csv" && t.src.delim === "\t" ? ".tsv" : ".csv";
+  download(base + ext, new Blob([toCSV(t, xh, xb)], { type: "text/csv;charset=utf-8" }));
+  toast("บันทึก " + n + " แถวเป็น " + ext + " แล้ว");
+}
+
+/* ───────── เมนูเลือกนามสกุลตอนบันทึก (v4.7) ───────── */
+function saveMenu(){
+  const t = T(), p = $("savemenu");
+  const csvFirst = !(t.src && t.src.kind === "xlsx");   /* เปิด CSV มา ก็ให้ CSV อยู่บน */
+  const tag = '<span class="tag">ตรงกับไฟล์ที่เปิด</span>';
+  const item = f => f === "csv"
+    ? '<button class="mi" data-f="csv"><b>.csv</b><i>ข้อความคั่นด้วย' +
+      (t.src && t.src.delim === "\t" ? "แท็บ" : "คอมมา") +
+      ' รูปแบบเดิมทุกอย่าง ส่งเข้าระบบต่อได้ทันที</i>' + (csvFirst ? tag : "") + "</button>"
+    : '<button class="mi" data-f="xlsx"><b>.xlsx</b><i>เปิดใน Excel ได้เลย ความกว้างคอลัมน์จัดให้</i>' +
+      (csvFirst ? "" : tag) + "</button>";
+
+  const all = t.rows.length, now = view.length;
+  const foot = now === all
+    ? '<div class="foot">จะบันทึก ' + all.toLocaleString("th-TH") + " แถว ครบทั้งไฟล์</div>"
+    : '<div class="foot">ตอนนี้กรองอยู่ เห็น ' + now.toLocaleString("th-TH") + " จาก " +
+      all.toLocaleString("th-TH") + " แถว" +
+      '<div class="scope">' +
+        '<button data-s="view" aria-pressed="' + (!t.saveAll) + '">เฉพาะที่เห็น</button>' +
+        '<button data-s="all" aria-pressed="' + (!!t.saveAll) + '">ทุกแถว</button>' +
+      "</div></div>";
+
+  p.innerHTML = "<h4>บันทึกเป็นไฟล์แบบไหน</h4>" +
+                (csvFirst ? item("csv") + item("xlsx") : item("xlsx") + item("csv")) + foot;
+  p.querySelectorAll(".mi").forEach(b => b.onclick = () => {
+    p.className = ""; $("csv").setAttribute("aria-expanded", "false");
+    saveFile(b.dataset.f);
+  });
+  p.querySelectorAll(".scope button").forEach(b => b.onclick = () => {
+    t.saveAll = b.dataset.s === "all";
+    saveMenu();   /* วาดใหม่ให้ปุ่มติดสถานะ เมนูยังเปิดค้างไว้ */
+  });
+  p.className = "on";
 }
 
 $("csv").onclick = () => {
-  const t = T();
-  const { head, body } = exportRows(t);
-  const base = (t.file.replace(/\.[^.]+$/, "") || t.label) + "_Pass";
-  const fmt = t.fmt || { kind: "xlsx" };
-
-  if (fmt.kind === "csv"){
-    saveFile(base + ".csv",
-      new Blob([csvText(head, body, fmt)], { type: "text/csv;charset=utf-8" }));
-    return toast("บันทึก " + body.length.toLocaleString("th-TH") + " แถวเป็น .csv แล้ว \u00B7 " +
-                 head.length + " คอลัมน์เท่าไฟล์ต้นทาง");
+  const p = $("savemenu");
+  if (p.className === "on"){
+    p.className = ""; $("csv").setAttribute("aria-expanded", "false");
+    return;
   }
-
-  if (typeof XLSX !== "undefined"){
-    try{
-      const ws = XLSX.utils.aoa_to_sheet([head, ...body]);
-      ws["!cols"] = head.map((c, i) => ({
-        wch: Math.min(38, Math.max(String(c).length + 2,
-             ...body.slice(0, 300).map(r => String(r[i] ?? "").length + 2)))
-      }));
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, t.label.slice(0, 28));
-      XLSX.writeFile(wb, base + ".xlsx");
-      return toast("บันทึก " + body.length.toLocaleString("th-TH") + " แถวเป็น .xlsx แล้ว");
-    }catch(e){ /* ตกไปใช้ CSV ข้างล่าง */ }
-  }
-  saveFile(base + ".csv", new Blob(
-    [csvText(head, body, { delim: ",", eol: "\r\n", bom: true })],
-    { type: "text/csv;charset=utf-8" }));
-  toast("เขียน .xlsx ไม่ได้ บันทึกเป็น CSV แทน");
+  saveMenu();
+  $("csv").setAttribute("aria-expanded", "true");
 };
 
 /* ═══════════════════════════════════════════════════════════════
