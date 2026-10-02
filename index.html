@@ -11,7 +11,10 @@
   FILE     : imos-viewer.html
   STACK    : single-file HTML · ไม่มี build step · ไม่ต่อฐานข้อมูล อ่านไฟล์ในเครื่องล้วน
   ENTRY    : ingest() -> apply() -> draw()
+             หน้า จัดการ Lot order (v5.9): lotTake() -> lotGroup() -> drawLot()
   STATE    : TABS.wood / TABS.fit  คือ single source of truth
+             LOT  = สถานะของหน้า จัดการ Lot order แยกขาดจาก TABS
+             mode = "bom" | "lot" หน้าที่เปิดอยู่
              >>> ห้ามนิยาม $ / norm / esc / blank / isNum / T() ซ้ำอีก
 
   --- CHANGELOG (ใหม่สุดอยู่บนสุด) -----------------------------------
@@ -96,6 +99,7 @@
   --page:#eef0f4; --card:#fff; --hover:#f5f7fb;
   --hl-bg:#fdf1e0; --hl-line:#f0d5ac; --hl-ink:#7a4a08; --hl-hover:#fbe8cf;
   --miss-bg:#fdecec; --miss-line:#f2c9c9; --miss-ink:#a32d2d;
+  --ok:#1e6b38; --ok-bg:#e6f4ea; --ok-line:#bfe3cb; --on-orange:#3a2200;
   --sans:"Sarabun",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
   --mono:"IBM Plex Mono","SF Mono",ui-monospace,Menlo,monospace;
 }
@@ -143,7 +147,7 @@ header .sp{flex:1}
 #find::placeholder{color:rgba(255,255,255,.42);font-family:var(--sans)}
 #find:focus{border-color:var(--orange);background:rgba(255,255,255,.18)}
 :focus-visible{outline:2px solid var(--orange);outline-offset:2px}
-#pick,#dpick{display:none}
+#pick,#dpick,#lpick{display:none}
 
 /* ── แท็บ ── */
 #tabs{flex:0 0 auto;display:flex;align-items:stretch;background:var(--navy);
@@ -461,6 +465,119 @@ footer .mono{font-family:var(--mono)}
        transition:opacity .18s;z-index:50}
 #toast.on{opacity:1}
 @media(max-width:820px){ .brand,.stat i{display:none} #find{width:110px} }
+
+/* ═══ ปุ่มสลับหน้า จัดการ BOM AX / จัดการ Lot order (v5.9) ═══ */
+.modes{display:flex;gap:2px;padding:2px;border-radius:9px;background:rgba(255,255,255,.10);
+       border:1px solid rgba(255,255,255,.18);margin:0 4px}
+.mode{font-family:var(--sans);font-size:12.5px;border:0;border-radius:7px;padding:6px 12px;cursor:pointer;
+      background:none;color:rgba(255,255,255,.78);white-space:nowrap}
+.mode:hover{background:rgba(255,255,255,.12);color:#fff}
+.mode.on{background:var(--card);color:var(--navy);font-weight:600}
+/* จอโน้ตบุ๊กแคบ หัวแอปล้น -> ตัดคำว่า จัดการ กับชื่อแอปออก (เลขเวอร์ชันยังอยู่) */
+@media(max-width:1180px){ .mode .mw, .brand{display:none} }
+/* หน้า Lot ซ่อนทุกอย่างที่เป็นของ BOM AX · ใช้ id ตรง ๆ เพราะโค้ดเดิมเขียนทับ className ของ #chkbar #bar */
+body.mode-lot #open, body.mode-lot #find, body.mode-lot #only, body.mode-lot #colbtn,
+body.mode-lot #copy, body.mode-lot .menuwrap, body.mode-lot #tabs, body.mode-lot #chkbar,
+body.mode-lot #bar, body.mode-lot #main, body.mode-lot footer{display:none !important}
+
+/* ═══ หน้า จัดการ Lot order (v5.9) ═══ */
+#lot{flex:1;min-height:0;display:none;flex-direction:column;position:relative;background:var(--page)}
+body.mode-lot #lot{display:flex}
+.lbar{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;
+      background:var(--card);border-bottom:1px solid var(--line)}
+.lbar .sp{flex:1}
+.lfile{font-size:12.5px;color:var(--dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lfile b{color:var(--ink);font-weight:600}
+.lfile .m{font-family:var(--mono);font-weight:600;color:var(--navy)}
+.lgc{font-size:11.5px;color:var(--dim);display:none;align-items:center;gap:6px}
+.lgc.on{display:flex}
+.lgc select{font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:6px;
+            border:1px solid var(--line-2);background:var(--card);color:var(--ink);cursor:pointer}
+.lbody{flex:1;min-height:0;display:flex}
+.lgroups{flex:0 0 430px;max-width:46%;display:flex;flex-direction:column;min-height:0;
+         background:var(--card);border-right:1px solid var(--line)}
+.lgsearch{flex:0 0 auto;padding:10px;border-bottom:1px solid var(--line)}
+#lfind{width:100%;font-family:var(--mono);font-size:13px;padding:9px 11px;border-radius:8px;
+       border:1px solid var(--line-2);outline:0;background:var(--card);color:var(--ink)}
+#lfind::placeholder{font-family:var(--sans);color:var(--faint)}
+#lfind:focus{border-color:var(--orange)}
+.lglist{flex:1;overflow:auto}
+.lg{display:grid;grid-template-columns:20px 1fr auto;gap:3px 10px;align-items:center;padding:8px 12px;
+    border-bottom:1px solid var(--line);cursor:pointer;min-height:44px}
+.lg:hover{background:var(--hover)}
+.lg.on{background:var(--hl-bg);box-shadow:inset 3px 0 0 var(--orange)}
+.lg .ck{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line-2);background:var(--card);
+        display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--on-orange)}
+.lg.on .ck{background:var(--orange);border-color:var(--orange)}
+.lg .lk{font-family:var(--mono);font-size:12.5px;font-weight:600}
+.lg .lk.none{font-family:var(--sans);color:var(--miss-ink)}
+.lg .ln{font-size:11.5px;color:var(--dim);white-space:nowrap}
+.lg .ln b{font-family:var(--mono);font-size:12.5px;color:var(--ink);font-weight:600}
+.lg .lm{grid-column:2 / 4;font-size:11px;color:var(--faint);line-height:1.5}
+.lg .lm .m{font-family:var(--mono)}
+.lg .lm .warn{color:var(--hl-ink)}
+.lgnone{padding:22px 14px;font-size:12.5px;color:var(--faint);text-align:center;line-height:1.7}
+.lside{flex:1;min-width:0;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+.lcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;flex:0 0 auto}
+.lcard h4{font-size:13.5px;font-weight:600;margin-bottom:10px;display:flex;align-items:baseline;gap:8px}
+.lcard h4 em{font-style:normal;font-weight:400;font-size:12px;color:var(--faint)}
+.lcard h4 .dlink{margin-left:auto}
+.lcard p{font-size:12.5px;color:var(--dim);line-height:1.75}
+.lcard p b{color:var(--ink)}
+.lcard p .m{font-family:var(--mono);font-size:12px}
+.lchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.lchip{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:12px;font-weight:600;
+       background:var(--hl-bg);color:var(--hl-ink);border:1px solid var(--hl-line);border-radius:20px;
+       padding:3px 4px 3px 11px}
+.lchip button{border:0;background:none;color:inherit;font-size:15px;line-height:1;cursor:pointer;
+              width:24px;height:24px;border-radius:50%}
+.lchip button:hover{background:var(--hl-hover)}
+.lstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.lstats>div{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:var(--page);min-width:0}
+.lstats b{display:block;font-family:var(--mono);font-size:14px;font-weight:600;color:var(--navy);
+          overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lstats i{display:block;font-style:normal;font-size:10.5px;color:var(--faint);margin-top:2px}
+.lroom{display:flex;flex-direction:column;gap:4px}
+.lroom label{font-size:11.5px;color:var(--dim)}
+#lroom{font-family:var(--sans);font-size:14px;padding:8px 10px;border-radius:7px;border:1px solid var(--line-2);
+       outline:0;background:var(--card);color:var(--ink);width:180px;max-width:100%}
+#lroom:focus{border-color:var(--orange)}
+.lout{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:9px}
+.lo-t{font-size:12.5px;display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.lo-t .no{font-family:var(--mono);font-size:11px;font-weight:600;width:20px;height:20px;border-radius:50%;
+          background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.lo-t .cnt{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap}
+.lo-t .cnt b{font-family:var(--mono);color:var(--ink)}
+.lo-r{display:flex;gap:8px}
+.lname{flex:1;min-width:0;font-family:var(--sans);font-size:12.5px;padding:8px 10px;border-radius:7px;
+       border:1px solid var(--line-2);outline:0;background:var(--card);color:var(--ink)}
+.lname:focus{border-color:var(--orange)}
+.lo-r .cbtn,.lfoot .cbtn{min-height:36px}
+.lver{font-size:12px;line-height:1.65;border-radius:9px;padding:9px 12px;margin:4px 0 12px}
+.lver.ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line)}
+.lver.bad{background:var(--miss-bg);color:var(--miss-ink);border:1px solid var(--miss-line)}
+.lver .m{font-family:var(--mono);font-weight:600}
+.lfoot{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lfoot .sp{flex:1}
+.lfoot .note{font-size:11.5px;color:var(--faint);line-height:1.5;flex:1 1 220px}
+.lpwrap{max-height:min(56vh,520px);overflow:auto;border:1px solid var(--line);border-radius:8px;position:relative}
+.lpwrap thead th{cursor:default}
+.lpmore{font-size:11.5px;color:var(--faint);margin-top:7px}
+#ldrop{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;
+       justify-content:center;gap:13px;background:var(--card);padding:36px;text-align:center}
+#ldrop.off{display:none}
+#ldrop.over{background:var(--hl-bg);outline:2px dashed var(--orange);outline-offset:-14px}
+#ldrop h2{font-size:17px;font-weight:600}
+#ldrop p{font-size:13px;color:var(--dim);max-width:58ch;line-height:1.75}
+#ldrop code{font-family:var(--mono);background:var(--page);padding:2px 6px;border-radius:4px;font-size:11.5px}
+#ldrop.err h2{color:var(--miss-ink)}
+@media(max-width:820px){
+  .mode{padding:6px 9px;font-size:12px}
+  .lbody{flex-direction:column;overflow:auto}
+  .lgroups{flex:0 0 auto;max-width:none;max-height:46vh;border-right:0;border-bottom:1px solid var(--line)}
+  .lside{overflow:visible}
+  .lstats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style>
 </head>
 <body>
@@ -468,6 +585,11 @@ footer .mono{font-family:var(--mono)}
 <header>
   <div class="brand">ReCheck <span>Bom</span></div>
   <button class="vbadge" id="vbadge" title="คลิกดูประวัติรุ่น">v?</button>
+  <!-- v5.9: สลับหน้าใหญ่ · BOM AX = ของเดิมทั้งหมด · Lot order = แยกห้องออกจากไฟล์ Lot -->
+  <div class="modes">
+    <button class="mode on" data-m="bom" aria-pressed="true"><span class="mw">จัดการ </span>BOM AX</button>
+    <button class="mode" data-m="lot" aria-pressed="false"><span class="mw">จัดการ </span>Lot order</button>
+  </div>
   <button class="btn go" id="open">เปิดไฟล์เข้าแท็บนี้</button>
   <input type="file" id="pick" accept=".xlsx,.xls,.csv,.txt,.tsv" multiple>
   <input type="file" id="dpick" webkitdirectory directory multiple>
@@ -520,6 +642,28 @@ footer .mono{font-family:var(--mono)}
 <div id="side"><div id="sum"></div></div>
 </div>
 
+<!-- ═══ หน้า จัดการ Lot order (v5.9) ═══ ไม่เช็คไม้ ไม่เช็คอุปกรณ์ แค่แยกห้อง -->
+<section id="lot">
+  <div class="lbar">
+    <button class="cbtn primary" id="lopen">เปิดไฟล์ Lot</button>
+    <input type="file" id="lpick" accept=".csv,.txt,.tsv">
+    <span class="lfile" id="lfile">ยังไม่ได้เปิดไฟล์</span>
+    <span class="sp"></span>
+    <label class="lgc" id="lgc">แยกห้องด้วยคอลัมน์ <select id="lgcol"></select></label>
+  </div>
+  <div class="lbody">
+    <div class="lgroups">
+      <div class="lgsearch">
+        <input id="lfind" placeholder="พิมพ์หรือวางเลข PD แล้วกด Enter · เลขท้ายก็ได้ เช่น 44813"
+               autocomplete="off" spellcheck="false">
+      </div>
+      <div class="lglist" id="lglist"></div>
+    </div>
+    <div class="lside" id="lside"></div>
+  </div>
+  <div id="ldrop"></div>
+</section>
+
 <footer>
   <span id="state">ยังไม่ได้เปิดไฟล์</span>
   <span class="sp"></span>
@@ -539,9 +683,10 @@ footer .mono{font-family:var(--mono)}
 /* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
 const APP_META = {
   name: "ReCheck Bom",
-  version: "5.8",
-  build: "2026-09-05/save-clears-filter",
+  version: "5.9",
+  build: "2026-09-29/lot-order-split",
   changelog: [
+    ["5.9","2026-09-29","FEAT เพิ่มหน้า จัดการ Lot order แยกจากหน้า จัดการ BOM AX (ของเดิมทั้งหมด) สลับได้ที่ปุ่มบนหัวแอป และจำไว้ว่าเปิดหน้าไหนค้าง · ทำเพราะมีเคสตัดห้องออกจากไฟล์ Lot เช่น ห้อง 609 ใช้ PD69000044813 เดิมต้องไปลบแถวเองใน Excel ซึ่งเสี่ยงลบเกินและ Excel แอบเปลี่ยนรูปแบบตัวเลข · เปิดไฟล์ Lot (.csv) แล้วโปรแกรมแยกห้องจากท่อนหน้าขีดของ BarcodePart บอกว่าแต่ละ PD มีกี่แถว ItemIdSet อะไร ShelfNo ช่วงไหน อยู่บรรทัดไหนในไฟล์ · เลือกห้องด้วยการคลิก หรือพิมพ์/วางเลข PD แล้วกด Enter (เลขท้ายอย่าง 44813 หรือ BarcodePart ทั้งท่อนก็ได้) ใส่ชื่อห้องไว้ตั้งชื่อไฟล์ ได้สองไฟล์ คือ เฉพาะห้องนั้น กับ ไฟล์เดิมตัดห้องนั้นออก · ไฟล์ที่ได้ตัดท่อนไบต์จากไฟล์ต้นฉบับมาต่อกันตรง ๆ ไม่ได้ประกอบ CSV ใหม่ รูปแบบจึงเหมือนเดิมทุกอย่าง 683.0 ไม่กลายเป็น 683 BOM CRLF ติดไปครบ ไม่ขึ้นกับ encoding · มีบรรทัดตรวจว่าสองไฟล์รวมกันได้เท่าไฟล์เดิม · หน้านี้ไม่เช็คโค้ดไม้/อุปกรณ์ ไม่แก้ X เป็น Y · หน้าจอแคบกว่า 1180px ตัดคำว่า จัดการ กับชื่อแอปบนหัวออกกันปุ่มล้นจอ · ทดสอบในเบราว์เซอร์กับไฟล์จริง SDRHH_P_TOW.A_FL2-7_LOT2.1 แล้ว PD69000044813 ได้ 99 แถว ไฟล์ที่เหลือ 3,811 แถว เทียบไบต์ตรงกับต้นฉบับทั้งสองไฟล์ และหน้า BOM AX ยังเปิดไฟล์ได้ตามเดิม (ส่วนเช็คกับ Supabase ไม่ได้ทดสอบรอบนี้ เพราะไม่ได้แตะโค้ดส่วนนั้น)"],
     ["5.8","2026-09-05","กดบันทึกไฟล์ตอนที่ยังกรองอยู่ จะล้างตัวกรองให้ก่อนแล้วบันทึกครบทั้งไฟล์ ของเดิมได้เฉพาะแถวที่เห็นซึ่งไม่ค่อยมีใครตั้งใจและไม่รู้ตัว · ล้างครบทุกแบบ ทั้งคำค้น เฉพาะที่ยังว่าง เฉพาะที่ยังไม่มีโค้ด เฉพาะแถวที่แก้ และการคลิกกรองจากค่าในช่อง หน้าจอกับไฟล์ที่ได้จึงตรงกันเสมอ · ถ้าตั้งใจจะเอาเฉพาะที่กรองจริง ๆ กดปุ่ม เอาตัวกรองกลับ ในเมนูบันทึกได้"],
     ["5.7","2026-09-05","เลิกเอา SQL ไปตั้งขวางหน้าคนหน้าเครื่อง ตอนต่อฐานข้อมูลไม่ได้จะเห็นแค่บรรทัดเดียวว่าหลักฐานเก็บในเครื่องนี้ ใช้งานได้ตามปกติ ส่วนวิธีสร้างตารางกับ SQL พับไว้หลังลิงก์ ผู้ดูแลระบบกดที่นี่ · เขียนให้ชัดว่าสร้างตารางครั้งเดียวจบ ทำแล้วข้อความหายไปเองทุกเครื่อง ไม่ใช่ต้องรันทุกรอบ"],
     ["5.6","2026-09-05","เปลี่ยนชื่อตารางหลักฐานจาก drill_scans เป็น recheck_drill_scans เพราะโปรเจกต์ Supabase นี้มีตาราง drill_scans ของระบบอื่นอยู่ก่อนแล้ว (station barcode barcode2 order_id cab_name) ชื่อชนกันทำให้ SQL ไปเพิ่มคอลัมน์ในตารางเขาและเปิด RLS ให้ตารางเขาโดยไม่ตั้งใจ · ชื่อตารางอยู่ที่ตัวแปร DRILL_TABLE ตัวเดียว SQL กับ index กับ policy ประกอบตามให้เอง เปลี่ยนอีกก็แก้ที่เดียว"],
@@ -613,6 +758,9 @@ const TABS = {
 };
 let cur = "wood", view = [];
 const T = () => TABS[cur];
+/* v5.9: หน้าใหญ่ที่เปิดอยู่ "bom" = จัดการ BOM AX (ของเดิม) · "lot" = จัดการ Lot order
+   ตัวรับลากวางกับตัวรับวางข้อความเป็นของทั้งเอกสาร จึงต้องดูค่านี้ก่อนส่งไฟล์ไปหน้าไหน */
+let mode = "bom";
 
 /* ───────── ตัวอ่าน CSV/TSV — รองรับคำพูด คอมมาในค่า ขึ้นบรรทัดในเซลล์ ─────────
    (v1.0 เขียนไว้แล้ว ไม่แตะ) */
@@ -1138,14 +1286,24 @@ async function takeFiles(list){
 $("open").onclick = () => $("pick").click();
 $("pick").onchange = e => takeFiles(e.target.files);
 
+/* v5.9: ลากไฟล์มาวางตอนอยู่หน้า Lot ต้องเข้าหน้า Lot ไม่ใช่ไปทับแท็บ BOM ไม้ */
 ["dragenter","dragover"].forEach(ev =>
-  document.addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+  document.addEventListener(ev, e => {
+    e.preventDefault();
+    $(mode === "lot" ? "ldrop" : "drop").classList.add("over");
+  }));
 ["dragleave","drop"].forEach(ev =>
-  document.addEventListener(ev, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
+  document.addEventListener(ev, e => {
+    e.preventDefault();
+    $("drop").classList.remove("over"); $("ldrop").classList.remove("over");
+  }));
 document.addEventListener("drop", e => {
-  if (e.dataTransfer && e.dataTransfer.files.length){ $("drop").className = ""; takeFiles(e.dataTransfer.files); }
+  if (!(e.dataTransfer && e.dataTransfer.files.length)) return;
+  if (mode === "lot") return lotTake(e.dataTransfer.files[0]);
+  $("drop").className = ""; takeFiles(e.dataTransfer.files);
 });
 document.addEventListener("paste", e => {
+  if (mode === "lot") return;   // v5.9: หน้า Lot ปล่อยให้วางในช่องค้นหา PD ตามปกติ
   if (e.target === $("find")) return;
   const x = (e.clipboardData || window.clipboardData).getData("text");
   if (!x || x.indexOf("\n") < 0) return;
@@ -2863,8 +3021,454 @@ $("vbadge").onclick = () => {
   $("modal").className = "on";
 };
 
+/* ═══════════════════════════════════════════════════════════════
+   จัดการ Lot order  (v5.9)
+   งาน : ไฟล์ Lot รวมหลายห้องไว้ในไฟล์เดียว บางครั้งต้องตัดห้องหนึ่งออก
+         เช่น ห้อง 609 ใช้ PD69000044813 -> ต้องการสองไฟล์
+           1) เฉพาะห้องนั้น
+           2) ไฟล์เดิมที่ตัดห้องนั้นออกแล้ว
+   แยกห้อง: ท่อนหน้าขีดของ BarcodePart  (PD69000044813-PD04PT18 -> PD69000044813)
+   หัวใจ : ไฟล์ที่ได้ต้องเหมือนต้นฉบับทุกไบต์ ต่างกันแค่แถวที่ย้ายออก
+           จึงไม่ประกอบ CSV ใหม่จากค่าในช่อง แต่ตัดท่อนไบต์ของแต่ละบรรทัดจากไฟล์เดิมมาต่อกัน
+           683.0 ไม่กลายเป็น 683 · BOM · CRLF · คำพูด · ช่องว่างท้ายแถว ติดไปครบ
+           และไม่ขึ้นกับ encoding ของไฟล์ด้วย (ไทยแบบ Windows-874 ก็ไม่เพี้ยน)
+   หน้านี้ไม่เช็คโค้ดไม้ ไม่เช็คอุปกรณ์ ไม่แก้ X เป็น Y และไม่แตะ TABS
+   ═══════════════════════════════════════════════════════════════ */
+const LS_MODE = "imosviewer_mode";
+const LOT_PREV_MAX = 400;          // ตัวอย่างแถวในหน้าจอ แสดงไม่เกินเท่านี้ (ไฟล์ที่บันทึกได้ครบ)
+
+const LOT = {
+  file: "", buf: null, dec: null, delim: ",", bom: false, eof: true, eol: null,
+  top: [], cols: [], recs: [], dataN: 0, gcol: -1,
+  groups: [], sel: new Set(), q: "", room: ""
+};
+
+/* ถอดไบต์เป็นข้อความเพื่อแสดงผลเท่านั้น (ไฟล์ที่บันทึกใช้ไบต์เดิม)
+   ลอง UTF-8 แบบเข้มก่อน ไม่ผ่านแปลว่าเป็นไทยแบบเก่า ใช้ Windows-874 */
+function lotDecoder(buf){
+  try{ new TextDecoder("utf-8", { fatal: true }).decode(buf); return { d: new TextDecoder("utf-8"), name: "UTF-8" }; }
+  catch(_){
+    try{ return { d: new TextDecoder("windows-874"), name: "Windows-874" }; }
+    catch(__){ return { d: new TextDecoder("utf-8"), name: "UTF-8" }; }
+  }
+}
+
+/* แบ่งไฟล์เป็นบรรทัดระดับไบต์ · ขึ้นบรรทัดในเซลล์ที่ครอบคำพูดไม่นับเป็นบรรทัดใหม่
+   คืน [{ s, e, n }]  s..e = เนื้อบรรทัด  ·  e..n = ตัวขึ้นบรรทัดของบรรทัดนั้นเอง
+   (\r\n หรือ \n · บรรทัดสุดท้ายที่ไม่มีตัวขึ้นบรรทัด e === n) */
+function lotLines(buf, start, dl){
+  const out = [];
+  let s = start, q = false, fs = true;          // fs = อยู่ต้นช่องพอดี
+  for (let i = start; i < buf.length; i++){
+    const c = buf[i];
+    if (q){
+      if (c === 0x22){
+        if (buf[i + 1] === 0x22){ i++; continue; }
+        q = false;
+      }
+      continue;
+    }
+    if (c === 0x22 && fs){ q = true; fs = false; continue; }
+    if (c === dl){ fs = true; continue; }
+    if (c === 0x0A){
+      const e = (i > s && buf[i - 1] === 0x0D) ? i - 1 : i;
+      out.push({ s, e, n: i + 1 });
+      s = i + 1; fs = true;
+      continue;
+    }
+    if (c !== 0x0D) fs = false;
+  }
+  if (s < buf.length) out.push({ s, e: buf.length, n: buf.length });
+  return out;
+}
+
+function lotFail(title, body){
+  Object.assign(LOT, { file: "", buf: null, top: [], cols: [], recs: [], dataN: 0, groups: [], sel: new Set(), q: "", room: "" });
+  $("ldrop").className = "err";
+  $("ldrop").innerHTML = "<h2>" + esc(title) + "</h2><p>" + body + "</p>" +
+    "<p style='font-size:12px;color:var(--faint)'>ลากไฟล์ใหม่มาวาง หรือกด เปิดไฟล์ Lot เพื่อลองอีกครั้ง</p>";
+  $("lfile").textContent = "เปิดไฟล์ไม่สำเร็จ";
+  $("lgc").className = "lgc";
+  $("lglist").innerHTML = ""; $("lside").innerHTML = "";
+}
+
+function lotEmpty(){
+  $("ldrop").className = "";
+  $("ldrop").innerHTML =
+    "<h2>จัดการ Lot order — ลากไฟล์ Lot มาวางตรงนี้</h2>" +
+    "<p>โปรแกรมแยกห้องให้จากเลข PD ใน <code>BarcodePart</code> " +
+    "เลือกห้องที่ต้องการ แล้วได้สองไฟล์ คือ <b>เฉพาะห้องนั้น</b> กับ <b>ไฟล์เดิมที่ตัดห้องนั้นออก</b><br>" +
+    "รองรับ <code>.csv</code> <code>.tsv</code> <code>.txt</code> · ไฟล์ที่ได้รูปแบบเหมือนต้นฉบับทุกอย่าง<br>" +
+    "หน้านี้ไม่เช็คโค้ดไม้หรืออุปกรณ์ · ไฟล์เปิดในเครื่องคุณเท่านั้น</p>";
+}
+
+/* ───────── รับไฟล์ Lot ───────── */
+async function lotTake(f){
+  if (!f) return;
+  const ext = (f.name.split(".").pop() || "").toLowerCase();
+  if (ext === "xlsx" || ext === "xls"){
+    return lotFail("หน้านี้รับเฉพาะไฟล์ CSV",
+      "ไฟล์ Lot ที่ส่งเข้าเครื่องเป็น CSV อยู่แล้ว โปรแกรมตัดแถวจากไฟล์ต้นฉบับตรง ๆ " +
+      "เพื่อให้ไฟล์ที่ได้เหมือนเดิมทุกไบต์ ถ้ามีแต่ Excel ให้ Save As → CSV ก่อน");
+  }
+  let buf;
+  try{ buf = new Uint8Array(await f.arrayBuffer()); }
+  catch(e){ return lotFail("อ่านไฟล์ไม่ได้", esc(e.message)); }
+
+  const bom = buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF;
+  const start = bom ? 3 : 0;
+  const dz = lotDecoder(buf);
+  let nl = buf.indexOf(0x0A, start); if (nl < 0) nl = buf.length;
+  const delim = detectDelim(dz.d.decode(buf.subarray(start, nl)));
+  const lines = lotLines(buf, start, delim.charCodeAt(0));
+  const txt = L => dz.d.decode(buf.subarray(L.s, L.e));
+
+  /* บรรทัดแรกที่ไม่ว่าง = หัวตาราง · บรรทัดว่างก่อนหน้า (ถ้ามี) ติดไปทั้งสองไฟล์ */
+  const hi = lines.findIndex(L => txt(L).trim() !== "");
+  if (hi < 0) return lotFail("ไฟล์ว่าง", "ไม่พบข้อมูลในไฟล์ " + esc(f.name));
+  const cols = (parseDelimited(txt(lines[hi]), delim)[0] || []).map(h => String(h).trim());
+  if (cols.length < 2) return lotFail("อ่านหัวตารางไม่ออก",
+    "บรรทัดแรกของไฟล์ต้องเป็นหัวตาราง คั่นด้วยคอมมาหรือแท็บ");
+
+  const recs = lines.slice(hi + 1).map((L, k) => {
+    const x = txt(L);
+    return { s: L.s, e: L.e, n: L.n, line: hi + 2 + k,
+             cells: x.trim() === "" ? null : (parseDelimited(x, delim)[0] || null) };
+  });
+  const dataN = recs.filter(r => r.cells).length;
+  if (!dataN) return lotFail("มีแต่หัวตาราง", "ไฟล์ " + esc(f.name) + " ไม่มีแถวข้อมูล");
+
+  const H = lines[hi], last = lines[lines.length - 1];
+  Object.assign(LOT, {
+    file: f.name, buf, dec: dz, delim, bom,
+    /* ตัวขึ้นบรรทัดหลักของไฟล์ ใช้เติมให้บรรทัดสุดท้ายเดิมเวลาถูกย้ายไปอยู่กลางไฟล์ใหม่ */
+    eol: H.n > H.e ? buf.subarray(H.e, H.n) : new Uint8Array([13, 10]),
+    eof: last.n > last.e,
+    top: lines.slice(0, hi + 1), cols, recs, dataN,
+    sel: new Set(), q: "", room: ""
+  });
+  LOT.gcol = lotGuessCol();
+  lotGroup();
+  $("lfind").value = "";
+  drawLot();
+  toast("เปิด " + f.name + " · " + dataN.toLocaleString("th-TH") + " แถว · " + LOT.groups.length + " PD");
+}
+
+/* คอลัมน์ที่ใช้แยกห้อง — BarcodePart ก่อน ไม่มีค่อยหาคอลัมน์ที่ค่าขึ้นต้นด้วย PD ทุกแถว */
+function lotGuessCol(){
+  let i = colIdx(LOT, "BarcodePart");
+  if (i >= 0) return i;
+  const sample = LOT.recs.filter(r => r.cells).slice(0, 60);
+  i = LOT.cols.findIndex((_, ci) => sample.every(r => /^PD\d+/i.test(String(r.cells[ci] ?? "").trim())));
+  return i >= 0 ? i : 0;
+}
+const lotKey = r => String(r.cells[LOT.gcol] ?? "").trim().split("-")[0].trim();
+
+/* จัดกลุ่มตาม PD · เรียงตามที่เจอก่อนในไฟล์ */
+function lotGroup(){
+  const gm = new Map();
+  const ii = colIdx(LOT, "ItemIdSet"), si = colIdx(LOT, "ShelfNo"), qi = qtyIndex(LOT);
+  LOT.recs.forEach((r, k) => {
+    if (!r.cells) return;
+    const key = lotKey(r);
+    let g = gm.get(key);
+    if (!g){ g = { key, idx: [], items: new Set(), shelf: [], qty: 0, runs: 0, prev: -2 }; gm.set(key, g); }
+    if (k !== g.prev + 1) g.runs++;          // แถวของห้องนี้ขาดตอนเป็นกี่ช่วงในไฟล์
+    g.prev = k;
+    g.idx.push(k);
+    if (ii >= 0){ const v = String(r.cells[ii] ?? "").trim(); if (v) g.items.add(v); }
+    if (si >= 0){ const v = String(r.cells[si] ?? "").trim(); if (v) g.shelf.push(v); }
+    if (qi >= 0) g.qty += parseFloat(String(r.cells[qi] ?? "").replace(/,/g, "")) || 0;
+  });
+  LOT.groups = [...gm.values()].map(g => {
+    const sh = g.shelf.slice().sort();
+    return Object.assign(g, {
+      from: LOT.recs[g.idx[0]].line, to: LOT.recs[g.idx[g.idx.length - 1]].line,
+      shelfLo: sh[0] || "", shelfHi: sh[sh.length - 1] || ""
+    });
+  });
+  const keep = new Set(LOT.groups.map(g => g.key));
+  LOT.sel = new Set([...LOT.sel].filter(k => keep.has(k)));
+}
+
+/* PD ที่เลือก ตามลำดับในไฟล์ */
+const lotSelGroups = () => LOT.groups.filter(g => LOT.sel.has(g.key));
+
+/* แบ่งแถวเป็นสองกอง ตามลำดับในไฟล์เดิม · a = ห้องที่เลือก · b = ที่เหลือ (รวมบรรทัดว่าง ถ้ามี) */
+function lotSplit(){
+  const on = new Set();
+  lotSelGroups().forEach(g => g.idx.forEach(k => on.add(k)));
+  const a = [], b = [];
+  LOT.recs.forEach((r, k) => (on.has(k) ? a : b).push(k));
+  return { a, b, bData: b.filter(k => LOT.recs[k].cells).length };
+}
+
+/* ประกอบไฟล์จากท่อนไบต์ของไฟล์เดิม · หัวตาราง + แถวที่ต้องการ ตามลำดับเดิม */
+function lotBlob(idx){
+  const B = LOT.buf, parts = [];
+  if (LOT.bom) parts.push(new Uint8Array([0xEF, 0xBB, 0xBF]));
+  const list = LOT.top.concat(idx.map(k => LOT.recs[k]));
+  list.forEach((L, j) => {
+    parts.push(B.subarray(L.s, L.e));
+    const own = L.n > L.e ? B.subarray(L.e, L.n) : LOT.eol;
+    if (j < list.length - 1 || LOT.eof) parts.push(own);
+  });
+  return new Blob(parts, { type: "text/csv" });
+}
+
+/* ───────── ชื่อไฟล์ ─────────
+   ห้อง = ช่องชื่อห้อง ถ้าไม่ใส่ใช้เลข PD แทน
+   1) เฉพาะห้อง : ชื่อเดิมตัดท้าย _ไม่มีห้อง… ออก แล้วต่อ _ห้อง609
+   2) ตัดห้องออก: ชื่อเดิม ต่อ _ไม่มีห้อง609 */
+function lotLabel(){
+  const room = LOT.room.trim().replace(/\s+/g, "");
+  if (room) return /^ห้อง/.test(room) ? room : "ห้อง" + room;
+  const ks = lotSelGroups().map(g => g.key || "ว่าง");
+  return ks.length === 1 ? ks[0] : ks[0] + "+" + (ks.length - 1);
+}
+function lotNames(){
+  const ext = (LOT.file.match(/\.[^.]+$/) || [".csv"])[0];
+  const base = LOT.file.replace(/\.[^.]+$/, "") || "lot";
+  const core = base.replace(/(_ไม่มีห้อง[^_]*)+$/, "") || base;
+  const lab = lotLabel();
+  const clean = s => s.replace(/[\\/:*?"<>|]+/g, "_");
+  return { a: clean(core + "_" + lab) + ext, b: clean(base + "_ไม่มี" + lab) + ext };
+}
+function lotSyncNames(){
+  if (!$("lnameA")) return;
+  const n = lotNames();
+  $("lnameA").value = n.a; $("lnameB").value = n.b;
+}
+
+/* ───────── วาดหน้า Lot ───────── */
+function drawLot(){
+  if (!LOT.recs.length){
+    if ($("ldrop").className !== "err") lotEmpty();
+    $("lfile").textContent = "ยังไม่ได้เปิดไฟล์";
+    $("lgc").className = "lgc";
+    $("lglist").innerHTML = ""; $("lside").innerHTML = "";
+    return;
+  }
+  $("ldrop").className = "off";
+  $("lfile").innerHTML = "<b>" + esc(LOT.file) + "</b> · <span class=\"m\">" +
+    LOT.dataN.toLocaleString("th-TH") + "</span> แถว · <span class=\"m\">" +
+    LOT.groups.length + "</span> PD";
+  $("lgc").className = "lgc on";
+  $("lgcol").innerHTML = LOT.cols.map((c, i) =>
+    '<option value="' + i + '"' + (i === LOT.gcol ? " selected" : "") + ">" + esc(c) + "</option>").join("");
+  drawLotList();
+  drawLotSide();
+}
+
+function drawLotList(){
+  const toks = LOT.q.toLowerCase().split(/[\s,;|]+/).filter(Boolean);
+  const hit = g => !toks.length || toks.some(t =>
+    g.key.toLowerCase().includes(t) || [...g.items].some(v => v.toLowerCase().includes(t)));
+  const list = LOT.groups.map((g, i) => [g, i]).filter(([g]) => hit(g));
+  const n = v => v.toLocaleString("th-TH");
+  $("lglist").innerHTML = list.length ? list.map(([g, i]) => {
+    const on = LOT.sel.has(g.key);
+    const meta = [];
+    if (g.items.size) meta.push('<span class="m">' + esc([...g.items].join(", ")) + "</span>");
+    if (g.shelfLo) meta.push('<span class="m">' + esc(g.shelfLo) +
+      (g.shelfHi !== g.shelfLo ? "–" + esc(g.shelfHi) : "") + "</span>");
+    meta.push('บรรทัด <span class="m">' + n(g.from) + (g.to !== g.from ? "–" + n(g.to) : "") + "</span>");
+    if (g.runs > 1) meta.push('<span class="warn">แถวไม่ติดกัน ' + g.runs + " ช่วง</span>");
+    return '<div class="lg' + (on ? " on" : "") + '" data-i="' + i + '">' +
+      '<span class="ck">' + (on ? "✓" : "") + "</span>" +
+      (g.key ? '<span class="lk">' + esc(g.key) + "</span>" : '<span class="lk none">(ว่าง)</span>') +
+      '<span class="ln"><b>' + n(g.idx.length) + "</b> แถว</span>" +
+      '<span class="lm">' + meta.join(" · ") + "</span></div>";
+  }).join("") : '<div class="lgnone">ไม่พบ PD ที่ตรงกับ “' + esc(LOT.q) + "”</div>";
+
+  $("lglist").querySelectorAll(".lg").forEach(el => {
+    el.onclick = () => {
+      const g = LOT.groups[+el.dataset.i];
+      LOT.sel.has(g.key) ? LOT.sel.delete(g.key) : LOT.sel.add(g.key);
+      drawLotList(); drawLotSide();
+    };
+  });
+}
+
+function drawLotSide(){
+  const n = v => v.toLocaleString("th-TH");
+  const sg = lotSelGroups();
+  if (!sg.length){
+    $("lside").innerHTML =
+      '<div class="lcard"><h4>เลือกห้องที่จะแยก</h4>' +
+      "<p>คลิกเลข PD ทางซ้าย หรือพิมพ์เลข PD ในช่องค้นหาแล้วกด <b>Enter</b> " +
+      "พิมพ์แค่เลขท้ายก็ได้ เช่น <span class=\"m\">44813</span> · วางหลายเลขพร้อมกันก็ได้<br>" +
+      "เลือกหลายห้อง จะรวมอยู่ในไฟล์เดียวกัน</p>" +
+      '<p style="margin-top:8px">ไฟล์นี้มี <b class="m">' + LOT.groups.length + "</b> PD รวม <b class=\"m\">" +
+      n(LOT.dataN) + "</b> แถว</p></div>";
+    return;
+  }
+
+  const { a, b, bData } = lotSplit();
+  const qi = qtyIndex(LOT);
+  const items = new Set(); sg.forEach(g => g.items.forEach(v => items.add(v)));
+  const shelves = sg.flatMap(g => g.shelf).sort();
+  const qty = sg.reduce((s, g) => s + g.qty, 0);
+  const sum = a.length + bData;
+  const same = sum === LOT.dataN;
+  const blanks = b.length - bData;
+
+  /* บอกรูปแบบไฟล์ที่จะได้ ให้รู้ว่าติดไปเหมือนเดิม */
+  const fmt = [
+    LOT.dec.name,
+    LOT.bom ? "มี BOM" : "ไม่มี BOM",
+    LOT.delim === "\t" ? "คั่นด้วยแท็บ" : LOT.delim === "," ? "คั่นด้วยคอมมา" : "คั่นด้วย " + LOT.delim,
+    LOT.eol.length === 2 ? "ขึ้นบรรทัด CRLF" : "ขึ้นบรรทัด LF"
+  ].join(" · ");
+
+  const stat = (v, l) => '<div><b title="' + esc(v) + '">' + esc(v) + "</b><i>" + l + "</i></div>";
+  let html =
+    '<div class="lcard"><h4>ห้องที่เลือก <em>' + sg.length + " PD</em>" +
+      '<button class="dlink" id="lclear">ล้างที่เลือก</button></h4>' +
+    '<div class="lchips">' + sg.map(g =>
+      '<span class="lchip">' + esc(g.key || "(ว่าง)") +
+      '<button data-k="' + LOT.groups.indexOf(g) + '" title="เอาออก">&times;</button></span>').join("") + "</div>" +
+    '<div class="lstats">' +
+      stat(n(a.length), "แถว") +
+      (qi >= 0 ? stat(n(qty), "รวม Qty") : "") +
+      (items.size ? stat(items.size === 1 ? [...items][0] : items.size + " แบบ", "ItemIdSet") : "") +
+      (shelves.length ? stat(shelves[0] + (shelves[shelves.length - 1] !== shelves[0]
+        ? "–" + shelves[shelves.length - 1].replace(/^[A-Za-z]+/, "") : ""), "ShelfNo") : "") +
+    "</div>" +
+    '<div class="lroom"><label for="lroom">ชื่อห้อง ใช้ตั้งชื่อไฟล์ · ไม่ใส่ก็ได้ จะใช้เลข PD แทน</label>' +
+      '<input id="lroom" placeholder="เช่น 609" autocomplete="off" value="' +
+      esc(LOT.room).replace(/"/g, "&quot;") + '"></div>' +
+    "</div>";
+
+  html +=
+    '<div class="lcard"><h4>ไฟล์ที่จะได้ <em>ไฟล์ต้นฉบับไม่ถูกแตะ</em></h4>' +
+    '<div class="lout"><div class="lo-t"><span class="no">1</span>เฉพาะห้องที่เลือก' +
+      '<span class="cnt"><b>' + n(a.length) + "</b> แถว + หัวตาราง</span></div>" +
+      '<div class="lo-r"><input class="lname" id="lnameA" spellcheck="false">' +
+      '<button class="cbtn" id="lsaveA">บันทึก</button></div></div>' +
+    '<div class="lout"><div class="lo-t"><span class="no">2</span>ไฟล์เดิม ตัดห้องที่เลือกออก' +
+      '<span class="cnt"><b>' + n(bData) + "</b> แถว + หัวตาราง</span></div>" +
+      '<div class="lo-r"><input class="lname" id="lnameB" spellcheck="false">' +
+      '<button class="cbtn" id="lsaveB">บันทึก</button></div></div>' +
+    '<div class="lver ' + (same ? "ok" : "bad") + '">' +
+      (same
+        ? "✓ <span class=\"m\">" + n(a.length) + " + " + n(bData) + " = " + n(sum) +
+          "</span> แถว เท่ากับไฟล์เดิม ไม่มีแถวหายหรือซ้ำ"
+        : "✕ <span class=\"m\">" + n(a.length) + " + " + n(bData) + " = " + n(sum) +
+          "</span> แถว ไม่เท่าไฟล์เดิม <span class=\"m\">" + n(LOT.dataN) + "</span> อย่าเพิ่งใช้ไฟล์นี้") +
+      "<br>หัวตารางติดไปทั้งสองไฟล์ · รูปแบบเหมือนต้นฉบับ: " + esc(fmt) +
+      (blanks ? " · บรรทัดว่าง " + blanks + " บรรทัดอยู่ในไฟล์ 2 ตามเดิม" : "") +
+      (bData === 0 ? "<br>เลือกครบทุก PD ไฟล์ 2 จะเหลือแต่หัวตาราง" : "") +
+    "</div>" +
+    '<div class="lfoot"><span class="note">ถ้าเบราว์เซอร์ถามว่าให้ดาวน์โหลดหลายไฟล์ไหม กดอนุญาต</span>' +
+      '<button class="cbtn primary" id="lsave2">บันทึกทั้งสองไฟล์</button></div>' +
+    "</div>";
+
+  /* ตัวอย่างแถวของห้องที่เลือก · # คือเลขบรรทัดในไฟล์เดิม เทียบกับ Excel ได้ */
+  const show = a.slice(0, LOT_PREV_MAX);
+  html +=
+    '<div class="lcard"><h4>แถวของห้องที่เลือก <em>' + n(a.length) + " แถว · # คือเลขบรรทัดในไฟล์เดิม</em></h4>" +
+    '<div class="lpwrap"><table><thead><tr><th class="rn">#</th>' +
+      LOT.cols.map((c, i) => '<th class="' + (i === LOT.gcol ? "hl" : "") + '">' + esc(c) + "</th>").join("") +
+    "</tr></thead><tbody>" +
+      show.map(k => {
+        const r = LOT.recs[k];
+        return '<tr><td class="rn">' + r.line + "</td>" + LOT.cols.map((_, i) => {
+          const v = r.cells[i] ?? "";
+          const cls = i === LOT.gcol ? "hl" : blank(v) ? "e" : isNum(v) ? "n" : "";
+          return '<td class="' + cls + '">' + (blank(v) ? "–" : esc(v)) + "</td>";
+        }).join("") + "</tr>";
+      }).join("") +
+    "</tbody></table></div>" +
+    (a.length > show.length
+      ? '<div class="lpmore">แสดง ' + n(show.length) + " แถวแรก · ไฟล์ที่บันทึกได้ครบ " + n(a.length) + " แถว</div>"
+      : "") +
+    "</div>";
+
+  $("lside").innerHTML = html;
+  lotSyncNames();
+
+  $("lclear").onclick = () => { LOT.sel.clear(); drawLotList(); drawLotSide(); };
+  $("lside").querySelectorAll(".lchip button").forEach(bt => {
+    bt.onclick = () => { LOT.sel.delete(LOT.groups[+bt.dataset.k].key); drawLotList(); drawLotSide(); };
+  });
+  /* พิมพ์ชื่อห้อง -> เปลี่ยนแค่ชื่อไฟล์ ไม่วาดทั้งการ์ดใหม่ เคอร์เซอร์จะได้ไม่หลุด */
+  $("lroom").oninput = function(){ LOT.room = this.value; lotSyncNames(); };
+  $("lsaveA").onclick = () => lotSave("a");
+  $("lsaveB").onclick = () => lotSave("b");
+  $("lsave2").onclick = () => { lotSave("a"); setTimeout(() => lotSave("b"), 700); };
+}
+
+function lotSave(which){
+  if (!lotSelGroups().length) return toast("ยังไม่ได้เลือกห้อง");
+  const sp = lotSplit();
+  const idx = which === "a" ? sp.a : sp.b;
+  const ext = (LOT.file.match(/\.[^.]+$/) || [".csv"])[0];
+  let name = ($(which === "a" ? "lnameA" : "lnameB").value || "").trim()
+               .replace(/[\\/:*?"<>|]+/g, "_");
+  if (!name) name = lotNames()[which];
+  if (!/\.[A-Za-z0-9]{2,4}$/.test(name)) name += ext;
+  download(name, lotBlob(idx));
+  const rows = which === "a" ? idx.length : sp.bData;
+  toast("บันทึก " + name + " · " + rows.toLocaleString("th-TH") + " แถว");
+}
+
+/* เลือก PD จากที่พิมพ์/วาง · รับเลขเต็ม เลขท้าย หรือ BarcodePart ทั้งท่อน */
+function lotPick(){
+  const toks = LOT.q.split(/[\s,;|]+/).map(v => v.trim()).filter(Boolean);
+  if (!toks.length || !LOT.groups.length) return;
+  const got = [], miss = [];
+  toks.forEach(tk => {
+    const u = tk.toUpperCase(), head = u.split("-")[0];
+    const K = g => g.key.toUpperCase();
+    let g = LOT.groups.find(x => K(x) === u) || LOT.groups.find(x => K(x) === head);
+    if (!g){
+      const m = LOT.groups.filter(x => x.key && K(x).endsWith(u));
+      if (m.length === 1) g = m[0];
+    }
+    if (g){ LOT.sel.add(g.key); got.push(g.key); } else miss.push(tk);
+  });
+  if (got.length && !miss.length){ LOT.q = ""; $("lfind").value = ""; }
+  drawLotList(); drawLotSide();
+  const el = $("lglist").querySelector(".lg.on");
+  if (el) el.scrollIntoView({ block: "nearest" });
+  toast(got.length
+    ? "เลือก " + got.join(", ") + (miss.length ? " · ไม่พบ " + miss.join(", ") : "")
+    : "ไม่พบ " + miss.join(", ") + " ในไฟล์นี้");
+}
+
+$("lopen").onclick = () => $("lpick").click();
+$("lpick").onchange = e => { lotTake(e.target.files[0]); e.target.value = ""; };
+$("lfind").oninput = function(e){
+  LOT.q = this.value;
+  if (e.inputType === "insertFromPaste") return lotPick();   // วางเลขมา = เลือกให้เลย
+  drawLotList();
+};
+$("lfind").onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); lotPick(); } };
+$("lgcol").onchange = function(){
+  LOT.gcol = +this.value; LOT.sel.clear();
+  lotGroup(); drawLot();
+};
+
+/* ───────── สลับหน้าใหญ่ ───────── */
+function setMode(m){
+  mode = m === "lot" ? "lot" : "bom";
+  document.body.classList.toggle("mode-lot", mode === "lot");
+  document.querySelectorAll(".mode").forEach(b => {
+    const on = b.dataset.m === mode;
+    b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+  });
+  try{ localStorage.setItem(LS_MODE, mode); }catch(_){}
+  $("colpanel").className = ""; $("savemenu").className = "";
+  if (mode === "bom") render();       // กลับมาแล้ววาดใหม่ ความกว้างสองฝั่งจะได้ถูก
+  else drawLot();
+}
+document.querySelectorAll(".mode").forEach(b => { b.onclick = () => setMode(b.dataset.m); });
+
 syncTabs();
 emptyScreen();
+lotEmpty();
+(function(){ let m = "bom"; try{ m = localStorage.getItem(LS_MODE) || "bom"; }catch(_){} if (m === "lot") setMode("lot"); })();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
