@@ -12,7 +12,10 @@
   STACK    : single-file HTML · ไม่มี build step · ไม่ต่อฐานข้อมูล อ่านไฟล์ในเครื่องล้วน
   ENTRY    : ingest() -> apply() -> draw()
              หน้า จัดการ Lot order (v5.9): lotTake() -> lotGroup() -> drawLot()
+             เช็ค Mirror (v6.0): เลือกโฟลเดอร์เจาะ -> takeNames() -> mirRun()
+             -> mirBox() · แก้ไฟล์ที่ mirFix() (ย้ายมาจาก MPR Mirror Check)
   STATE    : TABS.wood / TABS.fit  คือ single source of truth
+             t.mirror = ผลเช็ค Mirror ของแท็บนั้น (ล้างทิ้งตอนเปิดไฟล์ใหม่)
              LOT  = สถานะของหน้า จัดการ Lot order แยกขาดจาก TABS
              mode = "bom" | "lot" หน้าที่เปิดอยู่
              >>> ห้ามนิยาม $ / norm / esc / blank / isNum / T() ซ้ำอีก
@@ -100,6 +103,7 @@
   --hl-bg:#fdf1e0; --hl-line:#f0d5ac; --hl-ink:#7a4a08; --hl-hover:#fbe8cf;
   --miss-bg:#fdecec; --miss-line:#f2c9c9; --miss-ink:#a32d2d;
   --ok:#1e6b38; --ok-bg:#e6f4ea; --ok-line:#bfe3cb; --on-orange:#3a2200;
+  --mir-bg:#efe9fb; --mir-line:#d6c9f3; --mir-ink:#5a3a9e;   /* v6.0: ไฟล์เจาะ XMIRROR */
   --sans:"Sarabun",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
   --mono:"IBM Plex Mono","SF Mono",ui-monospace,Menlo,monospace;
 }
@@ -421,6 +425,40 @@ tbody tr:hover td.st.no{background:#fbe0e0}
 tbody tr td.cleared{background:var(--miss-bg);color:var(--miss-ink);font-weight:600}
 tbody tr:hover td.cleared{background:#fadfdf}
 
+/* ── เช็ค Mirror ของไฟล์เจาะ (v6.0 · ย้ายมาจาก MPR Mirror Check) ── */
+/* บาร์โค้ดที่ไฟล์เจาะเป็น VIEW=XMIRROR — เอาเมาส์ชี้เพื่อดูว่าไฟล์ไหน */
+tbody tr td.mir{background:var(--mir-bg);color:var(--mir-ink);font-weight:600;
+                box-shadow:inset 3px 0 0 var(--mir-ink)}
+tbody tr:hover td.mir{background:var(--mir-line)}
+.dmir{border:1px solid var(--mir-line);border-radius:10px;padding:11px 12px;margin-bottom:13px;
+      background:var(--card)}
+.dmir h5{font-size:12.5px;font-weight:600;color:var(--mir-ink);display:flex;align-items:baseline;
+         gap:8px;flex-wrap:wrap}
+.dmir h5 em{font-style:normal;font-weight:400;font-size:11.5px;color:var(--faint)}
+.dmir .dstat{margin-top:9px}
+.dmir .dnote{margin-top:8px}
+.dstat b.mir{color:var(--mir-ink)}
+.mirlist{border:1px solid var(--mir-line);border-radius:9px;margin-top:10px;max-height:180px;overflow:auto}
+.mirow{display:grid;grid-template-columns:minmax(130px,auto) 1fr auto;gap:4px 10px;padding:6px 10px;
+       border-bottom:1px solid var(--line);align-items:baseline}
+.mirow:last-child{border-bottom:0}
+.mirow .c{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--mir-ink)}
+.mirow.ok .c{color:var(--ok)}
+.mirow .p{font-size:12px;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mirow .v{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
+.mirow .s{grid-column:1 / 4;font-size:11px;color:var(--faint);line-height:1.5}
+.mirow .w{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;border-radius:4px;
+          padding:0 5px;margin-left:5px;background:var(--hl-bg);color:var(--hl-ink);border:1px solid var(--hl-line)}
+.mirfix{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.mirfix .cbtn{min-height:36px}
+.mirfix label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);cursor:pointer}
+.mirfix input{accent-color:var(--orange);cursor:pointer}
+.mirlog{display:none;font-family:var(--mono);font-size:11px;line-height:1.7;max-height:130px;overflow:auto;
+        margin-top:9px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--page)}
+.mirlog.on{display:block}
+.mirlog .ok{color:var(--ok)}
+.mirlog .bad{color:var(--miss-ink)}
+
 /* ปุ่มย้อนกลับการแก้ X เป็น Y */
 .undo{background:var(--hl-bg);border-color:var(--hl-line);color:var(--hl-ink);font-weight:600}
 .undo:hover{background:#fbe8cf}
@@ -683,9 +721,10 @@ body.mode-lot #lot{display:flex}
 /* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
 const APP_META = {
   name: "ReCheck Bom",
-  version: "5.9",
-  build: "2026-09-29/lot-order-split",
+  version: "6.0",
+  build: "2026-10-02/mirror-check",
   changelog: [
+    ["6.0","2026-10-02","FEAT รวมโปรแกรม MPR Mirror Check เข้ามาในขั้นตอน เช็คไฟล์เจาะ · เดิมต้องเปิดสองโปรแกรม ตัวนี้เช็คว่ามีไฟล์เจาะไหม อีกตัวเช็คว่าไฟล์ไหนตั้ง VIEW=XMIRROR ซึ่งเครื่องบางตัวอ่านผิดแล้วเจาะกลับข้าง · ตอนนี้เลือกโฟลเดอร์ (หรือลากมาวาง) ครั้งเดียว โปรแกรมใช้รายชื่อ .mpr ชุดเดียวกัน เปิดอ่านเฉพาะ 8 KB แรกของทุกไฟล์ขนาน 12 งาน ไม่ไล่โฟลเดอร์ซ้ำ ไม่บล็อกขั้นตอนเดิม · กล่องบอกจำนวน XMIRROR / Mirror อื่น / ปกติ / อ่านไม่ได้ พร้อมรายชื่อว่าเป็นชิ้นไหน (PartId PartName จาก BOM) และเตือนไฟล์ที่ตั้ง GP/GY = 1 ซึ่งเป็นกระจกจริง · บาร์โค้ดของไฟล์ XMIRROR ระบายม่วงในคอลัมน์ Barcode / Barcode2 และปุ่ม เช็คไฟล์เจาะ ต่อท้ายจำนวน XMIRROR ไว้ให้เห็นตลอด · แก้ไฟล์ได้จากในกล่อง เปลี่ยนเฉพาะบรรทัด VIEW เป็น NOMIRROR ไม่แตะพิกัดเจาะ แก้ทีละไบต์ ภาษาไทยในคอมเมนต์กับ CRLF ไม่เพี้ยน สำรองต้นฉบับเป็น .mpr.bak ก่อน (มี .bak อยู่แล้วไม่ทับ · สำรองไม่สำเร็จจะไม่เขียนทับ) ต้องติ๊กยืนยันก่อนปุ่มแก้จะกดได้ มีปุ่มทดสอบแก้ 1 ไฟล์ และปุ่มอ่านซ้ำไว้ตรวจหลังแก้ · แก้ไฟล์ได้เฉพาะโฟลเดอร์ที่เปิดผ่านปุ่ม เลือกโฟลเดอร์ หรือลากมาวางใน Chrome/Edge (ลากวางเปลี่ยนไปขอ handle ก่อน ไม่ได้ค่อยใช้ทางเดิม) ทางสำรอง input เช็คได้อย่างเดียว · ตัดโหมด ลบบรรทัด VIEW และโหมดเขียนลงโฟลเดอร์ปลายทางของโปรแกรมเดิมออก เหลือวิธีที่แนะนำวิธีเดียว · ไฟล์ที่แก้แล้วเวลาแก้ไขจะเปลี่ยน สแกนรอบหน้าหลักฐานจะขึ้นว่าถูกแก้ไข ซึ่งถูกต้อง · ทดสอบใน Chromium กับโฟลเดอร์จำลอง .mpr 7 ไฟล์ (CRLF ไบต์ไทย Windows-874 ยาวเกิน 8 KB มีโฟลเดอร์ย่อย มีไฟล์ .txt ปน) ทั้งทางปุ่มเลือกโฟลเดอร์และทางสำรอง input นับถูก แก้แล้วเทียบไบต์ตรงกับต้นฉบับยกเว้นบรรทัด VIEW และ .bak ตรงต้นฉบับเป๊ะ ขั้นล้างบาร์โค้ดเดิมยังทำงานตามเดิม · ยังไม่ได้ทดสอบกับไฟล์จริงบนเครื่อง 10.11.0.6 และยังไม่ได้ทดสอบทางลากโฟลเดอร์มาวาง"],
     ["5.9","2026-09-29","FEAT เพิ่มหน้า จัดการ Lot order แยกจากหน้า จัดการ BOM AX (ของเดิมทั้งหมด) สลับได้ที่ปุ่มบนหัวแอป และจำไว้ว่าเปิดหน้าไหนค้าง · ทำเพราะมีเคสตัดห้องออกจากไฟล์ Lot เช่น ห้อง 609 ใช้ PD69000044813 เดิมต้องไปลบแถวเองใน Excel ซึ่งเสี่ยงลบเกินและ Excel แอบเปลี่ยนรูปแบบตัวเลข · เปิดไฟล์ Lot (.csv) แล้วโปรแกรมแยกห้องจากท่อนหน้าขีดของ BarcodePart บอกว่าแต่ละ PD มีกี่แถว ItemIdSet อะไร ShelfNo ช่วงไหน อยู่บรรทัดไหนในไฟล์ · เลือกห้องด้วยการคลิก หรือพิมพ์/วางเลข PD แล้วกด Enter (เลขท้ายอย่าง 44813 หรือ BarcodePart ทั้งท่อนก็ได้) ใส่ชื่อห้องไว้ตั้งชื่อไฟล์ ได้สองไฟล์ คือ เฉพาะห้องนั้น กับ ไฟล์เดิมตัดห้องนั้นออก · ไฟล์ที่ได้ตัดท่อนไบต์จากไฟล์ต้นฉบับมาต่อกันตรง ๆ ไม่ได้ประกอบ CSV ใหม่ รูปแบบจึงเหมือนเดิมทุกอย่าง 683.0 ไม่กลายเป็น 683 BOM CRLF ติดไปครบ ไม่ขึ้นกับ encoding · มีบรรทัดตรวจว่าสองไฟล์รวมกันได้เท่าไฟล์เดิม · หน้านี้ไม่เช็คโค้ดไม้/อุปกรณ์ ไม่แก้ X เป็น Y · หน้าจอแคบกว่า 1180px ตัดคำว่า จัดการ กับชื่อแอปบนหัวออกกันปุ่มล้นจอ · ทดสอบในเบราว์เซอร์กับไฟล์จริง SDRHH_P_TOW.A_FL2-7_LOT2.1 แล้ว PD69000044813 ได้ 99 แถว ไฟล์ที่เหลือ 3,811 แถว เทียบไบต์ตรงกับต้นฉบับทั้งสองไฟล์ และหน้า BOM AX ยังเปิดไฟล์ได้ตามเดิม (ส่วนเช็คกับ Supabase ไม่ได้ทดสอบรอบนี้ เพราะไม่ได้แตะโค้ดส่วนนั้น)"],
     ["5.8","2026-09-05","กดบันทึกไฟล์ตอนที่ยังกรองอยู่ จะล้างตัวกรองให้ก่อนแล้วบันทึกครบทั้งไฟล์ ของเดิมได้เฉพาะแถวที่เห็นซึ่งไม่ค่อยมีใครตั้งใจและไม่รู้ตัว · ล้างครบทุกแบบ ทั้งคำค้น เฉพาะที่ยังว่าง เฉพาะที่ยังไม่มีโค้ด เฉพาะแถวที่แก้ และการคลิกกรองจากค่าในช่อง หน้าจอกับไฟล์ที่ได้จึงตรงกันเสมอ · ถ้าตั้งใจจะเอาเฉพาะที่กรองจริง ๆ กดปุ่ม เอาตัวกรองกลับ ในเมนูบันทึกได้"],
     ["5.7","2026-09-05","เลิกเอา SQL ไปตั้งขวางหน้าคนหน้าเครื่อง ตอนต่อฐานข้อมูลไม่ได้จะเห็นแค่บรรทัดเดียวว่าหลักฐานเก็บในเครื่องนี้ ใช้งานได้ตามปกติ ส่วนวิธีสร้างตารางกับ SQL พับไว้หลังลิงก์ ผู้ดูแลระบบกดที่นี่ · เขียนให้ชัดว่าสร้างตารางครั้งเดียวจบ ทำแล้วข้อความหายไปเองทุกเครื่อง ไม่ใช่ต้องรันทุกรอบ"],
@@ -741,7 +780,7 @@ const TABS = {
     guess: null,
     cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
     chk: null, onlyNo: false, paneW: null, src: null, saveAll: false,
-    drill: null, drillText: ""
+    drill: null, drillText: "", mirror: null, mirRun: 0
   },
   fit: {
     label: "BOM Fitting",
@@ -753,7 +792,7 @@ const TABS = {
     guess: c => /code$|code[^a-z]|^code|รหัส/i.test(String(c).trim()),
     cols: [], rows: [], hl: [], file: "", sortCol: -1, sortDir: 1, q: "", only: false, sel: null,
     chk: null, onlyNo: false, paneW: null, src: null, saveAll: false,
-    drill: null, drillText: ""
+    drill: null, drillText: "", mirror: null, mirRun: 0
   }
 };
 let cur = "wood", view = [];
@@ -832,6 +871,7 @@ function ingest(matrix, name, tab, src){
   t.chk = null; t.onlyNo = false;   // ไฟล์ใหม่ = ผลเช็คเก่าใช้ไม่ได้แล้ว
   t.needCheck = false; t.xy = null; t.onlyEd = false;
   t.drill = null; t.drillText = "";   // v4.9: ไฟล์ใหม่ = ผลเช็คเจาะเก่าใช้ไม่ได้
+  t.mirror = null; t.mirRun = 0;      // v6.0: ผลเช็ค Mirror ก็เป็นของงานเก่า · รอบที่ยังอ่านค้างอยู่จะถูกทิ้ง
 
   const wantSet = new Set(t.want.map(norm));
   t.hl = t.cols.map((c, i) => (wantSet.size && wantSet.has(norm(c))) ? i : -1).filter(i => i >= 0);
@@ -932,17 +972,23 @@ function drawTable(q){
   const MAX = 4000;
   const ed = editedRows(t);
   const dcm = t.drill ? t.drill.cells : null;   // v4.9: แถว -> { คอลัมน์: เลขเดิมที่ถูกล้าง }
+  /* v6.0: บาร์โค้ดที่ไฟล์เจาะเป็น XMIRROR -> ระบายม่วงในคอลัมน์ Barcode / Barcode2 */
+  const mx = mirXMap(t);
+  const mb = mx ? drillCols(t) : null;
   $("body").innerHTML = view.slice(0, MAX).map((r, n) => {
     const dc = dcm ? dcm.get(r) : null;
     return '<tr' + (ed && ed.has(r) ? ' class="ed"' : "") + '><td class="rn">' + (n+1) + "</td>" +
       r.map((v, i) => {
       const cls = [];
       const old = dc && dc[i] !== undefined ? dc[i] : null;
+      const mf = mb && (i === mb.b1 || i === mb.b2) ? mx.get(String(v ?? "").trim()) : null;
       if (HL.has(i)) cls.push(blank(v) ? "miss" : "hl");
       else if (blank(v)) cls.push("e");
       if (isNum(v)) cls.push("n");
       if (old !== null) cls.push("cleared");
+      if (mf) cls.push("mir");
       return '<td class="' + cls.join(" ") + '"' +
+             (mf ? ' title="ไฟล์เจาะ ' + esc(mf) + ' เป็น VIEW=XMIRROR · เครื่องที่อ่านค่านี้จะเจาะกลับข้าง"' : "") +
              (old !== null ? ' title="ล้างแล้ว \u00B7 เดิมคือ ' + esc(old) + ' \u00B7 ไม่มีในไฟล์เจาะ"' : "") +
              ">" + (blank(v) ? "\u2013" : hi(v)) + "</td>";
     }).join("") + "</tr>";
@@ -1866,16 +1912,19 @@ function syncDrillBtn(){
     return;
   }
   btn.disabled = false;
+  /* v6.0: มีไฟล์ XMIRROR ค้างอยู่ ต่อท้ายปุ่มให้เห็นตลอด ไม่ต้องเปิดกล่องดู */
+  const nx = mirCount(t, "x");
+  const mtxt = nx ? "  \u00B7  XMIRROR " + nx : "";
   if (t.drill){
-    btn.textContent = "\u2713 เช็คเจาะแล้ว \u00B7 ล้าง " + t.drill.n + " ช่อง";
+    btn.textContent = "\u2713 เช็คเจาะแล้ว \u00B7 ล้าง " + t.drill.n + " ช่อง" + mtxt;
     btn.title = "คลิกเพื่อดูว่าล้างอะไรไปบ้าง";
     un.style.display = "";
     $("onlyed").style.display = "";
     $("onlyed").setAttribute("aria-pressed", String(!!t.onlyEd));
     return;
   }
-  btn.textContent = "เช็คไฟล์เจาะ";
-  btn.title = "วางเลข Barcode จากไฟล์เจาะ แล้วล้างช่องที่ไม่มีเจาะจริง";
+  btn.textContent = "เช็คไฟล์เจาะ" + mtxt;
+  btn.title = "วางเลข Barcode จากไฟล์เจาะ แล้วล้างช่องที่ไม่มีเจาะจริง · เลือกโฟลเดอร์แล้วเช็ค Mirror ให้ด้วย";
 }
 
 /* กล่องสรุปตัวเลขในหน้าต่าง */
@@ -1993,35 +2042,40 @@ const hhmm = ms => new Date(ms).toLocaleTimeString("th-TH", { hour: "2-digit", m
    ถึงเพดานก็หยุดอ่านแล้วเตือน ไม่ปล่อยให้หน้าจอนิ่งจนไม่รู้ว่าเจ๊งหรือยัง */
 const SCAN_MAX = 20000;
 
-/* เดินโฟลเดอร์แบบ File System Access API (Chrome/Edge) */
-async function walkDirHandle(dir, out, depth, tick){
+/* เดินโฟลเดอร์แบบ File System Access API (Chrome/Edge)
+   v6.0: นอกจากชื่อกับเวลา เก็บ handle ของไฟล์ (h) โฟลเดอร์แม่ (d) File ที่ได้มาแล้ว (f)
+   และพาธย่อย (p) ไว้ด้วย ตัวเช็ค Mirror จะได้เปิดอ่านหัวไฟล์ต่อได้เลย
+   และแก้ไฟล์ทับที่เดิมได้ (ทางนี้ทางเดียวที่เบราว์เซอร์ยอมให้เขียน) */
+async function walkDirHandle(dir, out, depth, tick, pre){
   for await (const [name, h] of dir.entries()){
     if (out.length >= SCAN_MAX) return;
     if (h.kind === "file"){
-      let mt = 0;
+      let mt = 0, fo = null;
       /* เวลาแก้ไขไฟล์คือหลักฐานว่าไฟล์ไหนทำทีหลัง ยอมเสียเวลาถามทีละไฟล์
          เฉพาะตอนไฟล์ไม่เยอะ ถ้าเป็นหมื่นไฟล์ข้ามไป ไม่งั้นรอกันนาน */
       if (out.length < TIME_MAX){
-        try{ mt = (await h.getFile()).lastModified || 0; }catch(_){}
+        try{ fo = await h.getFile(); mt = fo.lastModified || 0; }catch(_){}
       }
-      out.push({ n: name, t: mt });
+      out.push({ n: name, t: mt, h, d: dir, f: fo, p: pre || "" });
       if (tick && out.length % 100 === 0) await tick(out.length);
     } else if (depth < 4){
-      await walkDirHandle(h, out, depth + 1, tick);
+      await walkDirHandle(h, out, depth + 1, tick, pre ? pre + "/" + name : name);
     }
   }
 }
 
-/* เดินโฟลเดอร์ที่ลากมาวาง (DataTransfer entry) */
+/* เดินโฟลเดอร์ที่ลากมาวาง (DataTransfer entry)
+   v6.0: เก็บ entry (e) กับ File (f) ไว้ให้ตัวเช็ค Mirror อ่านหัวไฟล์ · ทางนี้อ่านได้อย่างเดียว */
 async function walkDropEntry(entry, out, depth, tick){
   if (!entry || out.length >= SCAN_MAX) return;
   if (entry.isFile){
-    let mt = 0;
+    let mt = 0, fo = null;
     if (out.length < TIME_MAX){
-      mt = await new Promise(res =>
-        entry.file(f => res(f.lastModified || 0), () => res(0)));
+      fo = await new Promise(res => entry.file(f => res(f), () => res(null)));
+      mt = fo ? fo.lastModified || 0 : 0;
     }
-    out.push({ n: entry.name, t: mt });
+    const fp = String(entry.fullPath || "").replace(/^\/+/, "").split("/").slice(1, -1).join("/");
+    out.push({ n: entry.name, t: mt, e: entry, f: fo, p: fp });
     if (tick && out.length % 100 === 0) await tick(out.length);
     return;
   }
@@ -2106,6 +2160,406 @@ async function drillScanSave(row){
   return true;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   เช็ค Mirror ของไฟล์เจาะ  (v6.0 · ย้ายมาจากโปรแกรม MPR Mirror Check)
+   ปัญหา  : ไฟล์ .mpr บางไฟล์ถูกบันทึกมาเป็น VIEW="XMIRROR"
+            ค่านี้เป็นแค่มุมมองใน WoodWOP แต่เครื่องบางตัวอ่านผิดแล้วเจาะกลับข้าง
+            ตัวสั่งกระจกจริงคือ GP / GY = 1 เจอแล้วเตือนเฉย ๆ ไม่แก้ให้
+   ทางเดิน: เลือกโฟลเดอร์เจาะ -> takeNames() ได้รายชื่อ .mpr พร้อมของที่ใช้เปิดไฟล์
+            -> mirStart() -> mirRun() อ่านเฉพาะ 8 KB แรกของทุกไฟล์ ขนาน 12 งาน
+            -> เก็บผลไว้ที่ t.mirror -> mirPaint() วาดในกล่อง · drawTable() ระบายม่วง
+            ไม่ต้องไล่โฟลเดอร์ซ้ำ ใช้รายชื่อชุดเดียวกับที่เช็คไฟล์เจาะ
+   แก้ไฟล์: mirFix() เปลี่ยนเฉพาะบรรทัด VIEW เป็น VIEW="NOMIRROR" ไม่แตะพิกัดเจาะ
+            สำรองต้นฉบับเป็น ชื่อไฟล์.mpr.bak ก่อน (มี .bak อยู่แล้วไม่ทับ)
+            แก้ได้เฉพาะโฟลเดอร์ที่เปิดผ่านปุ่ม เลือกโฟลเดอร์ หรือลากมาวางใน Chrome/Edge
+            ทางสำรอง (input) เบราว์เซอร์ไม่ให้สิทธิ์เขียน จึงเช็คได้อย่างเดียว
+   ตัดออกจากโปรแกรมเดิม: โหมดลบบรรทัด VIEW ทิ้ง และโหมดเขียนลงโฟลเดอร์ปลายทาง
+   ═══════════════════════════════════════════════════════════════ */
+const MIR_HEAD  = 8192;     // อ่านแค่หัวไฟล์ · VIEW / GP / GY อยู่ในบล็อก [H ต้นไฟล์
+const MIR_LANES = 12;       // อ่านขนานกี่ไฟล์ · สำคัญมากเวลาอ่านผ่าน network drive
+const MIR_WAIT  = 30000;    // ไฟล์ไหนเปิดไม่จบในเวลานี้ ข้ามแล้วนับเป็นอ่านไม่ได้
+const MIR_MAX   = 5000;     // เกินนี้ไม่ไล่อ่าน น่าจะเลือกโฟลเดอร์กว้างเกิน
+const LS_MBAK   = "imosviewer_mirror_bak";   // จำว่าติ๊กสำรอง .bak ไว้ไหม
+let mirSeq = 0;             // เลขรอบ · รอบเก่าที่อ่านค้างอยู่จะรู้ตัวว่าถูกแทนแล้ว
+
+/* อ่านค่าที่ใช้ตัดสินจากหัวไฟล์ (ตัดทอนจาก parseMPR ของโปรแกรมเดิม กฎเหมือนเดิม) */
+function mirParse(text){
+  const r = { view: "", gp: "", gy: "", kind: "n" };
+  String(text || "").split(/\r?\n/).forEach(raw => {
+    const l = raw.trim();
+    let m;
+    if (!r.view && (m = l.match(/^VIEW\s*=\s*"?([^"]*)"?/i))) r.view = m[1].trim();
+    if (!r.gp && (m = l.match(/^GP\s*=\s*"?([^"]*)"?/))) r.gp = m[1].trim();
+    if (!r.gy && (m = l.match(/^GY\s*=\s*"?([^"]*)"?/))) r.gy = m[1].trim();
+  });
+  const v = r.view.toUpperCase();
+  r.kind = v.includes("XMIRROR") ? "x"
+         : v.includes("YMIRROR") ? "y"
+         : (v === "" || v === "NOMIRROR" || v === "STANDARD" || v === "NORMAL") ? "n" : "y";
+  return r;
+}
+
+/* ชื่อที่โชว์ = พาธย่อย + ชื่อไฟล์ */
+const mirName = it => (it.p ? it.p + "/" : "") + it.n;
+/* เลขบาร์โค้ดในชื่อไฟล์ · กฎเดียวกับ codesFromNames */
+const mirCodes = n => String(n).replace(/\.[^.]+$/, "").match(/\d{6,}/g) || [];
+
+/* เปิดไฟล์จากของที่ตัวเดินโฟลเดอร์เก็บไว้
+   fresh = ขอใหม่จากดิสก์ · หลังแก้ไฟล์แล้ว File ตัวเดิมที่ถือไว้จะอ่านไม่ได้ */
+async function mirFile(it, fresh){
+  if (!fresh && it.f) return it.f;
+  if (it.h) return await it.h.getFile();
+  if (it.e) return await new Promise((res, rej) => it.e.file(res, rej));
+  if (it.f) return it.f;
+  throw new Error("ไม่มีทางเปิดไฟล์นี้");
+}
+
+/* กันค้าง · network drive บางทีเปิดไฟล์ค้างไม่ตอบ */
+function mirTimeout(p, ms, label){
+  let tm;
+  return Promise.race([
+    Promise.resolve(p).finally(() => clearTimeout(tm)),
+    new Promise((_, rej) => { tm = setTimeout(() =>
+      rej(new Error("หมดเวลา " + Math.round(ms / 1000) + " วิ ที่ " + label)), ms); })
+  ]);
+}
+
+/* คิวขนาน n งาน */
+async function mirPool(items, n, worker, onDone){
+  let i = 0, done = 0;
+  const out = new Array(items.length);
+  const lane = async () => {
+    while (i < items.length){
+      const k = i++;
+      try{ out[k] = await worker(items[k]); }catch(_){ out[k] = null; }
+      onDone(++done);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, lane));
+  return out;
+}
+
+/* ไล่อ่านหัวไฟล์ .mpr ทุกไฟล์ แล้วเก็บผลไว้ที่ t.mirror
+   ถ้าระหว่างอ่านมีรอบใหม่หรือเปิดไฟล์ BOM ใหม่แทรก ผลรอบนี้ทิ้ง (คืน null) */
+async function mirRun(t, list, src, fresh, onStep){
+  const id = ++mirSeq;
+  t.mirRun = id;
+  const res = { at: new Date(), from: src.label || "", root: src.root || null,
+                items: list, files: [], over: false, ms: 0, log: [] };
+  const t0 = performance.now();
+  if (list.length > MIR_MAX){
+    res.over = true;
+  } else if (list.length){
+    const one = async (it, again) => {
+      const f = await mirTimeout(mirFile(it, again), MIR_WAIT, it.n);
+      return mirParse(await mirTimeout(f.slice(0, MIR_HEAD).text(), MIR_WAIT, it.n));
+    };
+    const out = await mirPool(list, MIR_LANES, async it => {
+      try{ return Object.assign({ it }, await one(it, fresh)); }
+      catch(e1){
+        /* File ที่ถือไว้ตั้งแต่ตอนไล่โฟลเดอร์อาจเก่าไปแล้ว ลองขอใหม่อีกครั้ง */
+        if (!fresh && (it.h || it.e)){
+          try{ return Object.assign({ it }, await one(it, true)); }catch(_){}
+        }
+        return { it, view: "", gp: "", gy: "", kind: "e",
+                 err: (e1 && ((e1.name && e1.name !== "Error" ? e1.name + ": " : "") + e1.message)) || String(e1) };
+      }
+    }, done => onStep && onStep(done, list.length));
+    /* เรียงตามชื่อ รายการในกล่องกับลำดับตอนแก้จะได้คงที่ ไม่ขึ้นกับลำดับที่ Windows ส่งมา */
+    res.files = out.filter(Boolean).sort((a, b) => mirName(a.it).localeCompare(mirName(b.it), "th", { numeric: true }));
+  }
+  res.ms = performance.now() - t0;
+  if (t.mirRun !== id) return null;
+  t.mirror = res;
+  return res;
+}
+
+/* บาร์โค้ด -> ชื่อไฟล์ ของไฟล์ที่ยังเป็น XMIRROR · ไม่มีเลยคืน null */
+function mirXMap(t){
+  if (!t || !t.mirror) return null;
+  const map = new Map();
+  t.mirror.files.forEach(r => {
+    if (r.kind === "x") mirCodes(r.it.n).forEach(c => map.set(c, mirName(r.it)));
+  });
+  return map.size ? map : null;
+}
+const mirCount = (t, k) => t && t.mirror ? t.mirror.files.filter(r => r.kind === k).length : 0;
+
+/* บาร์โค้ด -> "PartId PartName" ในไฟล์ BOM ใช้บอกว่าไฟล์เจาะเป็นชิ้นไหน */
+function mirParts(t){
+  const { b1, b2 } = drillCols(t);
+  const pid = colIdx(t, "PartId"), pn = colIdx(t, "PartName");
+  const m = new Map();
+  t.rows.forEach(r => [b1, b2].forEach(ci => {
+    if (ci < 0) return;
+    const v = String(r[ci] ?? "").trim();
+    if (!v || m.has(v)) return;
+    const s = ((pid >= 0 ? String(r[pid] ?? "").trim() : "") + " " +
+               (pn >= 0 ? String(r[pn] ?? "").trim() : "")).trim();
+    m.set(v, s || "อยู่ใน BOM นี้");
+  }));
+  /* ช่องที่ถูกล้างไปแล้วตอนเช็คเจาะ ยังรู้ได้จากเลขเดิมที่เก็บไว้ */
+  if (t.drill) t.drill.undo.forEach(([ri, , v]) => {
+    if (m.has(v)) return;
+    const r = t.rows[ri];
+    m.set(v, ((pid >= 0 ? String(r[pid] ?? "").trim() : "") + " " +
+              (pn >= 0 ? String(r[pn] ?? "").trim() : "")).trim() || "อยู่ใน BOM นี้");
+  });
+  return m;
+}
+
+/* ไบต์ <-> สตริงทีละไบต์ · แก้ไฟล์แบบนี้ไม่ต้องถอดรหัสตัวอักษรเลย
+   คอมเมนต์ภาษาไทยในไฟล์ (Windows-874) และ CRLF จึงออกมาเหมือนเดิมทุกไบต์ */
+function mirBin(u8){
+  let s = "";
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return s;
+}
+function mirBytes(s){
+  const u = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i) & 0xFF;
+  return u;
+}
+/* แทนบรรทัด VIEW บรรทัดแรก (ตัวเดียวกับที่ mirParse อ่าน) · ยอมแก้เฉพาะตอนที่ยังเป็น XMIRROR */
+function mirPatch(bin){
+  const re = /(^|\n)([ \t]*)VIEW[ \t]*=[ \t]*"?[^"\r\n]*"?[ \t]*(?=\r?\n|$)/i;
+  const m = bin.match(re);
+  if (!m) return { bin, changed: false, why: "ไม่พบบรรทัด VIEW" };
+  if (!/XMIRROR/i.test(m[0])) return { bin, changed: false, why: "ไม่ใช่ XMIRROR แล้ว (" + m[0].trim() + ")" };
+  const to = 'VIEW="NOMIRROR"';
+  const out = bin.replace(re, () => m[1] + m[2] + to);
+  return { bin: out, changed: out !== bin, from: m[0].trim(), to };
+}
+
+/* เขียนทับไฟล์ XMIRROR ทีละไฟล์ · limit = แก้แค่กี่ไฟล์ (0 = ทั้งหมด) */
+async function mirFix(t, limit, bak, log){
+  const m = t.mirror;
+  let todo = m.files.filter(r => r.kind === "x" && r.it.h);
+  if (limit) todo = todo.slice(0, limit);
+  const out = { ok: 0, bad: 0, nb: 0, n: todo.length };
+  for (const r of todo){
+    const it = r.it, name = mirName(it);
+    try{
+      const f = await mirTimeout(it.h.getFile(), MIR_WAIT, it.n);
+      const raw = new Uint8Array(await f.arrayBuffer());
+      const p = mirPatch(mirBin(raw));
+      if (!p.changed){ out.bad++; log("ข้าม  " + name + " — " + p.why, "bad"); continue; }
+      /* สำรองต้นฉบับก่อน · สำรองไม่สำเร็จ = ไม่เขียนทับ (โยนออกไปที่ catch) */
+      if (bak && it.d){
+        let had = true;
+        try{ await it.d.getFileHandle(it.n + ".bak"); }catch(_){ had = false; }
+        if (!had){
+          const bw = await (await it.d.getFileHandle(it.n + ".bak", { create: true })).createWritable();
+          await bw.write(raw); await bw.close();
+          out.nb++;
+        }
+      }
+      const w = await it.h.createWritable();
+      await w.write(mirBytes(p.bin)); await w.close();
+      r.view = "NOMIRROR"; r.kind = "n"; r.fixed = true; it.f = null;
+      out.ok++;
+      log("OK   " + name + "   " + p.from + "  →  " + p.to, "ok");
+    }catch(e){
+      out.bad++;
+      log("พลาด " + name + " — " + ((e && ((e.name || "") + " " + e.message)) || e), "bad");
+    }
+  }
+  return out;
+}
+
+/* แท็บไหนเป็นเจ้าของผล · ใช้กันวาดผลของแท็บหนึ่งลงกล่องของอีกแท็บ */
+const mirTab = t => Object.keys(TABS).find(k => TABS[k] === t) || "";
+
+/* เริ่มอ่านหัวไฟล์ · วาดความคืบหน้าในกล่อง แล้ววาดผลเมื่อจบ */
+function mirStart(t, items, src, fresh){
+  const list = (items || []).filter(it => /\.mpr$/i.test(it.n));
+  t.mirBusy = { done: 0, total: list.length };
+  mirPaint(t);
+  let last = 0;
+  return mirRun(t, list, src, !!fresh, (done, total) => {
+    t.mirBusy = { done, total };
+    const now = performance.now();
+    if (done < total && now - last < 120) return;   // ไม่วาดถี่จนหน้าจอหน่วง
+    last = now;
+    const box = $("dmir");
+    if (!box || box.dataset.tab !== mirTab(t) || !$("mirnow")) return;
+    $("mirnow").textContent = done.toLocaleString("th-TH");
+    $("mirfill").className = "bfill";
+    $("mirfill").style.width = (total ? done / total * 100 : 0).toFixed(1) + "%";
+  }).then(res => {
+    t.mirBusy = null;
+    if (res && T() === t && t.rows.length){ syncDrillBtn(); apply(); }
+    mirPaint(t);
+  }, e => {
+    t.mirBusy = null;
+    const box = $("dmir");
+    if (box && box.dataset.tab === mirTab(t))
+      box.innerHTML = '<h5>เช็ค Mirror</h5><div class="dmiss">อ่านหัวไฟล์ไม่สำเร็จ: ' + esc(e.message || e) + "</div>";
+  });
+}
+
+/* วาดกล่อง Mirror ลงใน #dmir แล้วผูกปุ่ม · เรียกซ้ำได้ทุกครั้งที่ผลเปลี่ยน */
+function mirPaint(t){
+  const box = $("dmir");
+  if (!box || box.dataset.tab !== mirTab(t)) return;
+  const n0 = v => Number(v).toLocaleString("th-TH");
+
+  if (t.mirBusy){
+    const b = t.mirBusy;
+    box.innerHTML = '<h5>เช็ค Mirror <em>กำลังอ่านหัวไฟล์ .mpr</em></h5>' +
+      '<div class="bnum" style="margin:8px 0 7px"><b id="mirnow">' + n0(b.done) + "</b> / " +
+      n0(b.total) + " ไฟล์</div>" +
+      '<div class="btrack"><div class="' + (b.done ? "bfill" : "bfill idle") + '" id="mirfill"' +
+      (b.done ? ' style="width:' + (b.done / b.total * 100).toFixed(1) + '%"' : "") + "></div></div>";
+    return;
+  }
+
+  const m = t.mirror;
+  if (!m){
+    box.innerHTML = '<h5>เช็ค Mirror</h5><p class="dnote">เลือกโฟลเดอร์หรือลากโฟลเดอร์มาวาง ' +
+      "โปรแกรมจะเปิดอ่านหัวไฟล์ .mpr ทุกไฟล์ด้วย ว่ามีไฟล์ไหนตั้ง <b>VIEW=XMIRROR</b> ไว้ " +
+      "ซึ่งเครื่องบางตัวอ่านแล้วเจาะกลับข้าง · ถ้าวางเลขเองในช่องข้างล่าง เช็ค Mirror ไม่ได้ เพราะไม่มีไฟล์ให้เปิด</p>";
+    return;
+  }
+
+  const head = '<h5>เช็ค Mirror <em>' + esc(m.from) + " · เช็คเมื่อ " +
+    m.at.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) +
+    (m.files.length ? " · ใช้เวลา " + (m.ms / 1000).toFixed(1) + " วิ" : "") + "</em>" +
+    (m.items.length && !m.over ? ' <button class="dlink" id="mirre">อ่านซ้ำ</button>' : "") + "</h5>";
+
+  if (m.over){
+    box.innerHTML = head + '<div class="dmiss">มีไฟล์ .mpr ' + n0(m.items.length) + " ไฟล์ เกินเพดาน " +
+      n0(MIR_MAX) + " ไฟล์ จึงไม่ไล่อ่าน — โฟลเดอร์ที่เลือกน่าจะกว้างเกิน ลองเลือกเฉพาะโฟลเดอร์งานใบนี้</div>";
+    return;
+  }
+  if (!m.items.length){
+    box.innerHTML = head + '<p class="dnote">ไม่พบไฟล์ .mpr ในที่เลือกมา จึงไม่มีอะไรให้เช็ค Mirror</p>';
+    return;
+  }
+
+  const xs = m.files.filter(r => r.kind === "x");
+  const ys = m.files.filter(r => r.kind === "y");
+  const es = m.files.filter(r => r.kind === "e");
+  const ns = m.files.filter(r => r.kind === "n");
+  const fx = m.files.filter(r => r.fixed);
+  const gw = r => r.gp === "1" || r.gy === "1";
+  const gps = m.files.filter(r => r.kind !== "e" && gw(r));
+  const parts = mirParts(t);
+  const sbox = (v, cls, cap) => "<div><b" + (cls ? ' class="' + cls + '"' : "") + ">" + n0(v) +
+    "</b><i>" + cap + "</i></div>";
+
+  /* รายการที่ต้องดู: XMIRROR ก่อน แล้ว Mirror อื่น อ่านไม่ได้ ตั้ง GP/GY และที่เพิ่งแก้ */
+  const seen = new Set();
+  const show = [...xs, ...ys, ...es, ...gps, ...fx].filter(r => !seen.has(r) && seen.add(r));
+  const row = r => {
+    const code = r.it.n.replace(/\.[^.]+$/, "");
+    const part = mirCodes(r.it.n).map(c => parts.get(c)).find(Boolean);
+    const sub = [];
+    if (r.it.p) sub.push("อยู่ใน " + esc(r.it.p));
+    if (r.err) sub.push("อ่านไม่ได้: " + esc(r.err));
+    if (r.fixed) sub.push("แก้แล้ว → VIEW=\"NOMIRROR\"");
+    if (gw(r)) sub.push("‼ ตั้ง GP/GY = 1 คือสั่งสร้าง NC แบบกระจกจริง ตรวจกับต้นทางก่อนแก้");
+    return '<div class="mirow' + (r.fixed ? " ok" : "") + '">' +
+      '<span class="c">' + esc(code) + "</span>" +
+      '<span class="p" title="' + esc(part || "").replace(/"/g, "&quot;") + '">' + (part ? esc(part) : '<i style="color:var(--faint)">ไม่พบใน BOM นี้</i>') + "</span>" +
+      '<span class="v">' + (r.kind === "e" ? "อ่านไม่ได้" : esc(r.view || "—")) +
+        (r.gp === "1" ? '<span class="w">GP=1</span>' : "") +
+        (r.gy === "1" ? '<span class="w">GY=1</span>' : "") + "</span>" +
+      (sub.length ? '<span class="s">' + sub.join("  ·  ") + "</span>" : "") + "</div>";
+  };
+
+  let html = head +
+    '<div class="dstat">' +
+      sbox(m.files.length, "", "ไฟล์ .mpr ที่อ่านหัว") +
+      sbox(xs.length, xs.length ? "mir" : "keep", "XMIRROR") +
+      sbox(ys.length, "", "Mirror อื่น (YMIRROR ฯลฯ)") +
+      sbox(ns.length, "keep", "ปกติ") +
+    "</div>";
+
+  if (!xs.length && !ys.length && !es.length){
+    html += '<p class="dnote" style="color:var(--ok)">ไม่มีไฟล์ไหนตั้ง Mirror ไว้ — ใช้ได้ทั้ง ' +
+      n0(m.files.length) + " ไฟล์" + (fx.length ? " (รวมที่เพิ่งแก้ " + n0(fx.length) + " ไฟล์)" : "") + "</p>";
+  }
+  if (show.length){
+    html += '<div class="mirlist">' + show.slice(0, 300).map(row).join("") +
+      (show.length > 300 ? '<div class="mirow"><span class="s">… อีก ' + n0(show.length - 300) + " ไฟล์</span></div>" : "") +
+      "</div>";
+  }
+  if (xs.length){
+    html += '<p class="dnote">VIEW=XMIRROR เป็นค่ามุมมองใน WoodWOP ไม่ควรมีผลกับการเจาะ ' +
+      "แต่เครื่องที่อ่านค่านี้ผิดจะเจาะกลับข้าง — แก้โดยเปลี่ยนเป็น NOMIRROR ไม่ต้องแตะพิกัด " +
+      "· บาร์โค้ดของไฟล์เหล่านี้ระบายม่วงในตาราง</p>";
+    if (m.root){
+      const bak0 = localStorage.getItem(LS_MBAK) !== "0";
+      html +=
+        '<label class="dryline"><input type="checkbox" id="mirok"> ' +
+        "ยืนยันให้เขียนทับไฟล์เจาะในโฟลเดอร์ <b>" + esc(m.from) + "</b> — " +
+        "เปลี่ยนเฉพาะบรรทัด VIEW เป็น NOMIRROR ไม่แตะพิกัดเจาะ" +
+        (xs.some(gw) ? " (มี " + xs.filter(gw).length + " ไฟล์ที่ตั้ง GP/GY = 1 ด้วย ตรวจกับต้นทางก่อน)" : "") +
+        "</label>" +
+        '<div class="mirfix">' +
+          '<button class="cbtn" id="mirfix1" disabled>ทดสอบแก้ 1 ไฟล์</button>' +
+          '<button class="cbtn warn" id="mirfixall" disabled>แก้ XMIRROR ทั้ง ' + n0(xs.length) + " ไฟล์</button>" +
+          '<label><input type="checkbox" id="mirbak"' + (bak0 ? " checked" : "") + "> สำรองต้นฉบับเป็น .bak ก่อน</label>" +
+        "</div>";
+    } else {
+      html += '<p class="dnote">แก้ไฟล์จากตรงนี้ไม่ได้ เพราะเปิดโฟลเดอร์ผ่านทางสำรอง เบราว์เซอร์ให้อ่านอย่างเดียว ' +
+        "— ใช้ Chrome หรือ Edge กดปุ่ม <b>เลือกโฟลเดอร์…</b> แล้วเลือกโฟลเดอร์เดิมอีกครั้ง</p>";
+    }
+  }
+  html += '<div class="mirlog' + (m.log.length ? " on" : "") + '" id="mirlog">' +
+    m.log.map(([c, s]) => '<div class="' + c + '">' + esc(s) + "</div>").join("") + "</div>";
+  box.innerHTML = html;
+  if ($("mirlog")) $("mirlog").scrollTop = $("mirlog").scrollHeight;
+
+  if ($("mirre")) $("mirre").onclick = () => mirStart(t, m.items, { label: m.from, root: m.root }, true);
+  if (!$("mirok")) return;
+  $("mirok").onchange = () => {
+    const on = $("mirok").checked && !t.mirFixing;
+    $("mirfix1").disabled = !on;
+    $("mirfixall").disabled = !on;
+  };
+  const go = async limit => {
+    if (t.mirFixing || !$("mirok").checked) return;
+    const bak = $("mirbak").checked;
+    /* ขอสิทธิ์เขียนก่อนอย่างอื่น ระหว่างที่ยังอยู่ในจังหวะคลิก ไม่งั้นเบราว์เซอร์ไม่ยอมเด้งถาม */
+    try{
+      if (m.root.queryPermission &&
+          (await m.root.queryPermission({ mode: "readwrite" })) !== "granted" &&
+          (await m.root.requestPermission({ mode: "readwrite" })) !== "granted"){
+        return toast("ไม่ได้รับสิทธิ์เขียนไฟล์ใน " + m.root.name);
+      }
+    }catch(e){ return toast("ขอสิทธิ์เขียนไฟล์ไม่สำเร็จ: " + (e.message || e)); }
+
+    localStorage.setItem(LS_MBAK, bak ? "1" : "0");
+    t.mirFixing = true;
+    ["mirfix1", "mirfixall", "mirok", "mirbak"].forEach(id => { if ($(id)) $(id).disabled = true; });
+    const log = (msg, cls) => {
+      m.log.push([cls || "", msg]);
+      const el = $("mirlog");
+      if (!el) return;
+      el.classList.add("on");
+      el.insertAdjacentHTML("beforeend", '<div class="' + (cls || "") + '">' + esc(msg) + "</div>");
+      el.scrollTop = el.scrollHeight;
+    };
+    log("เริ่มแก้ " + (limit ? "1 ไฟล์ (ทดสอบ)" : xs.length + " ไฟล์") +
+                " · VIEW=\"NOMIRROR\" · " + (bak ? "สำรอง .bak" : "ไม่สำรอง .bak"));
+    const t0 = performance.now();
+    let res;
+    try{ res = await mirFix(t, limit, bak, log); }
+    finally{ t.mirFixing = false; }
+    log("เสร็จ · สำเร็จ " + res.ok + " ไฟล์ · ข้าม/พลาด " + res.bad + " ไฟล์" +
+        (res.nb ? " · สำรอง .bak " + res.nb + " ไฟล์" : "") +
+        " · ใช้เวลา " + ((performance.now() - t0) / 1000).toFixed(1) + " วิ", res.bad ? "bad" : "ok");
+    if (T() === t && t.rows.length){ syncDrillBtn(); apply(); }
+    mirPaint(t);
+    toast(res.bad ? "แก้สำเร็จ " + res.ok + " ไฟล์ · พลาด " + res.bad + " ไฟล์ ดูรายละเอียดในกล่อง"
+                  : "แก้ VIEW เป็น NOMIRROR แล้ว " + res.ok + " ไฟล์");
+  };
+  $("mirfix1").onclick = () => go(1);
+  $("mirfixall").onclick = () => go(0);
+}
+
 $("drill").onclick = () => {
   const t = T();
 
@@ -2131,9 +2585,13 @@ $("drill").onclick = () => {
           " เลขในไฟล์เจาะที่ไม่พบใน BOM นี้</b><br>" +
           d.orphan.slice(0, 40).map(esc).join("  ") +
           (d.orphan.length > 40 ? "  \u2026" : "") + "</div>"
+        : "") +
+      /* v6.0: ผลเช็ค Mirror ของรอบนั้น · แก้ไฟล์ต่อจากตรงนี้ได้ */
+      (t.mirror || t.mirBusy
+        ? '<div class="dmir" id="dmir" data-tab="' + mirTab(t) + '" style="margin:12px 0 0"></div>'
         : "");
     $("mfoot").innerHTML =
-      '<span class="note">แก้เฉพาะข้อมูลในหน้าจอนี้ ไม่แตะไฟล์ต้นฉบับ</span><span class="sp"></span>' +
+      '<span class="note">ล้างบาร์โค้ดแก้เฉพาะในหน้าจอนี้ ไม่แตะไฟล์ BOM ต้นฉบับ</span><span class="sp"></span>' +
       '<button class="cbtn undo" id="drundo">ย้อนกลับทั้งหมด</button>' +
       '<button class="cbtn primary" id="drclose">ปิด</button>';
     $("drclose").onclick = closeModal;
@@ -2142,6 +2600,7 @@ $("drill").onclick = () => {
       toast("คืนเลขบาร์โค้ดกลับแล้ว " + n + " ช่อง");
     };
     $("modal").className = "on";
+    mirPaint(t);
     return;
   }
 
@@ -2167,7 +2626,8 @@ $("drill").onclick = () => {
   $("mbody").innerHTML =
     '<p style="font-size:13px;color:var(--dim);line-height:1.7">' +
     "ชี้ไปที่โฟลเดอร์ไฟล์เจาะ โปรแกรมจะอ่าน <b>ชื่อไฟล์</b> เป็นรายการบาร์โค้ดที่มีเจาะจริง " +
-    "(ไฟล์ <code>.mpr</code> ตั้งชื่อด้วยเลขบาร์โค้ดอยู่แล้ว ไม่ต้องเปิดอ่านข้างใน)<br>" +
+    "(ไฟล์ <code>.mpr</code> ตั้งชื่อด้วยเลขบาร์โค้ดอยู่แล้ว) " +
+    "และเปิดอ่านหัวไฟล์ทุกไฟล์เพื่อเช็ค <b>Mirror</b> ไปพร้อมกัน<br>" +
     "ช่อง <b>Barcode</b> และ <b>Barcode2</b> ที่ไม่มีไฟล์เจาะ จะถูกล้างเป็นว่าง " +
     "\u2014 ชิ้นที่เจาะอยู่หน้าสอง จึงเหลือเฉพาะ Barcode2 ให้เอง</p>" +
     '<div class="dsrc" id="dsrc">' +
@@ -2192,8 +2652,9 @@ $("drill").onclick = () => {
       '<p class="dnote" style="margin-top:9px;font-size:11.5px">' +
       "เบราว์เซอร์อ่านไฟล์จากพาธที่พิมพ์เองไม่ได้ (กันเว็บแอบอ่านไฟล์ในเครื่อง) " +
       "กด <b>คัดลอกพาธ</b> แล้วกด <b>เลือกโฟลเดอร์</b> วางพาธในช่องบนของหน้าต่างที่เปิดมา กด Enter " +
-      "\u00B7 อ่านแค่ชื่อไฟล์ ไม่มีการส่งอะไรออกนอกเครื่อง</p>" +
+      "\u00B7 อ่านไฟล์ในเครื่อง ส่งขึ้นฐานข้อมูลแค่รายชื่อไฟล์กับเวลาไว้เป็นหลักฐาน</p>" +
     "</div>" +
+    '<div class="dmir" id="dmir" data-tab="' + mirTab(t) + '"></div>' +
     '<label class="dlab" for="dtext">เลขบาร์โค้ดที่มีเจาะจริง \u2014 แก้เองหรือวางเองก็ได้</label>' +
     '<textarea id="dtext" spellcheck="false" placeholder="26083120011215&#10;26083120012215&#10;26083120011216">' +
     esc(t.drillText || "") + "</textarea>" +
@@ -2204,7 +2665,7 @@ $("drill").onclick = () => {
       : "") +
     '<div id="dstat"></div>';
   $("mfoot").innerHTML =
-    '<span class="note">แก้เฉพาะข้อมูลในหน้าจอนี้ ไม่แตะไฟล์ต้นฉบับ</span><span class="sp"></span>' +
+    '<span class="note">ล้างบาร์โค้ดแก้เฉพาะในหน้าจอนี้ ไม่แตะไฟล์ BOM ต้นฉบับ</span><span class="sp"></span>' +
     '<button class="cbtn" id="drcancel">ยกเลิก</button>' +
     '<button class="cbtn primary" id="drok" disabled>ล้างช่องที่ไม่มีเจาะ</button>';
 
@@ -2412,11 +2873,15 @@ $("drill").onclick = () => {
     };
   };
 
-  const takeNames = (names, label) => {
+  /* v6.0: root = โฟลเดอร์ที่เปิดผ่าน showDirectoryPicker / ลากวาง (ได้ handle) ใช้ตอนแก้ไฟล์ Mirror
+     ทางสำรองไม่มี root -> เช็ค Mirror ได้ แต่แก้ไฟล์ไม่ได้ */
+  const takeNames = (names, label, root) => {
     /* โฟลเดอร์งานมักมีไฟล์อื่นปนอยู่ (log, รายการงาน) ที่ชื่อมีตัวเลขยาวเหมือนกัน
        ถ้าเจอ .mpr ก็เอาเฉพาะ .mpr ไม่งั้นรับหมดเผื่อโรงงานใช้นามสกุลอื่น */
     const mpr = names.filter(f => /\.mpr$/i.test(f.n));
     const use = mpr.length ? mpr : names;
+    /* v6.0: เช็ค Mirror จากรายชื่อชุดเดียวกัน ไม่ไล่โฟลเดอร์ซ้ำ · อ่านหัวไฟล์ขนานไปโดยไม่บล็อกขั้นตอนเดิม */
+    mirStart(t, mpr, { label, root: root || null });
     const codes = codesFromNames(use);
     if (!codes.length){
       $("dfrom").innerHTML = "<b>ไม่พบชื่อไฟล์ที่เป็นเลขบาร์โค้ดใน " + esc(label) + "</b>";
@@ -2494,7 +2959,7 @@ $("drill").onclick = () => {
         $("dfrom").textContent = "กำลังไล่อ่านชื่อไฟล์\u2026";
         const names = [];
         await walkDirHandle(dir, names, 0, tick);
-        return takeNames(names, dir.name);
+        return takeNames(names, dir.name, dir);
       }catch(err){
         if (err && err.name === "AbortError") return;   // ผู้ใช้กดยกเลิก
         /* บางที่เปิดไฟล์ตรงจากดิสก์ (file://) API นี้ใช้ไม่ได้ ตกไปทางสำรอง */
@@ -2507,8 +2972,9 @@ $("drill").onclick = () => {
     const fs2 = [...e.target.files];
     if (!fs2.length) return;
     const first = fs2[0].webkitRelativePath || "";
-    takeNames(fs2.map(f => ({ n: f.name, t: f.lastModified || 0 })),
-              first.split("/")[0] || "โฟลเดอร์ที่เลือก");
+    takeNames(fs2.map(f => ({ n: f.name, t: f.lastModified || 0, f,
+                              p: String(f.webkitRelativePath || "").split("/").slice(1, -1).join("/") })),
+              first.split("/")[0] || "โฟลเดอร์ที่เลือก", null);
   };
 
   /* ---- ลากโฟลเดอร์มาวางในกรอบ ---- */
@@ -2524,18 +2990,32 @@ $("drill").onclick = () => {
     box.classList.remove("over");
     $("drop").classList.remove("over");
     const dt = e.dataTransfer;
-    const entries = [...(dt.items || [])]
+    const items = [...(dt.items || [])];
+    /* v6.0: Chrome/Edge ขอ handle ของโฟลเดอร์ที่ลากมาได้ ได้ทั้งอ่านและแก้ไฟล์ Mirror
+       ต้องขอทั้ง handle และ entry ทันทีในจังหวะ drop ก่อน await ตัวแรก ไม่งั้นของหาย */
+    const hps = items.map(it => it.kind === "file" && it.getAsFileSystemHandle
+      ? it.getAsFileSystemHandle().catch(() => null) : null);
+    const entries = items
       .map(it => it.webkitGetAsEntry && it.webkitGetAsEntry()).filter(Boolean);
+    const dfiles = [...(dt.files || [])];   // หลัง await ตัวแรก dt.files จะว่าง จึงเก็บไว้ก่อน
     const names = [];
-    let label = "ที่ลากมาวาง";
-    if (entries.length){
+    let label = "ที่ลากมาวาง", root = null;
+    const hs = (await Promise.all(hps)).filter(Boolean);
+    if (hs.length === 1 && hs[0].kind === "directory"){
+      $("dfrom").textContent = "กำลังไล่อ่านชื่อไฟล์\u2026";
+      try{ await walkDirHandle(hs[0], names, 0, tick); root = hs[0]; label = root.name; }
+      catch(_){ names.length = 0; }
+    }
+    if (root){
+      /* ได้ครบจาก handle แล้ว ไม่ต้องเดินซ้ำด้วย entry */
+    } else if (entries.length){
       if (entries.length === 1 && entries[0].isDirectory) label = entries[0].name;
       $("dfrom").textContent = "กำลังไล่อ่านชื่อไฟล์\u2026";
       for (const en of entries) await walkDropEntry(en, names, 0, tick);
     } else {
-      [...(dt.files || [])].forEach(f => names.push({ n: f.name, t: f.lastModified || 0 }));
+      dfiles.forEach(f => names.push({ n: f.name, t: f.lastModified || 0, f }));
     }
-    if (names.length) takeNames(names, label);
+    if (names.length) takeNames(names, label, root);
     else $("dfrom").textContent = "อ่านชื่อไฟล์จากที่ลากมาไม่ได้ ลองกดปุ่มเลือกโฟลเดอร์แทน";
   };
   $("drcancel").onclick = closeModal;
@@ -2547,6 +3027,7 @@ $("drill").onclick = () => {
   };
   recalc();
   $("modal").className = "on";
+  mirPaint(t);
   setTimeout(() => $("dtext").focus(), 30);
 };
 
