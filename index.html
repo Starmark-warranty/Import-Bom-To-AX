@@ -10,14 +10,19 @@
   >>> บวกเลขที่ APP_META เท่านั้น อย่าบวกที่บล็อกนี้
   FILE     : imos-viewer.html
   STACK    : single-file HTML · ไม่มี build step · ไม่ต่อฐานข้อมูล อ่านไฟล์ในเครื่องล้วน
+             ยกเว้นหน้า ชื่อไทย Article (v6.1) ที่คุย SQL Server ผ่าน Article-Name-Filler.ps1
+             (ReCheck-Bom.cmd เปิดแอปที่ http://127.0.0.1:47821 · เปิดไฟล์ตรง ๆ หน้านั้นจะบอกวิธีเปิด)
   ENTRY    : ingest() -> apply() -> draw()
              หน้า จัดการ Lot order (v5.9): lotTake() -> lotGroup() -> drawLot()
              เช็ค Mirror (v6.0): เลือกโฟลเดอร์เจาะ -> takeNames() -> mirRun()
              -> mirBox() · แก้ไฟล์ที่ mirFix() (ย้ายมาจาก MPR Mirror Check)
+             หน้า ชื่อไทย Article (v6.1): ingest() -> artBomSchedule() -> artBomCheck()
+             -> artSaveRows() (ถ้าเปิดเติมอัตโนมัติ) -> artDraw() · ค้นจาก AX: artScan()
   STATE    : TABS.wood / TABS.fit  คือ single source of truth
              t.mirror = ผลเช็ค Mirror ของแท็บนั้น (ล้างทิ้งตอนเปิดไฟล์ใหม่)
              LOT  = สถานะของหน้า จัดการ Lot order แยกขาดจาก TABS
-             mode = "bom" | "lot" หน้าที่เปิดอยู่
+             ART  = สถานะของหน้า ชื่อไทย Article แยกขาดจาก TABS / LOT (อ่าน TABS อย่างเดียว)
+             mode = "bom" | "lot" | "art" หน้าที่เปิดอยู่
              >>> ห้ามนิยาม $ / norm / esc / blank / isNum / T() ซ้ำอีก
 
   --- CHANGELOG (ใหม่สุดอยู่บนสุด) -----------------------------------
@@ -616,6 +621,153 @@ body.mode-lot #lot{display:flex}
   .lside{overflow:visible}
   .lstats{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* ═══ หน้า ชื่อไทย Article (v6.1) ═══
+   เติมชื่อไทยที่ขาดใน ProductEngineering.pd.ProductionArticle · คุย SQL ผ่าน Article-Name-Filler.ps1
+   ทุกคลาสขึ้นต้นด้วย a / art ไม่ไปชนของเดิม (td.st td.n td.dt .nm .note มีความหมายอยู่แล้ว) */
+.mode .abadge{display:none;font-family:var(--mono);font-size:10.5px;font-weight:600;line-height:16px;
+              background:var(--miss-ink);color:#fff;border-radius:10px;padding:0 6px;margin-left:6px}
+.mode .abadge.on{display:inline-block}
+/* หน้า Article ซ่อนของ BOM AX เหมือนหน้า Lot */
+body.mode-art #open, body.mode-art #find, body.mode-art #only, body.mode-art #colbtn,
+body.mode-art #copy, body.mode-art .menuwrap, body.mode-art #tabs, body.mode-art #chkbar,
+body.mode-art #bar, body.mode-art #main, body.mode-art footer{display:none !important}
+#art{flex:1;min-height:0;display:none;flex-direction:column;position:relative;background:var(--page)}
+body.mode-art #art{display:flex}
+#art.over{outline:2px dashed var(--orange);outline-offset:-8px}
+.aseg{display:flex;gap:2px;padding:2px;border-radius:9px;background:var(--page);border:1px solid var(--line)}
+.aseg-b{font-family:var(--sans);font-size:12.5px;border:0;border-radius:7px;padding:6px 12px;cursor:pointer;
+        background:none;color:var(--dim);white-space:nowrap}
+.aseg-b:hover{color:var(--ink);background:var(--hover)}
+.aseg-b.on{background:var(--navy);color:#fff;font-weight:600}
+.aseg-b .n{font-family:var(--mono);font-size:11px;margin-left:5px;opacity:.85}
+.aseg-b .n:empty{display:none}
+.aconn{display:inline-flex;align-items:center;gap:7px;font-family:var(--sans);font-size:12px;color:var(--dim);
+       background:var(--card);border:1px solid var(--line-2);border-radius:20px;padding:5px 12px;cursor:pointer;
+       max-width:560px;min-width:0}
+.aconn:hover{border-color:var(--orange)}
+.aconn i{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+.aconn.on i{background:var(--ok)}
+.aconn.off i{background:var(--miss-ink)}
+.aconn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#agone{display:none;background:var(--miss-bg);color:var(--miss-ink);border-bottom:1px solid var(--miss-line);
+       padding:7px 12px;font-size:12.5px}
+#agone.on{display:block}
+.atools{flex:0 0 auto;display:flex;align-items:flex-end;gap:10px 14px;flex-wrap:wrap;padding:10px 12px;
+        background:var(--card);border-bottom:1px solid var(--line)}
+.atools .fld{flex:0 0 auto}
+.atools .fld input,.atools .fld select{padding:6px 9px;font-size:12.5px}
+#alot{font-family:var(--mono);width:190px}
+.afile{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:9px;padding:7px 10px;
+       background:var(--page);min-width:0;max-width:460px}
+.afile .t{font-size:11.5px;color:var(--dim);display:flex;gap:6px;align-items:baseline;min-width:0}
+.afile .t b{color:var(--ink);font-weight:600;white-space:nowrap}
+.afile .t span{font-family:var(--mono);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.afile label{font-size:11.5px;color:var(--dim);display:flex;align-items:center;gap:6px}
+.afile select{font-family:var(--mono);font-size:12px;padding:4px 7px;border-radius:6px;border:1px solid var(--line-2);
+              background:var(--card);color:var(--ink);cursor:pointer;max-width:250px}
+.afile select.none{border-color:var(--miss-line);background:var(--miss-bg);color:var(--miss-ink)}
+.afile .cnt{font-family:var(--mono);font-size:11px;color:var(--faint)}
+.achk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink);cursor:pointer;padding-bottom:6px}
+.achk input{accent-color:var(--orange);cursor:pointer;width:15px;height:15px}
+.achips{flex:0 0 auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:9px 12px}
+.achip{font-family:var(--sans);font-size:12px;border:1px solid var(--line-2);background:var(--card);border-radius:20px;
+       padding:4px 11px;cursor:pointer;color:var(--dim)}
+.achip b{font-family:var(--mono);color:var(--ink);margin-left:4px;font-weight:600}
+.achip:hover{border-color:var(--navy-2)}
+.achip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.achip.on b{color:#fff}
+.achips .meta{font-size:11.5px;color:var(--faint);margin-left:4px}
+.achips .sp{flex:1}
+#aq{font-family:var(--sans);font-size:12.5px;width:220px;padding:6px 10px;border-radius:7px;border:1px solid var(--line-2);
+    outline:0;background:var(--card);color:var(--ink)}
+#aq:focus{border-color:var(--orange)}
+.awrap{flex:1;min-height:0;overflow:auto;margin:0 12px;background:var(--card);border:1px solid var(--line);
+       border-radius:10px;position:relative}
+.atab{width:100%;font-size:12.5px;white-space:normal}
+.atab thead th{cursor:default;font-size:11.5px;padding:7px 9px;white-space:nowrap}
+.atab thead th:hover{background:var(--navy)}
+/* ตารางหลักของแอปตั้ง td เป็นตัวอักษร mono ขนาด 11px และตัดที่ 260px · หน้านี้มีชื่อไทยยาว ๆ จึงคืนค่าเป็นตัวอ่านง่าย */
+.atab tbody td{padding:5px 9px;vertical-align:middle;border-right:0;font-family:var(--sans);font-size:12.5px;
+               max-width:none;overflow:visible}
+.atab tbody tr.sel td{background:#fff6e7}
+.atab tbody tr.sel:hover td{background:#fdefd9}
+.atab .a-ck{width:36px;text-align:center}
+.atab input[type=checkbox]{accent-color:var(--orange);cursor:pointer;width:15px;height:15px}
+.atab input[type=checkbox]:disabled{cursor:default;opacity:.35}
+.atab .a-code{font-family:var(--mono);font-weight:600;white-space:nowrap}
+.atab .a-ax{color:var(--dim);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.atab .a-base{font-family:var(--mono);color:var(--dim);white-space:nowrap}
+.atab .a-name{min-width:300px}
+.atab .a-src{font-size:11.5px;color:var(--dim);white-space:nowrap}
+.atab .a-st{min-width:150px;max-width:360px}
+.atab .a-more{font-family:var(--mono);font-size:11.5px;color:var(--dim);white-space:nowrap}
+.atab .a-more small{font-family:var(--sans);color:var(--faint)}
+.a-nm{width:100%;font-family:var(--sans);font-size:13px;padding:5px 8px;border-radius:6px;border:1px solid var(--line-2);
+      outline:0;background:var(--card);color:var(--ink)}
+.a-nm:focus{border-color:var(--orange)}
+.a-nm.ed{background:#fff9ef;border-color:var(--hl-line)}
+.a-nm.empty{border-style:dashed}
+.a-fixed{color:var(--ink)}
+.a-dash{color:var(--faint)}
+.aedtag{font-size:10.5px;color:var(--hl-ink);margin-left:6px;white-space:nowrap}
+.abdg{display:inline-block;font-size:11.5px;font-weight:600;border-radius:6px;padding:1px 8px;white-space:nowrap}
+.abdg.ready{background:var(--ok-bg);color:var(--ok)}
+.abdg.conflict{background:var(--hl-bg);color:var(--hl-ink)}
+.abdg.nobase,.abdg.toolong,.abdg.failed{background:var(--miss-bg);color:var(--miss-ink)}
+.abdg.has,.abdg.skipped{background:var(--page);color:var(--dim)}
+.abdg.saved{background:#e3eefb;color:#1b4f8a}
+.a-why{display:block;font-size:11px;color:var(--faint);margin-top:2px;line-height:1.45}
+.aempty{padding:48px 20px;text-align:center;color:var(--dim);font-size:13px;line-height:1.8}
+.aempty b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
+.aempty .cbtn{margin-top:12px}
+.aempty.err b{color:var(--miss-ink)}
+.afoot{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;background:var(--card);
+       border-top:1px solid var(--line);margin-top:10px;font-size:12.5px}
+.afoot b{font-family:var(--mono)}
+.afoot .note{font-size:11.5px;color:var(--faint)}
+.afoot .sp{flex:1}
+#aoff{position:absolute;inset:0;z-index:6;display:none;flex-direction:column;align-items:center;justify-content:center;
+      gap:12px;background:var(--card);padding:36px;text-align:center}
+#aoff.on{display:flex}
+#aoff h2{font-size:17px;font-weight:600}
+#aoff p{font-size:13px;color:var(--dim);max-width:64ch;line-height:1.75}
+#aoff code{font-family:var(--mono);background:var(--page);padding:2px 6px;border-radius:4px;font-size:12px;word-break:break-all}
+#abusy{position:absolute;inset:0;z-index:7;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.72)}
+#abusy.on{display:flex}
+#abusy .bt{margin-bottom:12px}
+button.artpill{cursor:pointer}
+button.artpill:hover{filter:brightness(.96)}
+/* ในกล่อง (ใช้ #modal ตัวเดิมของแอป) */
+.awrapm{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:10px}
+.amini{width:100%;font-size:12px;white-space:normal}
+.amini thead th{cursor:default}
+.amini thead th:hover{background:var(--navy)}
+.amini td{padding:5px 8px;border-right:0;vertical-align:top;font-family:var(--sans);font-size:12px;max-width:none;overflow:visible}
+.amini td.a-m{font-family:var(--mono);white-space:nowrap}
+.amini td.a-nw{white-space:nowrap}
+.atext{font-size:12.5px;color:var(--dim);line-height:1.75}
+.atext b{color:var(--ink)}
+.atext code{font-family:var(--mono);font-size:11.5px;background:var(--page);padding:1px 5px;border-radius:4px}
+.alog{font-family:var(--mono);font-size:11.5px;line-height:1.6;background:#141a28;color:#d8deea;border-radius:9px;
+      padding:12px 14px;white-space:pre-wrap;word-break:break-word;max-height:58vh;overflow:auto}
+.akv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:12.5px;margin:10px 0}
+.akv span:nth-child(odd){color:var(--dim)}
+.aradio{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.aradio label{display:flex;align-items:center;gap:7px;font-size:12.5px;border:1px solid var(--line-2);border-radius:8px;
+              padding:7px 11px;cursor:pointer}
+.aradio label:has(input:checked){border-color:var(--orange);background:var(--hl-bg)}
+.aradio input{accent-color:var(--orange)}
+.ahint{font-size:11.5px;color:var(--faint);margin:-5px 0 11px}
+.aerr{color:var(--miss-ink);font-size:12.5px;min-height:1em;margin-top:6px}
+#mbody h5{font-size:12px;color:var(--dim);font-weight:600;margin:14px 0 9px;border-top:1px solid var(--line);padding-top:12px}
+.alib{display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;padding-top:20px}
+.alib input{accent-color:var(--orange)}
+@media(max-width:820px){
+  .aconn{max-width:100%}
+  #aq{width:100%}
+  .awrap{margin:0 8px}
+}
 </style>
 </head>
 <body>
@@ -627,6 +779,8 @@ body.mode-lot #lot{display:flex}
   <div class="modes">
     <button class="mode on" data-m="bom" aria-pressed="true"><span class="mw">จัดการ </span>BOM AX</button>
     <button class="mode" data-m="lot" aria-pressed="false"><span class="mw">จัดการ </span>Lot order</button>
+    <!-- v6.1: หน้าเติมชื่อไทย Article ที่ขาด (ตัวเลขแดง = รหัสใน BOM ที่ยังไม่มีชื่อ) -->
+    <button class="mode" data-m="art" aria-pressed="false"><span class="mw">ชื่อไทย </span>Article<span class="abadge" id="abadge"></span></button>
   </div>
   <button class="btn go" id="open">เปิดไฟล์เข้าแท็บนี้</button>
   <input type="file" id="pick" accept=".xlsx,.xls,.csv,.txt,.tsv" multiple>
@@ -657,6 +811,8 @@ body.mode-lot #lot{display:flex}
   <button class="cbtn undo" id="undoxy" style="display:none">ย้อนกลับ</button>
   <button class="cbtn" id="drill" disabled title="วางเลข Barcode จากไฟล์เจาะ แล้วล้างช่องที่ไม่มีเจาะจริง">เช็คไฟล์เจาะ</button>
   <button class="cbtn undo" id="undodr" style="display:none">ย้อนกลับเจาะ</button>
+  <!-- v6.1: ผลเช็คชื่อไทยของรหัส Article ในไฟล์ · คลิกไปหน้า ชื่อไทย Article -->
+  <button class="pill wait artpill" id="artpill" style="display:none"></button>
   <span class="sp"></span>
   <span class="note" id="chkat" style="font-size:11px;color:var(--faint)"></span>
 </div>
@@ -702,6 +858,50 @@ body.mode-lot #lot{display:flex}
   <div id="ldrop"></div>
 </section>
 
+<!-- ═══ หน้า ชื่อไทย Article (v6.1) ═══ เติมชื่อไทยที่ขาดใน ProductEngineering.pd.ProductionArticle
+     สองทาง: จาก BOM ที่เปิดอยู่ (เช็คตั้งแต่ต้นทาง) · ค้นจาก AX (รหัสที่เข้า AX ไปแล้ว)
+     คุย SQL ผ่าน Article-Name-Filler.ps1 ต้องเปิดแอปผ่าน ReCheck-Bom.cmd หน้านี้ถึงใช้ได้ -->
+<section id="art">
+  <div class="lbar">
+    <div class="aseg">
+      <button class="aseg-b on" data-v="bom">จาก BOM ที่เปิดอยู่<span class="n" id="anbom"></span></button>
+      <button class="aseg-b" data-v="ax">ค้นจาก AX<span class="n" id="anax"></span></button>
+    </div>
+    <button class="aconn" id="aconn" title="ตั้งค่าการเชื่อมต่อ"><i></i><span>กำลังเชื่อมต่อ…</span></button>
+    <span class="sp"></span>
+    <button class="cbtn" id="aautob">โหมดอัตโนมัติ</button>
+    <button class="cbtn" id="alogb">บันทึกการทำงาน</button>
+    <button class="cbtn" id="asetb">ตั้งค่า</button>
+  </div>
+  <div id="agone">ติดต่อโปรแกรมเบื้องหลังไม่ได้แล้ว — ปิดหน้าต่างนี้แล้วเปิด <b>ReCheck-Bom.cmd</b> ใหม่</div>
+  <div class="atools" id="atools"></div>
+  <div class="achips"><span id="achipsl" style="display:contents"></span><span class="sp"></span>
+    <input id="aq" placeholder="กรองในตาราง: รหัส หรือ ชื่อ" autocomplete="off" spellcheck="false"></div>
+  <div class="awrap" id="awrap">
+    <table class="atab"><thead id="ahead"></thead><tbody id="abody"></tbody></table>
+    <div class="aempty" id="aempty"></div>
+  </div>
+  <div class="afoot">
+    <span>เลือกแล้ว <b id="aseln">0</b> รายการ</span>
+    <span class="note" id="ahint"></span>
+    <span class="sp"></span>
+    <button class="cbtn" id="aready">เลือกรายการที่พร้อม</button>
+    <button class="cbtn" id="aclear">ล้างที่เลือก</button>
+    <button class="cbtn primary" id="asave" disabled>บันทึกที่เลือก</button>
+  </div>
+  <div id="abusy"><div class="bcard"><div class="bt" id="abusyt">กำลังทำงาน…</div>
+    <div class="btrack"><div class="bfill idle"></div></div></div></div>
+  <div id="aoff">
+    <h2>หน้านี้ต้องเปิดแอปผ่าน ReCheck-Bom.cmd</h2>
+    <p>เบราว์เซอร์ต่อฐานข้อมูล SQL Server เองไม่ได้ หน้านี้จึงคุยกับฐานข้อมูลผ่านโปรแกรมเบื้องหลัง
+       <b>Article-Name-Filler.ps1</b> ซึ่งจะทำงานก็ต่อเมื่อเปิดแอปด้วย <b>ReCheck-Bom.cmd</b>
+       (อยู่โฟลเดอร์เดียวกับไฟล์นี้)</p>
+    <p>ปิดหน้าต่างนี้ แล้วดับเบิลคลิก <b>ReCheck-Bom.cmd</b> แทนการเปิดไฟล์ .html ตรง ๆ</p>
+    <p>หน้า <b>จัดการ BOM AX</b> กับ <b>Lot order</b> ใช้ได้ตามปกติไม่ว่าจะเปิดแบบไหน</p>
+    <p style="font-size:11.5px;color:var(--faint)">เปิดอยู่ตอนนี้: <code id="aoffurl"></code></p>
+  </div>
+</section>
+
 <footer>
   <span id="state">ยังไม่ได้เปิดไฟล์</span>
   <span class="sp"></span>
@@ -721,9 +921,10 @@ body.mode-lot #lot{display:flex}
 /* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
 const APP_META = {
   name: "ReCheck Bom",
-  version: "6.0",
-  build: "2026-10-02/mirror-check",
+  version: "6.1",
+  build: "2026-10-20/article-name",
   changelog: [
+    ["6.1","2026-10-20","FEAT เพิ่มหน้า ชื่อไทย Article (ปุ่มที่สามบนหัวแอป ต่อจาก BOM AX กับ Lot order) รวมโปรแกรม Article Name Filler เข้ามา · เดิมชื่อไทยของรหัส Product Article อยู่ใน ProductEngineering.pd.ProductionArticle (NAME_TH) กับ Library (ModularV2 / StandAloneV2) แต่รหัสรุ่นแก้อย่าง MWA006_602A ไม่มีชื่อเลย ต้องรอให้เข้า AX ก่อนแล้วไปเปิดอีกโปรแกรมไล่ค้นเติมทีหลัง · ตอนนี้เปิด BOM ปุ๊บ โปรแกรมอ่านรหัส Article จากไฟล์ (หาคอลัมน์ ProductArticle / Article / ArticleId ให้เอง เลือกเองได้และจำไว้) แล้วเช็คชื่อตั้งแต่ต้นทาง รายการที่ พร้อมเติม (ตัดคำต่อท้ายหลัง _ แล้วเจอรหัสหลักที่มีชื่อไทยชื่อเดียว) เติมให้เลย ปิดสวิตช์ได้ · รายการ ชื่อหลักไม่ตรงกัน / ไม่พบรหัสหลัก ไม่เติมเอง ขึ้นให้พิมพ์หรือแก้ชื่อแล้วกดบันทึก · ผลขึ้นเป็นป้ายบนแถบเช็คของหน้า BOM และตัวเลขแดงบนปุ่มหน้า · มุมมอง ค้นจาก AX ทำแบบโปรแกรมเดิม (ช่วงวัน / Lot) · ตั้งค่าการเชื่อมต่อ โหมดอัตโนมัติตอนเข้า Windows และบันทึกการทำงาน อยู่ในหน้านี้ · บันทึกเฉพาะ INSERT แถวใหม่ หรือ UPDATE ช่องชื่อที่ยังว่าง ตรวจซ้ำใน transaction ก่อนเขียนทุกแถว ไม่ลบ ไม่แตะ Library ไม่แตะ AX · เบราว์เซอร์ต่อ SQL Server ตรงไม่ได้ จึงต้องเปิดแอปผ่าน ReCheck-Bom.cmd (Article-Name-Filler.ps1 v1.1 เปิดหน้าให้ที่ http://127.0.0.1:47821 พอร์ตตายตัว ค่าที่แอปจำไว้ในเครื่องจึงไม่หายทุกครั้งที่เปิด) · เปิดไฟล์ .html ตรง ๆ หรือจาก GitHub Pages หน้านี้บอกวิธีเปิดแทน ส่วนหน้า BOM AX กับ Lot order ทำงานเหมือนเดิมทุกอย่าง · หน้า Article ไม่รับการวางตารางจากคลิปบอร์ด (วางชื่อในช่องได้) และลากไฟล์มาวางที่หน้านี้จะพาไปหน้า BOM · ทดสอบในเบราว์เซอร์กับตัวกลางโหมดข้อมูลตัวอย่าง (BOM จำลองสองไฟล์ เช็ค เติมอัตโนมัติ แก้ชื่อเอง บันทึก ค้นจาก AX) และเปิดแบบไฟล์ตรงแล้วหน้า BOM / Lot ยังทำงาน · ยังไม่ได้ทดสอบกับ SQL Server จริงและไฟล์ BOM จริง (ยังไม่รู้ชื่อคอลัมน์รหัส Article ในไฟล์จริง)"],
     ["6.0","2026-10-02","FEAT รวมโปรแกรม MPR Mirror Check เข้ามาในขั้นตอน เช็คไฟล์เจาะ · เดิมต้องเปิดสองโปรแกรม ตัวนี้เช็คว่ามีไฟล์เจาะไหม อีกตัวเช็คว่าไฟล์ไหนตั้ง VIEW=XMIRROR ซึ่งเครื่องบางตัวอ่านผิดแล้วเจาะกลับข้าง · ตอนนี้เลือกโฟลเดอร์ (หรือลากมาวาง) ครั้งเดียว โปรแกรมใช้รายชื่อ .mpr ชุดเดียวกัน เปิดอ่านเฉพาะ 8 KB แรกของทุกไฟล์ขนาน 12 งาน ไม่ไล่โฟลเดอร์ซ้ำ ไม่บล็อกขั้นตอนเดิม · กล่องบอกจำนวน XMIRROR / Mirror อื่น / ปกติ / อ่านไม่ได้ พร้อมรายชื่อว่าเป็นชิ้นไหน (PartId PartName จาก BOM) และเตือนไฟล์ที่ตั้ง GP/GY = 1 ซึ่งเป็นกระจกจริง · บาร์โค้ดของไฟล์ XMIRROR ระบายม่วงในคอลัมน์ Barcode / Barcode2 และปุ่ม เช็คไฟล์เจาะ ต่อท้ายจำนวน XMIRROR ไว้ให้เห็นตลอด · แก้ไฟล์ได้จากในกล่อง เปลี่ยนเฉพาะบรรทัด VIEW เป็น NOMIRROR ไม่แตะพิกัดเจาะ แก้ทีละไบต์ ภาษาไทยในคอมเมนต์กับ CRLF ไม่เพี้ยน สำรองต้นฉบับเป็น .mpr.bak ก่อน (มี .bak อยู่แล้วไม่ทับ · สำรองไม่สำเร็จจะไม่เขียนทับ) ต้องติ๊กยืนยันก่อนปุ่มแก้จะกดได้ มีปุ่มทดสอบแก้ 1 ไฟล์ และปุ่มอ่านซ้ำไว้ตรวจหลังแก้ · แก้ไฟล์ได้เฉพาะโฟลเดอร์ที่เปิดผ่านปุ่ม เลือกโฟลเดอร์ หรือลากมาวางใน Chrome/Edge (ลากวางเปลี่ยนไปขอ handle ก่อน ไม่ได้ค่อยใช้ทางเดิม) ทางสำรอง input เช็คได้อย่างเดียว · ตัดโหมด ลบบรรทัด VIEW และโหมดเขียนลงโฟลเดอร์ปลายทางของโปรแกรมเดิมออก เหลือวิธีที่แนะนำวิธีเดียว · ไฟล์ที่แก้แล้วเวลาแก้ไขจะเปลี่ยน สแกนรอบหน้าหลักฐานจะขึ้นว่าถูกแก้ไข ซึ่งถูกต้อง · ทดสอบใน Chromium กับโฟลเดอร์จำลอง .mpr 7 ไฟล์ (CRLF ไบต์ไทย Windows-874 ยาวเกิน 8 KB มีโฟลเดอร์ย่อย มีไฟล์ .txt ปน) ทั้งทางปุ่มเลือกโฟลเดอร์และทางสำรอง input นับถูก แก้แล้วเทียบไบต์ตรงกับต้นฉบับยกเว้นบรรทัด VIEW และ .bak ตรงต้นฉบับเป๊ะ ขั้นล้างบาร์โค้ดเดิมยังทำงานตามเดิม · ยังไม่ได้ทดสอบกับไฟล์จริงบนเครื่อง 10.11.0.6 และยังไม่ได้ทดสอบทางลากโฟลเดอร์มาวาง"],
     ["5.9","2026-09-29","FEAT เพิ่มหน้า จัดการ Lot order แยกจากหน้า จัดการ BOM AX (ของเดิมทั้งหมด) สลับได้ที่ปุ่มบนหัวแอป และจำไว้ว่าเปิดหน้าไหนค้าง · ทำเพราะมีเคสตัดห้องออกจากไฟล์ Lot เช่น ห้อง 609 ใช้ PD69000044813 เดิมต้องไปลบแถวเองใน Excel ซึ่งเสี่ยงลบเกินและ Excel แอบเปลี่ยนรูปแบบตัวเลข · เปิดไฟล์ Lot (.csv) แล้วโปรแกรมแยกห้องจากท่อนหน้าขีดของ BarcodePart บอกว่าแต่ละ PD มีกี่แถว ItemIdSet อะไร ShelfNo ช่วงไหน อยู่บรรทัดไหนในไฟล์ · เลือกห้องด้วยการคลิก หรือพิมพ์/วางเลข PD แล้วกด Enter (เลขท้ายอย่าง 44813 หรือ BarcodePart ทั้งท่อนก็ได้) ใส่ชื่อห้องไว้ตั้งชื่อไฟล์ ได้สองไฟล์ คือ เฉพาะห้องนั้น กับ ไฟล์เดิมตัดห้องนั้นออก · ไฟล์ที่ได้ตัดท่อนไบต์จากไฟล์ต้นฉบับมาต่อกันตรง ๆ ไม่ได้ประกอบ CSV ใหม่ รูปแบบจึงเหมือนเดิมทุกอย่าง 683.0 ไม่กลายเป็น 683 BOM CRLF ติดไปครบ ไม่ขึ้นกับ encoding · มีบรรทัดตรวจว่าสองไฟล์รวมกันได้เท่าไฟล์เดิม · หน้านี้ไม่เช็คโค้ดไม้/อุปกรณ์ ไม่แก้ X เป็น Y · หน้าจอแคบกว่า 1180px ตัดคำว่า จัดการ กับชื่อแอปบนหัวออกกันปุ่มล้นจอ · ทดสอบในเบราว์เซอร์กับไฟล์จริง SDRHH_P_TOW.A_FL2-7_LOT2.1 แล้ว PD69000044813 ได้ 99 แถว ไฟล์ที่เหลือ 3,811 แถว เทียบไบต์ตรงกับต้นฉบับทั้งสองไฟล์ และหน้า BOM AX ยังเปิดไฟล์ได้ตามเดิม (ส่วนเช็คกับ Supabase ไม่ได้ทดสอบรอบนี้ เพราะไม่ได้แตะโค้ดส่วนนั้น)"],
     ["5.8","2026-09-05","กดบันทึกไฟล์ตอนที่ยังกรองอยู่ จะล้างตัวกรองให้ก่อนแล้วบันทึกครบทั้งไฟล์ ของเดิมได้เฉพาะแถวที่เห็นซึ่งไม่ค่อยมีใครตั้งใจและไม่รู้ตัว · ล้างครบทุกแบบ ทั้งคำค้น เฉพาะที่ยังว่าง เฉพาะที่ยังไม่มีโค้ด เฉพาะแถวที่แก้ และการคลิกกรองจากค่าในช่อง หน้าจอกับไฟล์ที่ได้จึงตรงกันเสมอ · ถ้าตั้งใจจะเอาเฉพาะที่กรองจริง ๆ กดปุ่ม เอาตัวกรองกลับ ในเมนูบันทึกได้"],
@@ -895,6 +1096,9 @@ function ingest(matrix, name, tab, src){
      ลากสองไฟล์พร้อมกัน ingest จะถูกเรียกสองครั้ง ธงจึงติดทั้งคู่ */
   t.needCheck = t.hl.length > 0;
   scheduleChecks();
+  /* v6.1: เช็คชื่อไทยของรหัส Article ในไฟล์ตั้งแต่ต้นทาง (ไม่ต้องรอเข้า AX แล้วค่อยไปค้นเติม)
+     ทำเบื้องหลัง ไม่ขวางกล่องรอของขั้นตอนเดิม · ไม่ได้เปิดผ่าน ReCheck-Bom.cmd = ข้ามเงียบ ๆ */
+  artBomSchedule();
 }
 
 function fail(title, body){
@@ -1336,20 +1540,24 @@ $("pick").onchange = e => takeFiles(e.target.files);
 ["dragenter","dragover"].forEach(ev =>
   document.addEventListener(ev, e => {
     e.preventDefault();
-    $(mode === "lot" ? "ldrop" : "drop").classList.add("over");
+    $(mode === "lot" ? "ldrop" : mode === "art" ? "art" : "drop").classList.add("over");
   }));
 ["dragleave","drop"].forEach(ev =>
   document.addEventListener(ev, e => {
     e.preventDefault();
-    $("drop").classList.remove("over"); $("ldrop").classList.remove("over");
+    $("drop").classList.remove("over"); $("ldrop").classList.remove("over"); $("art").classList.remove("over");
   }));
 document.addEventListener("drop", e => {
   if (!(e.dataTransfer && e.dataTransfer.files.length)) return;
   if (mode === "lot") return lotTake(e.dataTransfer.files[0]);
+  /* v6.1: ลาก BOM มาวางที่หน้า ชื่อไทย Article -> พาไปหน้า BOM ให้เห็นขั้นตอนอ่านไฟล์และ error ตามเดิม
+     ผลเช็คชื่อไทยขึ้นที่ป้ายบนแถบเช็ค (คลิกกลับมาหน้านี้ได้) */
+  if (mode === "art") setMode("bom");
   $("drop").className = ""; takeFiles(e.dataTransfer.files);
 });
 document.addEventListener("paste", e => {
   if (mode === "lot") return;   // v5.9: หน้า Lot ปล่อยให้วางในช่องค้นหา PD ตามปกติ
+  if (mode === "art") return;   // v6.1: หน้า Article ปล่อยให้วางชื่อในช่องได้ ไม่ถือเป็นการวางตาราง BOM
   if (e.target === $("find")) return;
   const x = (e.clipboardData || window.clipboardData).getData("text");
   if (!x || x.indexOf("\n") < 0) return;
@@ -3931,10 +4139,726 @@ $("lgcol").onchange = function(){
   lotGroup(); drawLot();
 };
 
+/* ═══════════════════════════════════════════════════════════════
+   หน้า ชื่อไทย Article (v6.1)
+   เดิม: ชื่อไทยของรหัส Product Article อยู่ใน ProductEngineering.pd.ProductionArticle (NAME_TH)
+         กับ Library (mo.ModularV2 / sd.StandAloneV2) · รหัสรุ่นแก้อย่าง MWA006_602A ไม่มีชื่อเลย
+         ต้องรอให้เข้า AX ก่อนแล้วค่อยไปไล่ค้นเติมทีหลัง (โปรแกรม Article Name Filler แยกต่างหาก)
+   ตอนนี้: 1) จาก BOM ที่เปิดอยู่ — เปิดไฟล์ BOM ปุ๊บ อ่านรหัส Article จากไฟล์ แล้วเช็คชื่อตั้งแต่ต้นทาง
+              รายการที่ "พร้อมเติม" (ตัดคำต่อท้ายแล้วได้รหัสหลักที่มีชื่อไทยชื่อเดียว) เติมให้เลย ปิดได้
+           2) ค้นจาก AX — ไล่รหัสที่เข้า AX ไปแล้วแต่ยังไม่มีชื่อ เหมือนโปรแกรมเดิม
+   เบราว์เซอร์ต่อ SQL Server ตรง ๆ ไม่ได้ จึงคุยผ่าน Article-Name-Filler.ps1 ที่เป็นคนเปิดหน้านี้
+   (ReCheck-Bom.cmd -> http://127.0.0.1:47821/?t=<token>) · เปิดไฟล์ .html ตรง ๆ หน้านี้จะบอกวิธีเปิดแทน
+   ส่วนอื่นของแอปไม่ขึ้นกับหน้านี้ ต่อไม่ได้ก็ใช้หน้า BOM / Lot ได้ตามเดิม
+   ENTRY: ingest() -> artBomSchedule() -> artBomCheck() -> artSaveRows() (ถ้าเปิดเติมอัตโนมัติ) -> artDraw()
+   STATE: ART แยกขาดจาก TABS และ LOT · อ่าน TABS อย่างเดียว ไม่แก้แถวในไฟล์ BOM
+   ═══════════════════════════════════════════════════════════════ */
+const LS_ART_AUTO = "imosviewer_art_autofill";   // เติมให้เองตอนเปิด BOM ไหม (ค่าเริ่มต้น = เติม)
+const LS_ART_COL  = "imosviewer_art_col";        // คอลัมน์รหัส Article ที่เลือกเอง แยกตามแท็บ {wood, fit}
+const LS_ART_VIEW = "imosviewer_art_view";       // เปิดมุมมองไหนค้างไว้ "bom" | "ax"
+/* หัวคอลัมน์ที่น่าจะเป็นรหัส Article (เทียบหลัง norm แล้ว: ตัวเล็ก ไม่มีช่องว่าง _ - .) เรียงตามความน่าจะเป็น */
+const ART_COLS     = ["productarticle", "article", "articleid", "articlecode", "articleno", "articlenumber", "productcode"];
+const ART_NAMECOLS = ["productname", "articlename", "articledescription", "articledesc"];
+const ART_STATUS = {
+  ready:    { t: "พร้อมเติม",         o: 0 },
+  conflict: { t: "ชื่อหลักไม่ตรงกัน", o: 1 },
+  nobase:   { t: "ไม่พบรหัสหลัก",     o: 2 },
+  toolong:  { t: "ยาวเกิน",           o: 3 },
+  has:      { t: "มีชื่อแล้ว",         o: 5 }
+};
+const ART_RESULT = { saved: "บันทึกแล้ว", skipped: "ข้าม", failed: "ไม่สำเร็จ" };
+const ART_FILTERS = [
+  ["need",   "ต้องเติม"],
+  ["ready",  "พร้อมเติม"],
+  ["review", "ต้องตรวจเอง"],
+  ["done",   "บันทึกรอบนี้"],
+  ["has",    "มีชื่อแล้ว"],
+  ["all",    "ทั้งหมด"]
+];
+const ART = {
+  linked: false, token: "", cid: "", gone: false, quitting: false,
+  status: null, statusErr: "", warnedPort: false,
+  view: "bom", q: "",
+  bom: { rows: [], info: [], at: null, err: "", busy: false, auto: null, tookMs: 0, filter: "need" },
+  ax:  { rows: [], at: null, err: "", days: null, lot: "", tookMs: 0, filter: "need" }
+};
+(function(){
+  const t = new URLSearchParams(location.search).get("t") || "";
+  ART.linked = location.protocol === "http:" && /^(127\.0\.0\.1|localhost)$/.test(location.hostname) && /^[0-9a-f]{32}$/i.test(t);
+  ART.token = t;
+  ART.cid = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  try{ const v = localStorage.getItem(LS_ART_VIEW); if (v === "ax" || v === "bom") ART.view = v; }catch(_){}
+})();
+/* esc เดิมไม่หนีเครื่องหมายคำพูด ใช้ตัวนี้กับค่าที่ใส่ใน attribute */
+const artQ = v => esc(v == null ? "" : v).replace(/"/g, "&quot;");
+const artArr = v => Array.isArray(v) ? v : (v == null ? [] : [v]);
+const artDT = s => s ? String(s).replace(/^(\d{4})-(\d\d)-(\d\d)[ T](\d\d:\d\d).*$/, "$3/$2/$1 $4") : "";
+const artSub = () => ART[ART.view];
+const artRows = () => artSub().rows;
+
+/* ───────── คุยกับโปรแกรมเบื้องหลัง ───────── */
+function artUrl(path){ return path + "?t=" + encodeURIComponent(ART.token) + "&c=" + encodeURIComponent(ART.cid); }
+async function artApi(path, body){
+  if (!ART.linked) throw new Error("ยังไม่ได้เปิดแอปผ่าน ReCheck-Bom.cmd");
+  let r;
+  try{
+    r = await fetch(artUrl(path), { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                                    body: JSON.stringify(body || {}) });
+  }catch(e){
+    artSetGone(true);
+    throw new Error("ติดต่อโปรแกรมเบื้องหลังไม่ได้ — ปิดหน้าต่างนี้แล้วเปิด ReCheck-Bom.cmd ใหม่");
+  }
+  artSetGone(false);
+  let j;
+  try{ j = await r.json(); }catch(e){ throw new Error("ข้อมูลตอบกลับอ่านไม่ได้ (HTTP " + r.status + ")"); }
+  if (!j || j.ok === false) throw new Error((j && j.error) || "เกิดข้อผิดพลาด");
+  return j;
+}
+function artSetGone(v){
+  if (ART.gone === v) return;
+  ART.gone = v;
+  $("agone").classList.toggle("on", v);
+  artPill();
+}
+const artConnected = () => !!(ART.status && ART.status.connected);
+
+async function artStatus(reconnect){
+  if (!ART.linked) return null;
+  try{
+    ART.status = await artApi("/api/status", { reconnect: !!reconnect });
+    ART.statusErr = "";
+    if (ART.status.portFallback && !ART.warnedPort){
+      ART.warnedPort = true;
+      toast("พอร์ตประจำถูกโปรแกรมอื่นใช้อยู่ รอบนี้ค่าที่แอปจำไว้ในเครื่องจะไม่ติดมา");
+    }
+  }catch(e){ ART.statusErr = e.message; }
+  artDrawHead();
+  return ART.status;
+}
+
+/* ───────── อ่านรหัส Article จาก BOM ที่เปิดอยู่ ───────── */
+function artColPrefs(){ try{ return JSON.parse(localStorage.getItem(LS_ART_COL) || "{}") || {}; }catch(_){ return {}; } }
+function artColSave(k, v){
+  try{ const o = artColPrefs(); if (v) o[k] = v; else delete o[k]; localStorage.setItem(LS_ART_COL, JSON.stringify(o)); }catch(_){}
+}
+/* คอลัมน์รหัส Article ของแท็บ k · -1 = ไม่มี
+   เลือกเองไว้ (จำชื่อหัวคอลัมน์) มาก่อน · "-" = ผู้ใช้บอกว่าแท็บนี้ไม่มี · ไม่งั้นเดาจาก ART_COLS */
+function artColOf(k){
+  const t = TABS[k];
+  if (!t.cols.length) return -1;
+  const n = t.cols.map(norm), pref = artColPrefs()[k];
+  if (pref === "-") return -1;
+  if (pref){ const i = n.indexOf(pref); if (i >= 0) return i; }
+  for (const c of ART_COLS){ const i = n.indexOf(c); if (i >= 0) return i; }
+  return -1;
+}
+function artNameColOf(k){
+  const n = TABS[k].cols.map(norm);
+  for (const c of ART_NAMECOLS){ const i = n.indexOf(c); if (i >= 0) return i; }
+  return -1;
+}
+function artBomCodes(){
+  const map = new Map(), info = [];
+  ["wood", "fit"].forEach(k => {
+    const t = TABS[k];
+    if (!t.rows.length) return;
+    const ci = artColOf(k), ni = artNameColOf(k);
+    const x = { k, label: t.label, file: t.file, ci, col: ci >= 0 ? t.cols[ci] : "", codes: 0 };
+    info.push(x);
+    if (ci < 0) return;
+    const mine = new Set();
+    t.rows.forEach(r => {
+      const c = String(r[ci] ?? "").trim();
+      if (!c) return;
+      let o = map.get(c);
+      if (!o){ o = { code: c, name: "", per: {} }; map.set(c, o); }
+      o.per[t.label] = (o.per[t.label] || 0) + 1;
+      if (!o.name && ni >= 0) o.name = String(r[ni] ?? "").trim();
+      mine.add(c);
+    });
+    x.codes = mine.size;
+  });
+  return { list: [...map.values()], info };
+}
+const artBomLoaded = () => TABS.wood.rows.length > 0 || TABS.fit.rows.length > 0;
+function artAutoOn(){ try{ return localStorage.getItem(LS_ART_AUTO) !== "0"; }catch(_){ return true; } }
+
+/* เปิด BOM แล้วเรียกตัวนี้ (จาก ingest) · ลากสองไฟล์พร้อมกัน ingest ถูกเรียกสองครั้ง จึงหน่วงไว้รวมเป็นรอบเดียว */
+let _artBomTimer = null, _artBomRun = 0;
+function artBomSchedule(){
+  clearTimeout(_artBomTimer);
+  _artBomTimer = setTimeout(() => artBomCheck(false), 300);
+}
+async function artBomCheck(manual){
+  const B = ART.bom;
+  const { list, info } = artBomCodes();
+  const run = ++_artBomRun;
+  B.info = info; B.auto = null; B.err = "";
+  if (!ART.linked || !list.length){
+    B.rows = []; B.busy = false; B.at = info.length ? new Date() : null;
+    artAfterBom(false);
+    return;
+  }
+  B.busy = true;
+  artAfterBom(false);
+  const files = info.filter(x => x.ci >= 0).map(x => x.file);
+  try{
+    if (!artConnected()) await artStatus(false);
+    if (!artConnected()){
+      throw new Error(ART.status ? "ยังไม่ได้เชื่อมต่อฐานข้อมูล — " + (ART.status.connError || "กดปุ่มตั้งค่า")
+                                 : (ART.statusErr || "ติดต่อโปรแกรมเบื้องหลังไม่ได้"));
+    }
+    const j = await artApi("/api/check-codes", { items: list.map(o => ({ code: o.code, name: o.name })), files });
+    if (run !== _artBomRun) return;              // มีไฟล์ใหม่เข้ามาระหว่างรอ ผลรอบนี้ทิ้ง
+    const by = new Map(list.map(o => [o.code, o]));
+    B.rows = artArr(j.rows).map(r => {
+      const o = by.get(r.code) || {};
+      return artPrep(r, { per: o.per || {} });
+    });
+    B.at = new Date(); B.tookMs = j.tookMs || 0;
+    if (artAutoOn()){
+      const ready = B.rows.filter(r => r.status === "ready" && artCanSel(r));
+      B.auto = { n: ready.length, saved: 0, skipped: 0, failed: 0 };
+      if (ready.length){
+        const res = await artSaveRows(ready, "เติมอัตโนมัติตอนเปิด BOM: " + files.join(", "));
+        res.forEach(x => { if (B.auto[x.result] != null) B.auto[x.result]++; });
+      }
+    }
+  }catch(e){
+    if (run === _artBomRun){ B.err = e.message; B.rows = []; }
+  }finally{
+    if (run === _artBomRun){ B.busy = false; artAfterBom(true); }
+  }
+}
+function artNeed(rows){ return rows.filter(r => r.status !== "has" && r.result !== "saved" && r.result !== "skipped"); }
+function artAfterBom(done){
+  artPill();
+  if (mode === "art") artDraw();
+  if (!done) return;
+  const B = ART.bom;
+  if (B.err){ toast("ชื่อไทย Article: เช็คไม่สำเร็จ — " + B.err); return; }
+  if (!B.rows.length) return;
+  const need = artNeed(B.rows).length, filled = B.auto ? B.auto.saved : 0;
+  toast("ชื่อไทย Article: " + (need ? "ยังขาด " + need + " จาก " + B.rows.length + " รหัส" : "ครบทั้ง " + B.rows.length + " รหัส") +
+        (filled ? " · เติมให้ " + filled : "") + (need ? " · ดูที่หน้า ชื่อไทย Article" : ""));
+}
+
+/* ป้ายบนแถบเช็คของหน้า BOM + ตัวเลขบนปุ่มหน้า */
+function artPill(){
+  const p = $("artpill"), bd = $("abadge");
+  const B = ART.bom;
+  const need = (!B.busy && !B.err) ? artNeed(B.rows).length : 0;
+  bd.textContent = need; bd.classList.toggle("on", ART.linked && need > 0);
+  if (!ART.linked || !artBomLoaded()){ p.style.display = "none"; return; }
+  p.style.display = "";
+  let cls = "wait", txt;
+  if (ART.gone){ cls = "bad"; txt = "ชื่อไทย · ขาดการเชื่อมต่อ"; }
+  else if (B.busy) txt = "ชื่อไทย · กำลังเช็ค…";
+  else if (B.err){ cls = "bad"; txt = "ชื่อไทย · เช็คไม่สำเร็จ"; }
+  else if (!B.info.some(x => x.ci >= 0)) txt = "ชื่อไทย · ไม่พบคอลัมน์รหัส Article";
+  else if (!B.rows.length) txt = "ชื่อไทย · ไม่มีรหัส Article ในไฟล์";
+  else if (need){ cls = "bad"; txt = "ชื่อไทยยังขาด " + need + " จาก " + B.rows.length; }
+  else {
+    cls = "good";
+    const filled = B.rows.filter(r => r.result === "saved").length;
+    txt = "ชื่อไทยครบ " + B.rows.length + " รหัส" + (filled ? " · เติมให้ " + filled : "");
+  }
+  p.className = "pill " + cls + " artpill";
+  p.textContent = txt;
+  p.title = (B.err ? B.err + "\n" : "") + "คลิกเพื่อดูรายละเอียดในหน้า ชื่อไทย Article";
+}
+
+/* ───────── แถวในตาราง ───────── */
+function artPrep(r, extra){
+  return Object.assign(r, { orig: r.name || "", name: r.name || "", sel: false, edited: false,
+                            result: "", resultMsg: "" }, extra || {});
+}
+const artMax = k => (ART.status && ART.status.meta && ART.status.meta[k]) || 100000;
+function artCanSel(r){
+  if (r.status === "has" || r.result === "saved" || r.result === "skipped") return false;
+  const n = (r.name || "").trim();
+  return !!n && n.length <= artMax("NAME_TH") && r.code.length <= artMax("CODE");
+}
+function artIn(r, f){
+  switch (f){
+    case "need":   return r.status !== "has";
+    case "ready":  return r.status === "ready" && !r.result;
+    case "review": return ["conflict", "nobase", "toolong"].includes(r.status) && !r.result;
+    case "done":   return !!r.result;
+    case "has":    return r.status === "has";
+    default:       return true;
+  }
+}
+function artVisible(){
+  const q = ART.q.toLowerCase(), S = artSub();
+  return S.rows.filter(r => artIn(r, S.filter) && (!q ||
+      r.code.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q) ||
+      (r.axName || "").toLowerCase().includes(q) || (r.base || "").toLowerCase().includes(q)))
+    .sort((a, b) => ((ART_STATUS[a.status] || { o: 9 }).o - (ART_STATUS[b.status] || { o: 9 }).o) ||
+                    a.code.localeCompare(b.code));
+}
+
+/* ───────── วาด ───────── */
+function artDrawHead(){
+  $("aoff").classList.toggle("on", !ART.linked);
+  $("aoffurl").textContent = location.href.split("?")[0];
+  const c = $("aconn"), st = ART.status;
+  c.classList.toggle("on", artConnected());
+  c.classList.toggle("off", ART.linked && !artConnected() && !!(st || ART.statusErr));
+  const cn = (st && st.conn) || {};
+  c.querySelector("span").textContent = !ART.linked ? "ยังไม่ได้ต่อโปรแกรมเบื้องหลัง"
+    : artConnected() ? cn.server + " / " + cn.database + " · " + (cn.user || "")
+    : st ? "ยังไม่เชื่อมต่อ — " + (st.connError || "กดเพื่อตั้งค่า")
+    : (ART.statusErr || "กำลังเชื่อมต่อ…");
+  c.title = artConnected() ? "คลิกเพื่อตั้งค่าการเชื่อมต่อ" : ((st && st.connError) || ART.statusErr || "");
+  const a = (st && st.auto) || {};
+  $("aautob").textContent = "โหมดอัตโนมัติ: " + (a.installed ? "เปิด" : "ปิด");
+  $("aautob").setAttribute("aria-pressed", String(!!a.installed));
+  document.querySelectorAll(".aseg-b").forEach(b => b.classList.toggle("on", b.dataset.v === ART.view));
+  const nb = artNeed(ART.bom.rows).length, na = artNeed(ART.ax.rows).length;
+  $("anbom").textContent = ART.bom.rows.length ? (nb ? nb : "\u2713") : "";
+  $("anax").textContent = ART.ax.rows.length ? (na ? na : "\u2713") : "";
+}
+
+let _artToolsSig = "";
+function artDrawTools(){
+  const B = ART.bom;
+  const sig = ART.view + "|" + (ART.view === "bom"
+    ? JSON.stringify(B.info.map(x => [x.k, x.file, x.ci, x.codes])) + "|" + artBomLoaded()
+    : String(ART.status && ART.status.settings && ART.status.settings.days));
+  if (sig === _artToolsSig) return;
+  _artToolsSig = sig;
+  const box = $("atools");
+  if (ART.view === "bom"){
+    const files = B.info.map(x => {
+      const t = TABS[x.k];
+      const opts = '<option value="-"' + (x.ci < 0 ? " selected" : "") + ">\u2014 ไม่มี \u2014</option>" +
+        t.cols.map((c, i) => '<option value="' + i + '"' + (i === x.ci ? " selected" : "") + ">" + esc(c) + "</option>").join("");
+      return '<div class="afile"><div class="t"><b>' + esc(x.label) + '</b><span title="' + artQ(x.file) + '">' + esc(x.file) + "</span></div>" +
+        '<label>คอลัมน์รหัส Article <select data-k="' + x.k + '" class="' + (x.ci < 0 ? "none" : "") + '">' + opts + "</select>" +
+        '<span class="cnt">' + (x.ci >= 0 ? x.codes + " รหัส" : "") + "</span></label></div>";
+    }).join("");
+    box.innerHTML = (files || '<span class="atext">ยังไม่ได้เปิดไฟล์ BOM</span>') +
+      '<label class="achk"><input type="checkbox" id="aautofill"' + (artAutoOn() ? " checked" : "") + "> " +
+      "เติมให้อัตโนมัติตอนเปิด BOM (เฉพาะรายการ “พร้อมเติม”)</label>" +
+      '<button class="cbtn" id="arecheck"' + (artBomLoaded() ? "" : " disabled") + ">เช็คซ้ำ</button>" +
+      '<button class="cbtn" id="aopenbom">เปิดไฟล์ BOM</button>';
+    box.querySelectorAll("select[data-k]").forEach(s => s.onchange = () => {
+      const k = s.dataset.k;
+      artColSave(k, s.value === "-" ? "-" : norm(TABS[k].cols[+s.value]));
+      artBomCheck(true);
+    });
+    $("aautofill").onchange = function(){
+      try{ localStorage.setItem(LS_ART_AUTO, this.checked ? "1" : "0"); }catch(_){}
+      toast(this.checked ? "เปิด BOM ครั้งหน้า จะเติมรายการที่พร้อมให้เอง" : "ปิดการเติมอัตโนมัติแล้ว — เช็คอย่างเดียว");
+    };
+    $("arecheck").onclick = () => artBomCheck(true);
+    $("aopenbom").onclick = () => { setMode("bom"); $("pick").click(); };
+  } else {
+    const d = String(ART.ax.days != null ? ART.ax.days
+                     : (ART.status && ART.status.settings && ART.status.settings.days != null ? ART.status.settings.days : 60));
+    const days = [[7, "7 วันล่าสุด"], [30, "30 วันล่าสุด"], [60, "60 วันล่าสุด"], [90, "90 วันล่าสุด"],
+                  [180, "180 วันล่าสุด"], [365, "1 ปีล่าสุด"], [0, "ทั้งหมด (ช้า)"]];
+    box.innerHTML =
+      '<div class="fld"><label for="adays">ช่วงเวลา (ข้อมูลใน AX)</label><select id="adays">' +
+        days.map(([v, t]) => '<option value="' + v + '"' + (String(v) === d ? " selected" : "") + ">" + t + "</option>").join("") +
+      "</select></div>" +
+      '<div class="fld"><label for="alot">Lot (ไม่บังคับ · ขึ้นต้นด้วย)</label>' +
+        '<input id="alot" placeholder="เช่น RE-0069-0602" autocomplete="off" spellcheck="false" value="' + artQ(ART.ax.lot) + '"></div>' +
+      '<button class="cbtn primary" id="ascan" style="margin-bottom:1px">ค้นหารหัสที่ขาดชื่อ</button>';
+    $("ascan").onclick = artScan;
+    $("alot").onkeydown = e => { if (e.key === "Enter") artScan(); };
+  }
+}
+
+function artDrawTable(){
+  const S = artSub(), bom = ART.view === "bom";
+  $("ahead").innerHTML = "<tr>" +
+    '<th class="a-ck"><input type="checkbox" id="ackall" title="เลือกทั้งหมดที่เห็น"></th>' +
+    "<th>Product Article</th><th>" + (bom ? "ชื่อใน BOM" : "ชื่อใน Ax Progress") + "</th><th>รหัสหลัก</th>" +
+    "<th>ชื่อไทยที่จะเติม</th><th>แหล่งชื่อ</th><th>สถานะ</th>" +
+    (bom ? "<th>อยู่ใน BOM</th>" : "<th>Lot</th><th>อัปเดตใน AX</th>") + "</tr>";
+  /* ชิปกรอง */
+  $("achipsl").innerHTML = S.rows.length ? ART_FILTERS.map(([k, t]) => {
+    const n = S.rows.filter(r => artIn(r, k)).length;
+    if (k === "done" && !n) return "";
+    return '<button class="achip' + (S.filter === k ? " on" : "") + '" data-f="' + k + '">' + t + "<b>" + n + "</b></button>";
+  }).join("") + artMetaText() : "";
+  const vis = artVisible();
+  ART.visible = vis;
+  $("abody").innerHTML = vis.map(r => artRowHtml(r, S.rows.indexOf(r), bom)).join("");
+  const em = $("aempty");
+  const msg = artEmptyText(S, vis);
+  em.style.display = msg ? "" : "none";
+  em.className = "aempty" + (S.err ? " err" : "");
+  em.innerHTML = msg;
+  const ob = $("aemptyopen"); if (ob) ob.onclick = () => { setMode("bom"); $("pick").click(); };
+  const os = $("aemptyset"); if (os) os.onclick = artOpenSettings;
+  $("ackall").onchange = e => { (ART.visible || []).forEach(r => { if (artCanSel(r)) r.sel = e.target.checked; }); artDrawTable(); };
+  artFoot();
+}
+function artMetaText(){
+  const S = artSub();
+  if (ART.view === "bom"){
+    if (!S.at) return "";
+    let t = "เช็คเมื่อ " + S.at.toLocaleTimeString("th-TH") + " · " + (S.tookMs / 1000).toFixed(1) + " วินาที";
+    if (S.auto) t += S.auto.n ? " · เติมอัตโนมัติ " + S.auto.saved + "/" + S.auto.n + (S.auto.failed ? " (ไม่สำเร็จ " + S.auto.failed + ")" : "")
+                              : " · ไม่มีรายการพร้อมเติมอัตโนมัติ";
+    else if (!artAutoOn()) t += " · ปิดเติมอัตโนมัติอยู่";
+    return '<span class="meta">' + esc(t) + "</span>";
+  }
+  if (!S.at) return "";
+  return '<span class="meta">ค้นเมื่อ ' + esc(artDT(S.at)) + " · " + (S.days ? S.days + " วันล่าสุด" : "ทั้งหมด") +
+         (S.lot ? " · Lot " + esc(S.lot) + "*" : "") + " · " + (S.tookMs / 1000).toFixed(1) + " วินาที</span>";
+}
+function artEmptyText(S, vis){
+  if (S.busy) return "<b>กำลังเช็คชื่อไทย…</b>";
+  if (S.err) return "<b>เช็คไม่สำเร็จ</b>" + esc(S.err) +
+    (artConnected() ? "" : '<br><button class="cbtn" id="aemptyset">ตั้งค่าการเชื่อมต่อ</button>');
+  if (ART.view === "bom"){
+    if (!artBomLoaded()) return "<b>ยังไม่ได้เปิดไฟล์ BOM</b>เปิด BOM ที่หน้า จัดการ BOM AX หรือกดปุ่มด้านล่าง " +
+      "โปรแกรมจะอ่านรหัส Article จากไฟล์ แล้วเช็คชื่อไทยให้ทันที<br>" +
+      '<button class="cbtn primary" id="aemptyopen">เปิดไฟล์ BOM</button>';
+    if (!S.info.some(x => x.ci >= 0)) return "<b>ไม่พบคอลัมน์รหัส Article ในไฟล์</b>" +
+      "เลือกคอลัมน์ที่เป็นรหัส Article ในช่อง “คอลัมน์รหัส Article” ด้านบน โปรแกรมจะจำไว้ใช้กับไฟล์ครั้งต่อไป";
+    if (!S.rows.length) return S.at ? "<b>ไม่มีรหัส Article ในคอลัมน์ที่เลือก</b>" : "";
+  } else if (!S.rows.length){
+    return S.at ? "<b>ไม่พบ Product Article ในช่วงนี้</b>ลองขยายช่วงเวลา หรือเปลี่ยน Lot"
+                : "<b>ยังไม่ได้ค้นหา</b>เลือกช่วงเวลา แล้วกด “ค้นหารหัสที่ขาดชื่อ” โปรแกรมจะไล่รหัสที่อยู่ใน AX แล้วแต่ยังไม่มีชื่อไทย";
+  }
+  if (!vis.length) return S.filter === "need" ? "<b>ทุกรหัสมีชื่อไทยแล้ว</b>ไม่มีอะไรต้องเติม" : "<b>ไม่มีรายการในหมวดนี้</b>";
+  return "";
+}
+function artRowHtml(r, i, bom){
+  const st = ART_STATUS[r.status] || { t: r.status };
+  const badge = r.result ? '<span class="abdg ' + r.result + '">' + ART_RESULT[r.result] + "</span>"
+                         : '<span class="abdg ' + r.status + '">' + st.t + "</span>";
+  const why = r.resultMsg || r.note;
+  const fixed = r.status === "has" || r.result === "saved" || r.result === "skipped";
+  const name = fixed ? '<span class="a-fixed">' + esc(r.name) + "</span>"
+    : '<input class="a-nm' + (r.edited ? " ed" : "") + (r.name ? "" : " empty") + '" data-i="' + i + '" value="' + artQ(r.name) +
+      '" placeholder="พิมพ์ชื่อไทย…">' + (r.edited ? '<span class="aedtag">แก้เอง</span>' : "");
+  const base = r.base ? (r.base !== r.code ? "\u2192 " : "") + esc(r.base) : '<span class="a-dash">\u2014</span>';
+  let more;
+  if (bom) more = Object.keys(r.per || {}).map(k => esc(k.replace(/^BOM /, "")) + " <small>" + r.per[k] + " แถว</small>").join(" · ");
+  else more = esc(r.sampleLot || "") + (r.lots > 1 ? " <small>+" + (r.lots - 1) + " Lot</small>" : "") +
+              '</td><td class="a-more">' + esc(artDT(r.lastMod));
+  return '<tr data-i="' + i + '"' + (r.sel ? ' class="sel"' : "") + ">" +
+    '<td class="a-ck"><input type="checkbox" class="ack" data-i="' + i + '"' + (r.sel ? " checked" : "") + (artCanSel(r) ? "" : " disabled") + "></td>" +
+    '<td class="a-code">' + esc(r.code) + "</td>" +
+    '<td class="a-ax" title="' + artQ(r.axName) + '">' + (r.axName ? esc(r.axName) : '<span class="a-dash">\u2014</span>') + "</td>" +
+    '<td class="a-base">' + base + "</td>" +
+    '<td class="a-name">' + name + "</td>" +
+    '<td class="a-src">' + esc(r.edited ? "แก้เอง" : (r.source || "\u2014")) + "</td>" +
+    '<td class="a-st">' + badge + (why ? '<span class="a-why">' + esc(why) + "</span>" : "") + "</td>" +
+    '<td class="a-more">' + more + "</td></tr>";
+}
+function artFoot(){
+  const S = artSub();
+  const sel = S.rows.filter(r => r.sel && artCanSel(r));
+  $("aseln").textContent = sel.length;
+  $("asave").disabled = !sel.length || !artConnected();
+  const ready = S.rows.filter(r => r.status === "ready" && !r.result).length;
+  $("aready").disabled = !ready;
+  $("aclear").disabled = !sel.length;
+  $("ahint").textContent = S.rows.length ? "พร้อมเติม " + ready + " รายการ · แก้ชื่อในช่องได้ก่อนบันทึก" : "";
+  const vis = (ART.visible || []).filter(artCanSel), ck = $("ackall");
+  if (ck){
+    ck.checked = vis.length > 0 && vis.every(r => r.sel);
+    ck.indeterminate = vis.some(r => r.sel) && !ck.checked;
+    ck.disabled = !vis.length;
+  }
+}
+function artDraw(){
+  artDrawHead();
+  if (mode !== "art") return;
+  const B = ART.bom;
+  /* เปิดหน้ามาแล้วมี BOM ค้างอยู่แต่ยังไม่เคยเช็ค (เช่น เพิ่งต่อฐานข้อมูลได้) เช็คให้เลย */
+  if (ART.view === "bom" && ART.linked && artBomLoaded() && !B.at && !B.busy && !B.err) artBomSchedule();
+  artDrawTools();
+  artDrawTable();
+}
+function artBusy(on, text){
+  $("abusyt").textContent = text || "กำลังทำงาน…";
+  $("abusy").classList.toggle("on", !!on);
+}
+
+/* ───────── โต้ตอบในตาราง ───────── */
+$("abody").addEventListener("change", e => {
+  const t = e.target;
+  if (!t.classList.contains("ack")) return;
+  const r = artRows()[+t.dataset.i];
+  r.sel = t.checked && artCanSel(r);
+  t.closest("tr").classList.toggle("sel", r.sel);
+  artFoot();
+});
+$("abody").addEventListener("input", e => {
+  const t = e.target;
+  if (!t.classList.contains("a-nm")) return;
+  const r = artRows()[+t.dataset.i];
+  r.name = t.value;
+  r.edited = t.value.trim() !== (r.orig || "").trim();
+  t.classList.toggle("ed", r.edited);
+  t.classList.toggle("empty", !t.value);
+  const tr = t.closest("tr"), ck = tr.querySelector(".ack"), ok = artCanSel(r);
+  ck.disabled = !ok;
+  if (r.edited && ok) r.sel = true;     // พิมพ์ชื่อเอง = ตั้งใจจะบันทึก ติ๊กให้เลย
+  if (!ok) r.sel = false;
+  ck.checked = r.sel;
+  tr.classList.toggle("sel", r.sel);
+  tr.querySelector(".a-src").textContent = r.edited ? "แก้เอง" : (r.source || "\u2014");
+  let tag = t.parentNode.querySelector(".aedtag");
+  if (r.edited && !tag){ tag = document.createElement("span"); tag.className = "aedtag"; tag.textContent = "แก้เอง"; t.parentNode.appendChild(tag); }
+  if (!r.edited && tag) tag.remove();
+  artFoot();
+});
+$("achipsl").addEventListener("click", e => {
+  const b = e.target.closest("[data-f]"); if (!b) return;
+  artSub().filter = b.dataset.f; artDrawTable();
+});
+$("aq").oninput = function(){ ART.q = this.value.trim(); artDrawTable(); };
+document.querySelectorAll(".aseg-b").forEach(b => b.onclick = () => {
+  ART.view = b.dataset.v;
+  try{ localStorage.setItem(LS_ART_VIEW, ART.view); }catch(_){}
+  artDraw();
+});
+$("aready").onclick = () => {
+  const S = artSub();
+  S.rows.forEach(r => { if (r.status === "ready" && !r.result && artCanSel(r)) r.sel = true; });
+  if (!["need", "ready", "all"].includes(S.filter)) S.filter = "ready";
+  artDrawTable();
+};
+$("aclear").onclick = () => { artRows().forEach(r => r.sel = false); artDrawTable(); };
+$("artpill").onclick = () => { ART.view = "bom"; setMode("art"); };
+$("aconn").onclick = () => { if (ART.linked) artOpenSettings(); };
+$("asetb").onclick = () => { if (ART.linked) artOpenSettings(); };
+$("aautob").onclick = () => { if (ART.linked) artOpenAuto(); };
+$("alogb").onclick = () => { if (ART.linked) artOpenLog(); };
+
+/* ───────── ค้นจาก AX ───────── */
+async function artScan(){
+  if (!artConnected()){ await artStatus(true); if (!artConnected()) return artOpenSettings(); }
+  const days = +$("adays").value, lot = $("alot").value.trim();
+  const A = ART.ax;
+  artBusy(true, days === 0 && !lot ? "กำลังค้นใน AX ทั้งหมด… อาจใช้เวลาหลายนาที" : "กำลังค้นใน AX และจับคู่ชื่อ…");
+  try{
+    const j = await artApi("/api/scan", { days, lot });
+    A.rows = artArr(j.rows).map(r => artPrep(r));
+    A.at = j.at; A.days = j.days; A.lot = j.lot || ""; A.tookMs = j.tookMs || 0; A.err = "";
+    if (A.filter === "done") A.filter = "need";
+    const sm = j.summary || {};
+    toast("พบ " + (sm.total || 0) + " รหัส · พร้อมเติม " + (sm.ready || 0) + " · ต้องตรวจเอง " +
+          ((sm.conflict || 0) + (sm.nobase || 0) + (sm.toolong || 0)));
+  }catch(e){ A.err = e.message; A.rows = []; toast("ค้นหาไม่สำเร็จ: " + e.message); }
+  finally{ artBusy(false); artDraw(); }
+}
+
+/* ───────── บันทึก ───────── */
+/* ใช้ร่วมกันทั้งตอนกดเองและตอนเติมอัตโนมัติจาก BOM · ผลไปติดที่แถว และแถวรหัสเดียวกันอีกมุมมองด้วย */
+async function artSaveRows(rows, origin){
+  const j = await artApi("/api/save", {
+    origin,
+    items: rows.map(r => ({ code: r.code, name: r.name.trim(), base: r.base, source: r.edited ? "แก้เอง" : r.source }))
+  });
+  const res = artArr(j.results), by = new Map(res.map(x => [x.code, x]));
+  [ART.bom.rows, ART.ax.rows].forEach(list => list.forEach(r => {
+    const x = by.get(r.code); if (!x) return;
+    r.result = x.result; r.resultMsg = x.message; r.sel = false;
+    if (x.result === "saved"){ r.orig = r.name = x.name; r.edited = false; }
+  }));
+  return res;
+}
+function artOpenConfirm(){
+  const sel = artRows().filter(r => r.sel && artCanSel(r));
+  if (!sel.length) return;
+  const cn = (ART.status && ART.status.conn) || {};
+  const ins = sel.filter(r => r.action !== "update").length;
+  $("mtitle").textContent = "ยืนยันบันทึกชื่อไทย " + sel.length + " รายการ";
+  $("mbody").innerHTML =
+    '<p class="atext">บันทึกลงตาราง <code>ProductEngineering.pd.ProductionArticle</code> บน <b>' + esc(cn.server || "") + "</b>" +
+    " · เพิ่มแถวใหม่ " + ins + " · เติมในแถวเดิมที่ชื่อว่าง " + (sel.length - ins) + "<br>" +
+    "ก่อนเขียนแต่ละแถว โปรแกรมตรวจซ้ำว่ายังไม่มีชื่อ ถ้ามีคนเติมไปก่อนแล้วจะข้าม ไม่เขียนทับ</p>" +
+    '<div class="awrapm"><table class="amini"><thead><tr><th>Product Article</th><th>ชื่อไทย</th><th>ที่มา</th><th>การทำงาน</th></tr></thead><tbody>' +
+    sel.map(r => '<tr><td class="a-m">' + esc(r.code) + "</td><td>" + esc(r.name.trim()) + '</td><td class="a-nw">' +
+      esc(r.edited ? "แก้เอง" : ((r.base && r.base !== r.code ? "จาก " + r.base + " · " : "") + (r.source || ""))) + '</td><td class="a-nw">' +
+      (r.action === "update" ? "เติมในแถวเดิม" : "เพิ่มแถวใหม่") + "</td></tr>").join("") +
+    "</tbody></table></div>";
+  $("mfoot").innerHTML = '<span class="note">ไม่มีการลบแถว ไม่แตะ Library และไม่แตะ AX</span><span class="sp"></span>' +
+    '<button class="cbtn" id="acx">ยกเลิก</button><button class="cbtn primary" id="aok">ยืนยันบันทึก</button>';
+  $("modal").className = "on";
+  $("acx").onclick = closeModal;
+  $("aok").onclick = async () => {
+    closeModal();
+    artBusy(true, "กำลังบันทึก " + sel.length + " รายการ…");
+    try{
+      const res = await artSaveRows(sel, ART.view === "bom" ? "กดจากหน้า ชื่อไทย Article · จาก BOM" : "กดจากหน้า ชื่อไทย Article · ค้นจาก AX");
+      artSub().filter = "done";
+      artShowResults(res);
+    }catch(e){ toast("บันทึกไม่สำเร็จ: " + e.message); }
+    finally{ artBusy(false); artPill(); artDraw(); }
+  };
+}
+$("asave").onclick = artOpenConfirm;
+function artShowResults(res){
+  const n = k => res.filter(x => x.result === k).length;
+  $("mtitle").textContent = "ผลการบันทึก";
+  $("mbody").innerHTML = '<p class="atext">บันทึกสำเร็จ <b>' + n("saved") + "</b> · ข้าม " + n("skipped") +
+    " · ไม่สำเร็จ <b" + (n("failed") ? ' style="color:var(--miss-ink)"' : "") + ">" + n("failed") + "</b></p>" +
+    '<div class="awrapm"><table class="amini"><thead><tr><th>Product Article</th><th>ชื่อไทย</th><th>ผล</th><th>รายละเอียด</th></tr></thead><tbody>' +
+    res.map(x => '<tr><td class="a-m">' + esc(x.code) + "</td><td>" + esc(x.name) + '</td><td class="a-nw"><span class="abdg ' + x.result + '">' +
+      (ART_RESULT[x.result] || x.result) + "</span></td><td>" + esc(x.message) + "</td></tr>").join("") +
+    "</tbody></table></div>";
+  $("mfoot").innerHTML = '<span class="sp"></span><button class="cbtn primary" id="aokr">ปิด</button>';
+  $("modal").className = "on";
+  $("aokr").onclick = closeModal;
+}
+
+/* ───────── ตั้งค่าการเชื่อมต่อ ───────── */
+function artOpenSettings(){
+  const s = (ART.status && ART.status.settings) || {};
+  const fld = (id, label, html) => '<div class="fld"><label for="' + id + '">' + label + "</label>" + html + "</div>";
+  $("mtitle").textContent = "ตั้งค่าการเชื่อมต่อ · ชื่อไทย Article";
+  $("mbody").innerHTML =
+    '<div class="aradio"><label><input type="radio" name="amode" value="config"> อ่านจาก ProductionArticle.exe.config</label>' +
+    '<label><input type="radio" name="amode" value="manual"> กรอกเซิร์ฟเวอร์เอง</label></div>' +
+    '<div id="asCfg"><div class="frow">' +
+      fld("asPath", "ที่อยู่ไฟล์ ProductionArticle.exe.config (ใช้ connection “ProductEngineering” ในไฟล์)",
+          '<input id="asPath" style="font-family:var(--mono)" placeholder="C:\\...\\ProductionArticle.exe.config" value="' + artQ(s.configPath) + '">') +
+      '<div class="fld" style="flex:0 0 auto;justify-content:flex-end"><button class="cbtn" id="asFind">ค้นหาในเครื่อง</button></div>' +
+    '</div><p class="ahint">คลิกขวาที่ไฟล์ใน File Explorer → “Copy as path” แล้ววางได้เลย</p></div>' +
+    '<div id="asMan"><div class="frow">' +
+      fld("asServer", "เซิร์ฟเวอร์", '<input id="asServer" style="font-family:var(--mono)" placeholder="10.11.0.6 หรือ STMM-IMOSSERVER" value="' + artQ(s.server) + '">') +
+      fld("asDb", "ฐานข้อมูล", '<input id="asDb" style="font-family:var(--mono)" value="' + artQ(s.database || "ProductEngineering") + '">') +
+    '</div><div class="frow">' +
+      fld("asAuth", "วิธีเข้าระบบ", '<select id="asAuth"><option value="windows">Windows (บัญชีที่ล็อกอินอยู่)</option><option value="sql">SQL login</option></select>') +
+      fld("asUser", "ชื่อผู้ใช้ SQL", '<input id="asUser" style="font-family:var(--mono)" autocomplete="off" value="' + artQ(s.user) + '">') +
+      fld("asPass", "รหัสผ่าน SQL", '<input id="asPass" type="password" autocomplete="new-password" placeholder="' + (s.hasPassword ? "เว้นว่าง = ใช้รหัสเดิม" : "") + '">') +
+    '</div><p class="ahint">รหัสผ่านเข้ารหัสด้วยบัญชี Windows ของคุณ ใช้ได้เฉพาะเครื่องนี้</p></div>' +
+    "<h5>ขั้นสูง</h5><div class=\"frow\">" +
+      fld("asLinked", "Linked server ไป AX", '<input id="asLinked" style="font-family:var(--mono)" value="' + artQ(s.linkedServer || "AXSQL2") + '">') +
+      fld("asAxDb", "ฐานข้อมูล AX", '<input id="asAxDb" style="font-family:var(--mono)" value="' + artQ(s.axDatabase || "AX63_STM_Live") + '">') +
+      fld("asAutoDays", "โหมดอัตโนมัติค้นย้อนหลัง (วัน · 0 = ทั้งหมด)", '<input id="asAutoDays" type="number" min="0" max="3650" value="' + artQ(s.autoDays != null ? s.autoDays : 30) + '">') +
+    "</div>" +
+    '<label class="alib" style="padding-top:0"><input type="checkbox" id="asLib"' + (s.libraryCountsAsNamed !== false ? " checked" : "") + "> " +
+      "รหัสที่มีชื่อใน Library แล้ว ถือว่ามีชื่อ ไม่ต้องเติมลง ProductionArticle (แนะนำ)</label>" +
+    '<p class="aerr" id="asErr">' + esc(ART.status && !ART.status.connected && ART.status.connError ? "เชื่อมต่อไม่ได้: " + ART.status.connError : "") + "</p>";
+  $("mfoot").innerHTML = '<span class="sp"></span><button class="cbtn" id="asCancel">ยกเลิก</button>' +
+    '<button class="cbtn primary" id="asSave">บันทึกและทดสอบ</button>';
+  $("modal").className = "on";
+  const setM = m => {
+    document.querySelectorAll("input[name=amode]").forEach(x => x.checked = x.value === m);
+    $("asCfg").style.display = m === "config" ? "" : "none";
+    $("asMan").style.display = m === "manual" ? "" : "none";
+  };
+  const syncAuth = () => { const q = $("asAuth").value === "sql"; $("asUser").disabled = !q; $("asPass").disabled = !q; };
+  setM(s.manual ? "manual" : "config");
+  $("asAuth").value = s.auth === "sql" ? "sql" : "windows"; syncAuth();
+  document.querySelectorAll("input[name=amode]").forEach(x => x.onchange = () => setM(x.value));
+  $("asAuth").onchange = syncAuth;
+  $("asCancel").onclick = closeModal;
+  $("asFind").onclick = async () => {
+    $("asErr").textContent = "กำลังค้นหาไฟล์ในเครื่อง…";
+    try{
+      const j = await artApi("/api/find-config", {});
+      if (j.path){ $("asPath").value = j.path; $("asErr").textContent = ""; toast("พบไฟล์ config แล้ว"); }
+      else $("asErr").textContent = "ไม่พบไฟล์ในตำแหน่งที่ค้น — วางที่อยู่ไฟล์เอง หรือเลือก “กรอกเซิร์ฟเวอร์เอง”";
+    }catch(e){ $("asErr").textContent = e.message; }
+  };
+  $("asSave").onclick = async () => {
+    const body = {
+      manual: document.querySelector("input[name=amode]:checked").value === "manual",
+      configPath: $("asPath").value.trim(), server: $("asServer").value.trim(), database: $("asDb").value.trim(),
+      auth: $("asAuth").value, user: $("asUser").value.trim(), linkedServer: $("asLinked").value.trim(),
+      axDatabase: $("asAxDb").value.trim(), autoDays: +$("asAutoDays").value || 0, libraryCountsAsNamed: $("asLib").checked
+    };
+    if ($("asPass").value) body.password = $("asPass").value;
+    $("asErr").textContent = "กำลังทดสอบการเชื่อมต่อ…";
+    $("asSave").disabled = true;
+    try{
+      ART.status = await artApi("/api/settings", body);
+      artDrawHead();
+      if (ART.status.connected){
+        closeModal();
+        toast("เชื่อมต่อสำเร็จ: " + ART.status.conn.server + " / " + ART.status.conn.database);
+        _artToolsSig = "";
+        if (artBomLoaded()) artBomCheck(true); else artDraw();
+      } else $("asErr").textContent = "บันทึกแล้ว แต่ยังเชื่อมต่อไม่ได้: " + (ART.status.connError || "");
+    }catch(e){ $("asErr").textContent = e.message; }
+    finally{ if ($("asSave")) $("asSave").disabled = false; }
+  };
+}
+
+/* ───────── โหมดอัตโนมัติ (ตอนเข้า Windows ค้นจาก AX แล้วเติมที่พร้อม) ───────── */
+function artOpenAuto(){
+  const st = ART.status || {}, a = st.auto || {}, s = st.settings || {}, l = a.last;
+  $("mtitle").textContent = "โหมดอัตโนมัติ";
+  $("mbody").innerHTML =
+    '<p class="atext">เมื่อเปิดใช้ ทุกครั้งที่เข้า Windows โปรแกรมจะทำงานเบื้องหลังโดยไม่เปิดหน้าต่าง: ค้นรหัสใน AX ย้อนหลัง <b>' +
+    (s.autoDays ? s.autoDays + " วัน" : "ทั้งหมด") + "</b> เติมชื่อ<b>เฉพาะรายการ “พร้อมเติม”</b> ตรวจผลแล้วปิดตัวเอง " +
+    "ถ้าตอนเปิดเครื่องฐานข้อมูลยังไม่พร้อม จะลองเชื่อมต่อใหม่รวม 6 ครั้ง</p>" +
+    '<p class="atext">รายการ “ชื่อหลักไม่ตรงกัน” และ “ไม่พบรหัสหลัก” ไม่ถูกเติมอัตโนมัติ ต้องเปิดหน้านี้ตรวจเอง · ' +
+    "ส่วนการเติมตอนเปิด BOM เป็นอีกสวิตช์หนึ่ง อยู่ที่มุมมอง “จาก BOM ที่เปิดอยู่”</p>" +
+    '<div class="akv"><span>สถานะ</span><span><b>' + (a.installed ? "เปิดอยู่ (มีทางลัดใน Startup)" : "ปิดอยู่") + "</b></span>" +
+    (l ? "<span>รอบล่าสุด</span><span>" + esc(artDT(l.at)) + (l.trigger === "manual" ? " (กดรันเอง)" : " (ตอนเข้า Windows)") + "</span>" +
+         "<span>ผล</span><span>" + (l.error ? '<span style="color:var(--miss-ink)">' + esc(l.error) + "</span>"
+           : "ค้น " + l.scanned + " รหัส · พร้อม " + l.ready + " · เพิ่ม " + l.inserted + " · เติมแถวเดิม " + l.updated +
+             " · ข้าม " + l.skipped + " · ไม่สำเร็จ " + l.failed + " · ต้องตรวจเอง " + l.review) + "</span>"
+       : "<span>รอบล่าสุด</span><span>ยังไม่เคยรัน</span>") + "</div>";
+  $("mfoot").innerHTML = '<button class="cbtn" id="aarun">รันรอบอัตโนมัติตอนนี้</button><span class="sp"></span>' +
+    '<button class="cbtn" id="aacl">ปิด</button><button class="cbtn' + (a.installed ? "" : " primary") + '" id="aatg">' +
+    (a.installed ? "ปิดโหมดอัตโนมัติ" : "เปิดโหมดอัตโนมัติ") + "</button>";
+  $("modal").className = "on";
+  $("aacl").onclick = closeModal;
+  $("aatg").onclick = async () => {
+    try{
+      const j = await artApi("/api/auto", { install: !a.installed });
+      ART.status.auto.installed = j.installed;
+      artDrawHead(); artOpenAuto();
+      toast(j.installed ? "เปิดโหมดอัตโนมัติแล้ว — จะทำงานทุกครั้งที่เข้า Windows" : "ปิดโหมดอัตโนมัติแล้ว");
+    }catch(e){ toast(e.message); }
+  };
+  $("aarun").onclick = async () => {
+    if (!confirm("รันรอบอัตโนมัติตอนนี้เลยไหม?\nโปรแกรมจะเติมชื่อให้ทุกรายการที่ “พร้อมเติม” ใน AX ทันที โดยไม่ถามซ้ำ")) return;
+    closeModal();
+    artBusy(true, "กำลังรันรอบอัตโนมัติ…");
+    try{
+      const j = await artApi("/api/auto-run", {});
+      ART.status.auto.last = j.summary;
+      toast(j.summary.error ? "รอบอัตโนมัติผิดพลาด: " + j.summary.error
+                            : "รอบอัตโนมัติเสร็จ: เติม " + (j.summary.inserted + j.summary.updated) + " รายการ");
+    }catch(e){ toast(e.message); }
+    finally{ artBusy(false); artOpenAuto(); }
+  };
+}
+
+/* ───────── บันทึกการทำงาน ───────── */
+async function artOpenLog(){
+  let j;
+  try{ j = await artApi("/api/log", {}); }catch(e){ return toast(e.message); }
+  $("mtitle").textContent = "บันทึกการทำงาน";
+  $("mbody").innerHTML = '<p class="atext" style="margin-bottom:8px"><code>' + esc(j.path) + "</code></p>" +
+    '<div class="alog" id="alogpre"></div>';
+  $("alogpre").textContent = artArr(j.lines).join("\n") || "(ยังไม่มีบันทึก)";
+  $("mfoot").innerHTML = '<span class="sp"></span><button class="cbtn" id="alogr">โหลดใหม่</button><button class="cbtn primary" id="alogc">ปิด</button>';
+  $("modal").className = "on";
+  const pre = $("alogpre"); pre.scrollTop = pre.scrollHeight;
+  $("alogr").onclick = artOpenLog;
+  $("alogc").onclick = closeModal;
+}
+
+/* ───────── เริ่มต้น: บอกโปรแกรมเบื้องหลังว่าหน้าต่างนี้ยังเปิดอยู่ ───────── */
+if (ART.linked){
+  setInterval(() => { if (!ART.quitting) artApi("/api/ping", {}).catch(() => {}); }, 15000);
+  addEventListener("pagehide", () => { try{ navigator.sendBeacon(artUrl("/api/bye"), "{}"); }catch(_){} });
+  artStatus(false).then(() => { artPill(); if (mode === "art") artDraw(); });
+}
+artDrawHead();
+
 /* ───────── สลับหน้าใหญ่ ───────── */
 function setMode(m){
-  mode = m === "lot" ? "lot" : "bom";
+  mode = m === "lot" ? "lot" : m === "art" ? "art" : "bom";   /* v6.1: เพิ่มหน้า ชื่อไทย Article */
   document.body.classList.toggle("mode-lot", mode === "lot");
+  document.body.classList.toggle("mode-art", mode === "art");
   document.querySelectorAll(".mode").forEach(b => {
     const on = b.dataset.m === mode;
     b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
@@ -3942,14 +4866,15 @@ function setMode(m){
   try{ localStorage.setItem(LS_MODE, mode); }catch(_){}
   $("colpanel").className = ""; $("savemenu").className = "";
   if (mode === "bom") render();       // กลับมาแล้ววาดใหม่ ความกว้างสองฝั่งจะได้ถูก
-  else drawLot();
+  else if (mode === "lot") drawLot();
+  else artDraw();
 }
 document.querySelectorAll(".mode").forEach(b => { b.onclick = () => setMode(b.dataset.m); });
 
 syncTabs();
 emptyScreen();
 lotEmpty();
-(function(){ let m = "bom"; try{ m = localStorage.getItem(LS_MODE) || "bom"; }catch(_){} if (m === "lot") setMode("lot"); })();
+(function(){ let m = "bom"; try{ m = localStorage.getItem(LS_MODE) || "bom"; }catch(_){} if (m === "lot" || m === "art") setMode(m); })();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
