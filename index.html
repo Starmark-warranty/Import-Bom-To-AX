@@ -18,11 +18,13 @@
              -> mirBox() · แก้ไฟล์ที่ mirFix() (ย้ายมาจาก MPR Mirror Check)
              หน้า ชื่อไทย Article (v6.1): ingest() -> artBomSchedule() -> artBomCheck()
              -> artSaveRows() (ถ้าเปิดเติมอัตโนมัติ) -> artDraw() · ค้นจาก AX: artScan()
+             แตกไส้ BOM แท็บ Fitting (v6.2): ingest() -> fxCompute() · ไฟล์ BOM: fxLoadFile() -> IndexedDB recheck_bom_src
   STATE    : TABS.wood / TABS.fit  คือ single source of truth
              t.mirror = ผลเช็ค Mirror ของแท็บนั้น (ล้างทิ้งตอนเปิดไฟล์ใหม่)
              LOT  = สถานะของหน้า จัดการ Lot order แยกขาดจาก TABS
              ART  = สถานะของหน้า ชื่อไทย Article แยกขาดจาก TABS / LOT (อ่าน TABS อย่างเดียว)
              mode = "bom" | "lot" | "art" หน้าที่เปิดอยู่
+             TABS.fit.base = แถวตามไฟล์ (v6.2 ไม่ถูกแก้) · TABS.fit.rows = หลังแตกไส้ หรือ = base ถ้าไม่ติ๊ก
              >>> ห้ามนิยาม $ / norm / esc / blank / isNum / T() ซ้ำอีก
 
   --- CHANGELOG (ใหม่สุดอยู่บนสุด) -----------------------------------
@@ -921,9 +923,11 @@ button.artpill:hover{filter:brightness(.96)}
 /* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
 const APP_META = {
   name: "ReCheck Bom",
-  version: "6.1",
-  build: "2026-10-20/article-name",
+  version: "6.3",
+  build: "2026-10-21/fitting-bom-worker",
   changelog: [
+    ["6.3","2026-10-21","FEAT อ่านไฟล์ไส้ BOM เบื้องหลัง หน้าจอไม่ค้าง · ไฟล์ FittingBOM ที่ดึงทุกรหัส (~9.4 หมื่นบรรทัด) อ่านนานหลายวินาที เดิมหน้าจอค้างระหว่างอ่าน ตอนนี้อ่านใน Web Worker ใช้งานต่อได้ระหว่างอ่าน ป้ายบนแถบเช็คบอก กำลังอ่าน… · อ่านเองจากโฟลเดอร์ (ไฟล์ถูก Refresh / Save ใหม่) ไม่ขึ้นกล่องรอแล้ว ติ๊กแตกไส้อยู่ขึ้นข้อความเมื่ออ่านเสร็จ · เลือกไฟล์เองยังขึ้นกล่องรอเหมือนเดิม · ใช้ตัวอ่าน Excel ตัวเดียวกับหน้านี้ ผลอ่านเหมือนเดิมทุกค่า ใช้เบื้องหลังไม่ได้ (เปิดจากไฟล์ในเครื่อง / ไม่มีเน็ต) อ่านแบบเดิมให้เอง · ข้อความไฟล์ FittingBOM ที่มีแต่รหัส 22 ตัว เปลี่ยนเป็นวิธีแก้ SQL ในไฟล์ตัวเดิมให้ดึงทุกรหัส (ทำครั้งเดียว ไม่ต้องก๊อปไฟล์) แทนการทำไฟล์ใหม่ · ปุ่ม คัดลอก SQL อยู่ในกล่อง ไส้ BOM · ตัวอย่างผู้ใช้ TPP00000320416 Qty 2 → TPP0000032 0.1598 × 2 = 0.3196 · ไม่ติ๊ก = แถวตามไฟล์เหมือน v6.1 ทุกตัวอักษร"],
+    ["6.2","2026-10-21","FEAT แท็บ BOM Fitting แตกไส้ BOM ได้ · เดิมแท็บนี้แสดงรหัสตามไฟล์ export_fitting ตรง ๆ รหัสที่มี BOM (ไส้) ต้องไปแตกเอง · ตอนนี้มีสวิตช์ แตกไส้ BOM บนแถบเช็คของแท็บ Fitting (และในหน้าว่างก่อนเปิดไฟล์) ติ๊กแล้วรหัสที่มีไส้ถูกแทนด้วยวัสดุข้างใน จำนวนไส้ = จำนวนต่อ 1 (BOMQTY ÷ BOMQTYSERIE) × Qty ของแถว เช่น ต่อ 1 = 0.5 × Qty 4 = 2 EA วัสดุที่มีไส้ของตัวเองแตกต่อจนสุด คูณต่อกัน (หยุดที่ P48/P68 · ไม่วน · ลึกสุด 8 ชั้น แบบเดียวกับ Production V2) ไส้ที่เป็นรหัสเดียวกับแถวเดิมในไฟล์ (คอลัมน์อื่นตรงกัน ไม่สนตัวพิมพ์) รวมยอดเข้าแถวนั้น คอลัมน์อื่น (Warehouse FittingType) ตามแถวแม่ จำนวนเขียนตามรูปแบบในไฟล์ (144.00 · 1,200.00) · ไม่ติ๊ก = แถวตามไฟล์ทุกตัวอักษรเหมือน v6.1 สลับไปมาได้ ข้อมูลตามไฟล์ไม่ถูกแก้ จำค่าติ๊กไว้ในเครื่อง · ไส้มาจาก 3 แหล่ง (ชนะกันตามลำดับ ทั้งชุดต่อรหัส): ใส่เองในโปรแกรม > ไฟล์ BOM ใส่เอง (หัวแบบ FittingBOM_Manual.xlsx ของ Production V2 · NOEXPLODE = ไม่แตก) > ไฟล์ AX แบบ FittingBOM_RefreshOnly.xlsm (หรือ .csv ที่ Production V2 ส่งออก) · อ่านเองจากโฟลเดอร์แบบ Production V2: เปิดจาก GitHub (เว็บเดียวกับ Production V2) ใช้โฟลเดอร์ที่ Production V2 จำไว้ได้เลย (โฟลเดอร์ Excel ของ AX หรือโฟลเดอร์ Server · อ่านอย่างเดียว ไม่แตะข้อมูลของ Production V2) หรือเลือกโฟลเดอร์เอง หาไฟล์ FittingBOM* / ReCheckBOM* ใหม่สุด (ชั้นแรก ไม่เจอดูโฟลเดอร์ย่อย 1 ชั้น) ตรวจทุก 1 นาทีและตอนกลับมาที่หน้าต่าง ไฟล์ถูก Refresh / Save ใหม่ อ่านให้เอง ไฟล์อ่านไม่ผ่าน (กำลัง Save · มีแต่หัว) ใช้ข้อมูลเดิมไปก่อนและบอกเหตุในกล่อง สิทธิ์โฟลเดอร์หายหลังเปิดเบราว์เซอร์ใหม่ไม่ลบไส้ที่อ่านไว้ ไม่ได้ติ๊กแตกไส้ = อ่านเงียบ ๆ ไม่ขึ้นกล่องรอ เบราว์เซอร์ต้องการให้กดอนุญาตอ่านโฟลเดอร์รอบละครั้งหลังเปิดใหม่ (กดป้ายหรือปุ่มในหน้าว่างครั้งเดียว) · หรือเลือกไฟล์เองจากกล่อง ไส้ BOM ลากมาวางในกล่อง หรือลากเข้าหน้าหลัก (.xlsm หรือชื่อมีคำว่า BOM / Manual / ใส่เอง) อ่านในเครื่อง จำไว้ใน IndexedDB ของเบราว์เซอร์ ไม่ต้องเลือกใหม่ทุกครั้ง มีปุ่มอ่านไฟล์เดิมใหม่ (Chrome/Edge) · รหัสที่ควรมีไส้แต่ AX ไม่มี: การ์ด ไส้ BOM มีรายการ ยังไม่มีไส้ พร้อมชื่อจากผลเช็คโค้ดและปุ่ม ＋ ใส่ไส้ ทุกรหัส · รหัสที่แตกแล้วมีปุ่ม ✎ แก้ไส้ (เห็นไส้ใน AX กด เอาไส้นี้มาแก้ ได้) · ตัวใส่ไส้: รหัสวัสดุ / จำนวนต่อ 1 (ใส่ 1/4 ได้) / หน่วย / ชื่อ วางจาก Excel ได้หลายบรรทัด มีช่อง ผลตอนแตก คิดจาก Qty ในไฟล์ให้ดู ติ๊ก ไม่แตกรหัสนี้ ได้ ตรวจก่อนบันทึก (ไม่มีรหัส · จำนวนไม่ใช่ตัวเลขหรือเป็น 0 · ซ้ำกับรหัสหลัก) · ไส้ที่ใส่เองจำไว้ในเครื่อง ส่งออกเป็น ReCheckBOM_Manual_วันที่.xlsx ไปเลือกที่เครื่องอื่นได้ ลบทีละรหัส / ล้างทั้งหมดต้องกดสองครั้ง · ดูง่าย: รหัสที่มีไส้เป็นสีฟ้าตัวหนา (ช่อง ItemId ในตารางและรายการ รหัสในไฟล์ ในการ์ด) รหัสที่ไม่มีไส้เป็นสีเทา ป้ายบนแถบเช็คบอกว่าไฟล์นี้มีไส้กี่รหัสหรือไม่มีเลย (ก่อนติ๊กก็เห็น) · หน้าว่างแยกชัด ① ไฟล์ไส้ BOM (FittingBOM / ใส่เอง เลือกครั้งเดียว) ② สวิตช์แตกไส้ ส่วนไฟล์งาน export_fitting เปิดด้วยปุ่ม เปิดไฟล์เข้าแท็บนี้ เหมือนเดิม · เลือกไฟล์ไส้แล้วผลขึ้นในกล่องเลย (สำเร็จสีเขียว · ไม่สำเร็จสีแดงพร้อมเหตุผล เช่น ไม่ใช่ไฟล์ไส้ BOM / ไฟล์ยังไม่ได้ Refresh / ไฟล์เปิดค้างใน Excel) · แถวที่มาจากการแตกระบายฟ้า ชี้ดูวิธีคิด (ต่อ 1 × Qty) การ์ด ไส้ BOM มีโน้ตวิธีคิดและโน้ตตัวเล็กใต้วัสดุทุกตัว คลิกวัสดุเพื่อกรองตาราง · เช็คโค้ดกับ Supabase ใหม่ให้เองหลังสลับ · บันทึกไฟล์ตอนแตกแล้วได้คอลัมน์เท่าเดิม ชื่อไฟล์ต่อท้าย _Explode · กล่องมีช่องดูไส้ของรหัส แบบฟอร์ม BOM ใส่เอง และ SQL ทำไฟล์ BOM ที่มีไส้ของรหัส Fitting (ไฟล์ FittingBOM_RefreshOnly.xlsm ของ Production V2 ดึงเฉพาะรหัสไม้ 22 ตัว ไม่มีไส้ของ Fitting) · ไม่แตะ Production V2 ไม่แตะแท็บ BOM ไม้ หน้า Lot order หน้า ชื่อไทย Article · ทดสอบใน Chromium กับไฟล์ export_fitting_2607212401_BO69_0546 ของผู้ใช้ ไฟล์ FittingBOM_RefreshOnly.xlsm จริง (66,513 บรรทัด อ่าน 6 วินาที) และไฟล์ BOM จำลองของรหัส Fitting: ไม่ติ๊กแล้วแถว ไฟล์ .xlsx และ .csv ที่บันทึกตรงกับ v6.1 ทุกไบต์ · ยังไม่ได้ทดสอบกับไฟล์ BOM ที่ดึงทุกรหัสจาก AX จริง"],
     ["6.1","2026-10-20","FEAT เพิ่มหน้า ชื่อไทย Article (ปุ่มที่สามบนหัวแอป ต่อจาก BOM AX กับ Lot order) รวมโปรแกรม Article Name Filler เข้ามา · เดิมชื่อไทยของรหัส Product Article อยู่ใน ProductEngineering.pd.ProductionArticle (NAME_TH) กับ Library (ModularV2 / StandAloneV2) แต่รหัสรุ่นแก้อย่าง MWA006_602A ไม่มีชื่อเลย ต้องรอให้เข้า AX ก่อนแล้วไปเปิดอีกโปรแกรมไล่ค้นเติมทีหลัง · ตอนนี้เปิด BOM ปุ๊บ โปรแกรมอ่านรหัส Article จากไฟล์ (หาคอลัมน์ ProductArticle / Article / ArticleId ให้เอง เลือกเองได้และจำไว้) แล้วเช็คชื่อตั้งแต่ต้นทาง รายการที่ พร้อมเติม (ตัดคำต่อท้ายหลัง _ แล้วเจอรหัสหลักที่มีชื่อไทยชื่อเดียว) เติมให้เลย ปิดสวิตช์ได้ · รายการ ชื่อหลักไม่ตรงกัน / ไม่พบรหัสหลัก ไม่เติมเอง ขึ้นให้พิมพ์หรือแก้ชื่อแล้วกดบันทึก · ผลขึ้นเป็นป้ายบนแถบเช็คของหน้า BOM และตัวเลขแดงบนปุ่มหน้า · มุมมอง ค้นจาก AX ทำแบบโปรแกรมเดิม (ช่วงวัน / Lot) · ตั้งค่าการเชื่อมต่อ โหมดอัตโนมัติตอนเข้า Windows และบันทึกการทำงาน อยู่ในหน้านี้ · บันทึกเฉพาะ INSERT แถวใหม่ หรือ UPDATE ช่องชื่อที่ยังว่าง ตรวจซ้ำใน transaction ก่อนเขียนทุกแถว ไม่ลบ ไม่แตะ Library ไม่แตะ AX · เบราว์เซอร์ต่อ SQL Server ตรงไม่ได้ จึงต้องเปิดแอปผ่าน ReCheck-Bom.cmd (Article-Name-Filler.ps1 v1.1 เปิดหน้าให้ที่ http://127.0.0.1:47821 พอร์ตตายตัว ค่าที่แอปจำไว้ในเครื่องจึงไม่หายทุกครั้งที่เปิด) · เปิดไฟล์ .html ตรง ๆ หรือจาก GitHub Pages หน้านี้บอกวิธีเปิดแทน ส่วนหน้า BOM AX กับ Lot order ทำงานเหมือนเดิมทุกอย่าง · หน้า Article ไม่รับการวางตารางจากคลิปบอร์ด (วางชื่อในช่องได้) และลากไฟล์มาวางที่หน้านี้จะพาไปหน้า BOM · ทดสอบในเบราว์เซอร์กับตัวกลางโหมดข้อมูลตัวอย่าง (BOM จำลองสองไฟล์ เช็ค เติมอัตโนมัติ แก้ชื่อเอง บันทึก ค้นจาก AX) และเปิดแบบไฟล์ตรงแล้วหน้า BOM / Lot ยังทำงาน · ยังไม่ได้ทดสอบกับ SQL Server จริงและไฟล์ BOM จริง (ยังไม่รู้ชื่อคอลัมน์รหัส Article ในไฟล์จริง)"],
     ["6.0","2026-10-02","FEAT รวมโปรแกรม MPR Mirror Check เข้ามาในขั้นตอน เช็คไฟล์เจาะ · เดิมต้องเปิดสองโปรแกรม ตัวนี้เช็คว่ามีไฟล์เจาะไหม อีกตัวเช็คว่าไฟล์ไหนตั้ง VIEW=XMIRROR ซึ่งเครื่องบางตัวอ่านผิดแล้วเจาะกลับข้าง · ตอนนี้เลือกโฟลเดอร์ (หรือลากมาวาง) ครั้งเดียว โปรแกรมใช้รายชื่อ .mpr ชุดเดียวกัน เปิดอ่านเฉพาะ 8 KB แรกของทุกไฟล์ขนาน 12 งาน ไม่ไล่โฟลเดอร์ซ้ำ ไม่บล็อกขั้นตอนเดิม · กล่องบอกจำนวน XMIRROR / Mirror อื่น / ปกติ / อ่านไม่ได้ พร้อมรายชื่อว่าเป็นชิ้นไหน (PartId PartName จาก BOM) และเตือนไฟล์ที่ตั้ง GP/GY = 1 ซึ่งเป็นกระจกจริง · บาร์โค้ดของไฟล์ XMIRROR ระบายม่วงในคอลัมน์ Barcode / Barcode2 และปุ่ม เช็คไฟล์เจาะ ต่อท้ายจำนวน XMIRROR ไว้ให้เห็นตลอด · แก้ไฟล์ได้จากในกล่อง เปลี่ยนเฉพาะบรรทัด VIEW เป็น NOMIRROR ไม่แตะพิกัดเจาะ แก้ทีละไบต์ ภาษาไทยในคอมเมนต์กับ CRLF ไม่เพี้ยน สำรองต้นฉบับเป็น .mpr.bak ก่อน (มี .bak อยู่แล้วไม่ทับ · สำรองไม่สำเร็จจะไม่เขียนทับ) ต้องติ๊กยืนยันก่อนปุ่มแก้จะกดได้ มีปุ่มทดสอบแก้ 1 ไฟล์ และปุ่มอ่านซ้ำไว้ตรวจหลังแก้ · แก้ไฟล์ได้เฉพาะโฟลเดอร์ที่เปิดผ่านปุ่ม เลือกโฟลเดอร์ หรือลากมาวางใน Chrome/Edge (ลากวางเปลี่ยนไปขอ handle ก่อน ไม่ได้ค่อยใช้ทางเดิม) ทางสำรอง input เช็คได้อย่างเดียว · ตัดโหมด ลบบรรทัด VIEW และโหมดเขียนลงโฟลเดอร์ปลายทางของโปรแกรมเดิมออก เหลือวิธีที่แนะนำวิธีเดียว · ไฟล์ที่แก้แล้วเวลาแก้ไขจะเปลี่ยน สแกนรอบหน้าหลักฐานจะขึ้นว่าถูกแก้ไข ซึ่งถูกต้อง · ทดสอบใน Chromium กับโฟลเดอร์จำลอง .mpr 7 ไฟล์ (CRLF ไบต์ไทย Windows-874 ยาวเกิน 8 KB มีโฟลเดอร์ย่อย มีไฟล์ .txt ปน) ทั้งทางปุ่มเลือกโฟลเดอร์และทางสำรอง input นับถูก แก้แล้วเทียบไบต์ตรงกับต้นฉบับยกเว้นบรรทัด VIEW และ .bak ตรงต้นฉบับเป๊ะ ขั้นล้างบาร์โค้ดเดิมยังทำงานตามเดิม · ยังไม่ได้ทดสอบกับไฟล์จริงบนเครื่อง 10.11.0.6 และยังไม่ได้ทดสอบทางลากโฟลเดอร์มาวาง"],
     ["5.9","2026-09-29","FEAT เพิ่มหน้า จัดการ Lot order แยกจากหน้า จัดการ BOM AX (ของเดิมทั้งหมด) สลับได้ที่ปุ่มบนหัวแอป และจำไว้ว่าเปิดหน้าไหนค้าง · ทำเพราะมีเคสตัดห้องออกจากไฟล์ Lot เช่น ห้อง 609 ใช้ PD69000044813 เดิมต้องไปลบแถวเองใน Excel ซึ่งเสี่ยงลบเกินและ Excel แอบเปลี่ยนรูปแบบตัวเลข · เปิดไฟล์ Lot (.csv) แล้วโปรแกรมแยกห้องจากท่อนหน้าขีดของ BarcodePart บอกว่าแต่ละ PD มีกี่แถว ItemIdSet อะไร ShelfNo ช่วงไหน อยู่บรรทัดไหนในไฟล์ · เลือกห้องด้วยการคลิก หรือพิมพ์/วางเลข PD แล้วกด Enter (เลขท้ายอย่าง 44813 หรือ BarcodePart ทั้งท่อนก็ได้) ใส่ชื่อห้องไว้ตั้งชื่อไฟล์ ได้สองไฟล์ คือ เฉพาะห้องนั้น กับ ไฟล์เดิมตัดห้องนั้นออก · ไฟล์ที่ได้ตัดท่อนไบต์จากไฟล์ต้นฉบับมาต่อกันตรง ๆ ไม่ได้ประกอบ CSV ใหม่ รูปแบบจึงเหมือนเดิมทุกอย่าง 683.0 ไม่กลายเป็น 683 BOM CRLF ติดไปครบ ไม่ขึ้นกับ encoding · มีบรรทัดตรวจว่าสองไฟล์รวมกันได้เท่าไฟล์เดิม · หน้านี้ไม่เช็คโค้ดไม้/อุปกรณ์ ไม่แก้ X เป็น Y · หน้าจอแคบกว่า 1180px ตัดคำว่า จัดการ กับชื่อแอปบนหัวออกกันปุ่มล้นจอ · ทดสอบในเบราว์เซอร์กับไฟล์จริง SDRHH_P_TOW.A_FL2-7_LOT2.1 แล้ว PD69000044813 ได้ 99 แถว ไฟล์ที่เหลือ 3,811 แถว เทียบไบต์ตรงกับต้นฉบับทั้งสองไฟล์ และหน้า BOM AX ยังเปิดไฟล์ได้ตามเดิม (ส่วนเช็คกับ Supabase ไม่ได้ทดสอบรอบนี้ เพราะไม่ได้แตะโค้ดส่วนนั้น)"],
@@ -1694,7 +1698,8 @@ function saveFile(fmt){
   if (!t.rows.length) return;
   fmt = fmt || (t.src && t.src.kind === "csv" ? "csv" : "xlsx");
   const { head: xh, body: xb } = exportRows(t);
-  const base = (t.file.replace(/\.[^.]+$/, "") || t.label) + "_Pass";
+  const base = (t.file.replace(/\.[^.]+$/, "") || t.label) + "_Pass" +
+               (window.fxSuffix ? window.fxSuffix(t) : "");   // v6.2: แตกไส้ BOM แล้ว ต่อท้าย _Explode
   const n = xb.length.toLocaleString("th-TH");
 
   if (fmt === "xlsx"){
@@ -4875,6 +4880,1730 @@ syncTabs();
 emptyScreen();
 lotEmpty();
 (function(){ let m = "bom"; try{ m = localStorage.getItem(LS_MODE) || "bom"; }catch(_){} if (m === "lot" || m === "art") setMode(m); })();
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   แตกไส้ BOM ในแท็บ BOM Fitting  (v6.2)
+   ไฟล์ export_fitting มีรหัสตรง ๆ · บางรหัสมี BOM (ไส้) ใน AX
+   ติ๊ก "แตกไส้ BOM" -> รหัสที่มี BOM ถูกแทนด้วยวัสดุข้างใน
+                         จำนวน = Qty ของแถว × BOMQTY ÷ BOMQTYSERIE (แตกต่อจนสุด เหมือน Production V2)
+   ไม่ติ๊ก            -> แถวตามไฟล์ทุกตัวอักษร (เหมือน v6.1)
+   ไส้มาจากไฟล์ BOM ที่ผู้ใช้เลือกเอง (ไฟล์ AX แบบ FittingBOM_RefreshOnly.xlsm หรือไฟล์ BOM ใส่เอง)
+   อ่านในเครื่อง จำไว้ใน IndexedDB ของเครื่องนี้ · ไม่ส่งข้อมูลไปไหน · ไม่แตะ Production V2
+   STATE : TABS.fit.base = แถวตามไฟล์ (การแตกไม่แก้ base · แก้ X เป็น Y แก้แถวที่ใช้ร่วมกันเหมือนเดิม) · TABS.fit.rows = แถวที่เห็น/บันทึก (หลังแตก หรือ = base)
+           FX = แหล่ง BOM + สวิตช์ · FXI (WeakMap) = แถวไหนมาจากการแตก
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+"use strict";
+const LS_FX_ON = "imosviewer_fx_on";          // จำว่าติ๊กแตกไส้ไว้ไหม (ค่าเริ่ม = ไม่ติ๊ก)
+const FX_DB = "recheck_bom_src", FX_STORE = "src";
+const FX_MAXD = 8;                             // แตกลึกสุดกี่ชั้น (กัน BOM วนไม่รู้จบ)
+const FX = { on: false, srcs: [], map: new Map(), ver: 0, ready: false, err: "", busy: "", msg: null };   /* msg = ผลเลือกไฟล์ครั้งล่าสุด แสดงในกล่อง */
+try{ FX.on = localStorage.getItem(LS_FX_ON) === "1"; }catch(_){}
+const FXI = new WeakMap();
+const TH = n => (+n).toLocaleString("th-TH", { maximumFractionDigits: 4 });
+const r4 = x => Math.round((+x || 0) * 10000) / 10000;
+const rN = (x, d) => { const k = Math.pow(10, d); return Math.round((+x || 0) * k) / k; };
+/* เขียนจำนวนตามรูปแบบของค่าในไฟล์ (144.00 -> 152.00) · ทศนิยมไม่พอ -> 4 ตำแหน่ง */
+const decOf = v => { const m = /\.(\d+)\s*$/.exec(String(v ?? "")); return m ? m[1].length : 0; };
+function fmtQ(x, like){
+  const d = Math.min(decOf(like), 10), v0 = rN(x, Math.max(4, d)), v = Object.is(v0, -0) ? 0 : v0;
+  const grp = /\d,\d{3}/.test(String(like ?? ""));   /* ไฟล์เขียน 1,200.00 -> เขียนแบบเดียวกัน */
+  if (d){
+    const s = v.toFixed(d);
+    if (Math.abs(+s - v) < 1e-9) return grp ? v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : s;
+  }
+  return grp ? v.toLocaleString("en-US", { maximumFractionDigits: 10 }) : String(v);
+}
+const escA = v => esc(v).replace(/"/g, "&quot;");   /* esc() ไม่แปลง " -> ใช้ตัวนี้ในค่า attribute */
+const extOf = n => (String(n).split(".").pop() || "").toLowerCase();
+const up = s => String(s ?? "").trim().toUpperCase();
+const sized = c => /P(48|68)$/i.test(String(c || "").trim());
+function numQ(v){
+  if (typeof v === "number") return isFinite(v) ? v : NaN;
+  const s = String(v ?? "").trim().replace(/,/g, "");
+  return s !== "" && isFinite(+s) ? +s : NaN;
+}
+function dt(ms){
+  if (!ms) return "–";
+  try{ return new Date(ms).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" }); }catch(_){ return String(new Date(ms)); }
+}
+
+/* ───────── อ่านไฟล์ BOM ─────────
+   หัวคอลัมน์แบบไฟล์ AX (FittingBOM_RefreshOnly.xlsm) และแบบไฟล์ใส่เอง (FittingBOM_Manual.xlsx ของ Production V2)
+   ไม่สนตัวพิมพ์/ช่องว่าง/ขีด · ข้อความในวงเล็บใช้ได้ทั้งสองส่วน เช่น "PARENT_ITEMID (รหัสไม้)" */
+const ALIAS = {
+  parent: ["parentitemid", "parent", "parentcode", "รหัสไม้", "รหัสแม่", "รหัสหลัก"],
+  comp:   ["componentitemid", "component", "componentcode", "รหัสวัสดุ", "วัสดุ", "รหัสไส้"],
+  qty:    ["bomqty", "qty", "quantity", "จำนวน", "จำนวนต่อแผ่น", "จำนวนต่อชิ้น"],
+  per:    ["bomqtyserie", "ต่อกี่แผ่น", "ต่อกี่ชิ้น"],
+  unit:   ["unitid", "unit", "หน่วย"],
+  name:   ["componentname", "ชื่อ", "ชื่อวัสดุ"],
+  recid:  ["recid"],
+  bomid:  ["bomid"],
+  linenum:["linenum"]
+};
+function hdrKeys(h){
+  const s = String(h ?? "").trim(), out = [norm(s)];
+  const m = /^(.*?)\((.*)\)\s*$/.exec(s);
+  if (m) out.push(norm(m[1]), norm(m[2]));
+  return out.filter(Boolean);
+}
+function findHeader(m){
+  for (let i = 0; i < Math.min(15, m.length); i++){
+    const row = m[i] || [], col = {};
+    Object.keys(ALIAS).forEach(k => {
+      col[k] = row.findIndex(h => hdrKeys(h).some(x => ALIAS[k].includes(x)));
+    });
+    if (col.parent >= 0 && col.comp >= 0 && col.qty >= 0) return { row: i, col };
+  }
+  return null;
+}
+function cellS(row, i){ return i >= 0 ? String(row[i] ?? "").trim() : ""; }
+/* "2.5/3" = 2.5 ต่อ 3 ชิ้น (แบบไฟล์ใส่เองของ Production V2) */
+function qtyPer(v){
+  if (typeof v === "number") return isFinite(v) ? { q: v, per: 1 } : null;
+  const s = String(v ?? "").trim().replace(/,/g, "");
+  const m = /^(\d*\.?\d+)\s*\/\s*(\d*\.?\d+)$/.exec(s);
+  if (m){ const a = +m[1], b = +m[2]; return b > 0 ? { q: a, per: b } : null; }
+  return s !== "" && isFinite(+s) ? { q: +s, per: 1 } : null;
+}
+function parseBom(m, kind){
+  const H = findHeader(m);
+  if (!H) return null;
+  const c = H.col, lines = [], seen = new Set();
+  let lastP = "", bad = 0, zero = 0;
+  for (let r = H.row + 1; r < m.length; r++){
+    const row = m[r]; if (!row) continue;
+    let p = cellS(row, c.parent);
+    const comp = cellS(row, c.comp), qraw = row[c.qty];
+    if (!p && !comp && String(qraw ?? "").trim() === "") continue;   // แถวว่าง
+    if (!p){ if (kind === "manual" && lastP) p = lastP; else { bad++; continue; } }
+    lastP = p;
+    if (!comp){ bad++; continue; }
+    if (up(comp) === "NOEXPLODE"){ lines.push([p, "", 0, 1, "", "", 1]); continue; }
+    if (up(comp) === up(p)){ bad++; continue; }
+    const qp = qtyPer(qraw);
+    if (!qp || qp.q < 0 || (kind === "manual" && qp.q <= 0)){ bad++; continue; }
+    let per = qp.per;
+    if (c.per >= 0){ const pv = numQ(row[c.per]); if (pv > 0) per = pv * (qp.per || 1); }
+    if (c.recid >= 0){
+      const id = cellS(row, c.recid);
+      if (id){ if (seen.has(id)) continue; seen.add(id); }
+    }
+    if (qp.q <= 0) zero++;
+    lines.push([p, comp, qp.q, per > 0 ? per : 1, cellS(row, c.unit), cellS(row, c.name), 0]);
+  }
+  return { lines, bad, zero, hasRecid: c.recid >= 0 || c.bomid >= 0 || c.linenum >= 0 };
+}
+/* v6.3: อ่าน Excel เบื้องหลัง (Web Worker) — ไฟล์ BOM ทุกรหัส ~9.4 หมื่นบรรทัด หน้าจอไม่ค้างตอนอ่าน
+   worker โหลดตัวอ่าน Excel ตัวเดียวกับหน้านี้ (URL เดียวกัน = รุ่นเดียวกัน ผลเหมือนกัน) · ใช้ไม่ได้ (เปิดจากไฟล์ในเครื่อง / ไม่มีเน็ต) = อ่านแบบเดิม */
+const XW_CODE = [
+  "self.onmessage = function(e){",
+  "  var d = e.data, step = 'lib';",
+  "  try{",
+  "    if (!self.XLSX) importScripts(d.lib);",
+  "    self.postMessage({ lib: true });",
+  "    step = 'read';",
+  "    var wb = XLSX.read(new Uint8Array(d.buf), { type: 'array', cellHTML: false, cellFormula: false });",
+  "    var out = wb.SheetNames.map(function(n){ return { name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }) }; });",
+  "    self.postMessage({ ok: true, sheets: out });",
+  "  }catch(x){ self.postMessage({ ok: false, step: step, err: String(x && x.message || x) }); }",
+  "};"
+].join("\n");
+let XW_OFF = false;   /* worker ใช้ไม่ได้ครั้งหนึ่งแล้ว (สร้างไม่ได้ / โหลดตัวอ่านไม่ได้) -> อ่านแบบเดิมตลอดรอบนี้ */
+function xlsxLib(){ const el = document.querySelector('script[src*="xlsx"]'); return el && /^https?:/i.test(el.src) ? el.src : ""; }
+function xlsxInWorker(buf){
+  return new Promise((res, rej) => {
+    const lib = xlsxLib();
+    if (XW_OFF || !lib || typeof Worker === "undefined" || !window.Blob || !window.URL || !URL.createObjectURL) return rej(Object.assign(new Error("no-worker"), { skip: true }));
+    let w = null, url = "", done = false, tm = 0;
+    const fin = (ok, v) => {
+      if (done) return; done = true; clearTimeout(tm);
+      try{ if (w) w.terminate(); }catch(_){}
+      try{ if (url) URL.revokeObjectURL(url); }catch(_){}
+      ok ? res(v) : rej(v);
+    };
+    const off = why => { XW_OFF = true; fin(false, new Error(why)); };
+    try{ url = URL.createObjectURL(new Blob([XW_CODE], { type: "text/javascript" })); w = new Worker(url); }
+    catch(e){ return off("worker: " + (e && e.message || e)); }
+    tm = setTimeout(() => off("worker: โหลดตัวอ่าน Excel ไม่ทัน"), 20000);   /* โหลดตัวอ่านค้าง -> เลิกใช้ worker */
+    w.onmessage = e => {
+      const d = e.data || {};
+      if (d.lib){ clearTimeout(tm); return; }   /* โหลดตัวอ่านแล้ว · ตอนอ่านไม่จับเวลา (ไฟล์ใหญ่ใช้เวลาได้) */
+      if (d.ok) return fin(true, d.sheets || []);
+      if (d.step === "lib") return off("worker: " + (d.err || "importScripts"));
+      fin(false, new Error(d.err || "worker"));
+    };
+    w.onerror = e => { try{ e.preventDefault(); }catch(_){} off("worker: " + ((e && e.message) || "error")); };
+    w.onmessageerror = () => fin(false, new Error("worker: messageerror"));
+    w.postMessage({ buf, lib });
+  });
+}
+async function readBomFile(file){
+  const ext = extOf(file.name);
+  const buf = await file.arrayBuffer();
+  const sheets = [];
+  if (["xlsx", "xlsm", "xls", "xlsb"].includes(ext)){
+    if (typeof XLSX === "undefined") throw new Error("ตัวอ่าน Excel โหลดจากอินเทอร์เน็ตไม่สำเร็จ");
+    const order = names => names.slice().sort((a, b) => (norm(b) === "bom") - (norm(a) === "bom"));
+    let got = null;
+    try{ got = await xlsxInWorker(buf); }catch(_){ got = null; }   /* ใช้ไม่ได้ / อ่านไม่ผ่าน -> อ่านแบบเดิม (ไฟล์เสียก็ได้ข้อความเดิม) */
+    if (got){
+      FX.via = "worker";
+      const by = new Map(got.map(x => [x.name, x.rows]));
+      order(got.map(x => x.name)).forEach(n => sheets.push({ name: n, get: () => by.get(n) || [] }));
+    } else {
+      FX.via = "main";
+      const wb = XLSX.read(new Uint8Array(buf), { type: "array", cellHTML: false, cellFormula: false });
+      order(wb.SheetNames).forEach(n => sheets.push({ name: n, get: () => XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: "" }) }));
+    }
+  } else {
+    let x;
+    try{ x = new TextDecoder("utf-8").decode(new Uint8Array(buf)); }catch(_){ x = ""; }
+    x = x.replace(/^﻿/, "");
+    sheets.push({ name: "", get: () => parseDelimited(x, detectDelim(x)) });
+  }
+  const manualName = /manual|ใส่เอง/i.test(file.name);
+  let empty = null, head = null;
+  for (const s of sheets){
+    const m = s.get();
+    if (!head) head = (m[0] || []).map(v => String(v ?? "").trim()).filter(Boolean).slice(0, 8);
+    const kindGuess = manualName ? "manual" : "ax";
+    let res = parseBom(m, kindGuess);
+    if (!res) continue;
+    const kind = manualName ? "manual" : (res.hasRecid ? "ax" : "manual");
+    if (kind !== kindGuess) res = parseBom(m, kind);
+    if (!res.lines.length){ if (!empty) empty = { kind, sheet: s.name, ...res }; continue; }
+    return { kind, sheet: s.name, ...res };
+  }
+  return empty || { none: true, head: head || [] };   /* empty = หัวตรงแต่ไม่มีบรรทัดที่ใช้ได้ · none = ไม่ใช่ไฟล์ BOM */
+}
+
+/* ───────── เก็บในเครื่อง (IndexedDB) ───────── */
+function idb(){
+  return new Promise((res, rej) => {
+    if (!window.indexedDB) return rej(new Error("เบราว์เซอร์นี้ไม่มี IndexedDB"));
+    const q = indexedDB.open(FX_DB, 1);
+    q.onupgradeneeded = () => { if (!q.result.objectStoreNames.contains(FX_STORE)) q.result.createObjectStore(FX_STORE, { keyPath: "id" }); };
+    q.onsuccess = () => res(q.result);
+    q.onerror = () => rej(q.error || new Error("เปิด IndexedDB ไม่ได้"));
+  });
+}
+async function idbDo(mode, fn){
+  const db = await idb();
+  try{
+    return await new Promise((res, rej) => {
+      const tx = db.transaction(FX_STORE, mode), st = tx.objectStore(FX_STORE);
+      let out;
+      const rq = fn(st);
+      if (rq) rq.onsuccess = () => { out = rq.result; };
+      tx.oncomplete = () => res(out);
+      tx.onerror = () => rej(tx.error || new Error("IndexedDB"));
+      tx.onabort = () => rej(tx.error || new Error("IndexedDB ถูกยกเลิก"));
+    });
+  } finally { try{ db.close(); }catch(_){} }
+}
+const idbAll = () => idbDo("readonly", st => st.getAll());
+const idbDel = id => idbDo("readwrite", st => st.delete(id));
+async function idbPut(rec){
+  try{ await idbDo("readwrite", st => st.put(rec)); }
+  catch(e){
+    if (!rec.handle) throw e;
+    const r2 = Object.assign({}, rec); delete r2.handle;   // เบราว์เซอร์ที่เก็บ handle ไม่ได้ เก็บแค่ข้อมูล
+    await idbDo("readwrite", st => st.put(r2));
+  }
+}
+
+/* ───────── รวมทุกแหล่งเป็นตารางเดียว ─────────
+   ไฟล์ใส่เองชนะไฟล์ AX ของรหัสเดียวกัน (ทั้งชุด · เหมือน Production V2) · ชนิดเดียวกัน ไฟล์ที่โหลดทีหลังชนะ */
+/* ใส่เองในโปรแกรม (2) ชนะไฟล์ใส่เอง (1) ชนะไฟล์ AX (0) · ระดับเดียวกัน ไฟล์ที่โหลดทีหลังชนะ */
+const rank = s => s.prog ? 2 : s.kind === "manual" ? 1 : 0;
+function buildMap(){
+  const map = new Map();
+  const order = FX.srcs.slice().sort((a, b) => (rank(a) - rank(b)) || (a.loadedAt - b.loadedAt));
+  order.forEach(s => {
+    const by = new Map();
+    s.lines.forEach(l => {
+      const k = up(l[0]);
+      let e = by.get(k);
+      if (!e){ e = { parent: l[0], src: s.kind, prog: !!s.prog, file: s.name, lines: [], no: false }; by.set(k, e); }
+      if (l[6]) e.no = true;
+      else e.lines.push({ c: String(l[1]), q: +l[2], per: +l[3] || 1, unit: l[4] || "", name: l[5] || "" });
+    });
+    by.forEach((e, k) => map.set(k, e));
+  });
+  FX.map = map; FX.ver++;
+}
+
+/* ───────── แตก ─────────
+   รหัส -> วัสดุต่อ 1 หน่วย [{c, per, unit, name, via, zero}] · null = ไม่แตก
+   แตกต่อจนสุด: วัสดุที่มี BOM ของตัวเองแตกต่อ · หยุดที่ P48/P68 · ไม่วน · ไม่เกิน FX_MAXD ชั้น */
+const FX_MAXN = 20000;                        // นับบรรทัดที่เดินต่อรหัส เกินนี้หยุดแตกต่อ
+function walk(e, mult, depth, path, via, out){
+  e.lines.forEach(ln => {
+    const m = mult * (ln.q / ln.per), cu = up(ln.c);
+    let sub = null;
+    out.n = (out.n || 0) + 1;
+    if (!sized(cu)){
+      if (path.includes(cu)) out.cyc = true;
+      else {
+        sub = FX.map.get(cu) || null;
+        if (sub && !sub.no && sub.lines.length && (depth >= FX_MAXD || out.n > FX_MAXN)){ out.deep = true; sub = null; }
+      }
+    }
+    if (sub && !sub.no && sub.lines.length){
+      if (sub.src !== e.src) out.mixed = true;
+      walk(sub, m, depth + 1, path.concat(cu), via.concat(ln.c), out);
+      return;
+    }
+    let o = out.by.get(cu);
+    if (!o){ o = { c: ln.c, per: 0, unit: ln.unit, name: ln.name, via: via.slice(), zero: false }; out.by.set(cu, o); out.list.push(o); }
+    o.per += m;
+    if (ln.q <= 0) o.zero = true;
+  });
+}
+function leavesOf(code){
+  const cu = up(code);
+  if (!cu || sized(cu)) return null;
+  const e = FX.map.get(cu);
+  if (!e || e.no || !e.lines.length) return null;
+  const out = { by: new Map(), list: [], cyc: false, deep: false, mixed: false, src: e.src, prog: e.prog, file: e.file };
+  walk(e, 1, 1, [cu], [], out);
+  return out.list.length ? out : null;
+}
+function fxCols(t){
+  let ic = colIdx(t, "ItemId");
+  if (ic < 0 && t.hl.length) ic = t.hl[0];
+  return { ic, qc: qtyIndex(t) };
+}
+/* คำนวณ t.rows จาก t.base · คืน true ถ้าแถวที่เห็นเปลี่ยน */
+function fxCompute(t){
+  if (!t.base) t.base = t.rows;
+  const prev = t.rows;
+  if (!FX.on || !FX.map.size || !t.base.length){
+    t.rows = t.base; t.fx = null; t.fxVer = -1; t.fxBase = null;
+    return t.rows !== prev;
+  }
+  if (t.fxBase === t.base && t.fxVer === FX.ver && t.fx) return false;
+  const { ic, qc } = fxCols(t);
+  if (ic < 0 || qc < 0){
+    t.rows = t.base; t.fxVer = FX.ver; t.fxBase = t.base;
+    t.fx = { err: "ไม่พบคอลัมน์ " + (ic < 0 ? "ItemId" : "Qty") + " ในไฟล์นี้ จึงแตกไส้ไม่ได้", ex: [], noBom: 0, keep: [], bad: [] };
+    return t.rows !== prev;
+  }
+  const keyOf = r => r.map((v, i) => i === qc ? "" : i === ic ? up(v) : String(v ?? "").trim()).join("\u0001");
+  const plan = t.base.map(r => {
+    const code = String(r[ic] ?? "").trim();
+    const lv = code ? leavesOf(code) : null;
+    return { r, code, lv };
+  });
+  /* แถวเดิมที่ไม่ถูกแตก -> ตัวรับยอด ถ้าไส้ออกมาเป็นรหัสเดียวกัน (คอลัมน์อื่นตรงกันหมด) */
+  const target = new Map();
+  plan.forEach((p, i) => {
+    if (p.lv) return;
+    const k = keyOf(p.r);
+    if (!target.has(k) && isFinite(numQ(p.r[qc]))) target.set(k, i);
+  });
+  const out = [], addTo = new Map(), leafAt = new Map(), ex = [], bad = [], keep = new Set(), noBom = new Map();
+  plan.forEach((p, i) => {
+    if (!p.lv){
+      out.push({ i, r: p.r });
+      if (p.code){
+        const e = FX.map.get(up(p.code));
+        if (e && e.no) keep.add(p.code);
+        else if (!sized(p.code)){
+          const k = up(p.code), q0 = numQ(p.r[qc]);
+          const o = noBom.get(k) || { code: p.code, qty: 0 };
+          if (isFinite(q0)) o.qty += q0;
+          noBom.set(k, o);
+        }
+      }
+      return;
+    }
+    const pq = numQ(p.r[qc]);
+    if (!isFinite(pq)){
+      out.push({ i, r: p.r });
+      bad.push({ code: p.code, why: "Qty “" + String(p.r[qc] ?? "") + "” ไม่ใช่ตัวเลข จึงไม่แตก" });
+      return;
+    }
+    const rec = { code: p.code, qty: pq, src: p.lv.src, prog: p.lv.prog, file: p.lv.file, cyc: p.lv.cyc, deep: p.lv.deep, mixed: p.lv.mixed, leaves: [] };
+    p.lv.list.forEach(L => {
+      const q = L.per * pq;
+      const nr = p.r.slice(); nr[ic] = L.c; nr[qc] = "";
+      const k = keyOf(nr);
+      const how = { p: p.code, pq, per: L.per, q };
+      rec.leaves.push({ c: L.c, q, per: L.per, unit: L.unit, name: L.name, via: L.via, zero: L.zero, into: target.has(k) });
+      if (target.has(k)){
+        const bi = target.get(k);
+        if (!addTo.has(bi)) addTo.set(bi, []);
+        addTo.get(bi).push(how);
+        return;
+      }
+      const lr = leafAt.get(k);
+      if (lr){ lr.q += q; lr.from.push(how); if (L.zero) lr.zero = true; return; }
+      const o = { row: nr, q, like: p.r[qc], from: [how], unit: L.unit, name: L.name, zero: L.zero, via: L.via };
+      leafAt.set(k, o); out.push({ leaf: o });
+    });
+    ex.push(rec);
+  });
+  if (!ex.length){
+    /* ไม่มีรหัสไหนแตก -> ใช้ชุดแถวตามไฟล์ตัวเดิม (ไม่ต้องเช็คโค้ดใหม่ · ชื่อไฟล์ตอนบันทึกเหมือนเดิม) */
+    t.rows = t.base;
+    t.fx = { ex, bad, keep: [...keep], noBom: noBom.size, noBomList: [...noBom.values()], merged: 0, leafRows: 0, before: t.base.length, after: t.base.length, at: new Date() };
+    t.fxVer = FX.ver; t.fxBase = t.base;
+    return t.rows !== prev;
+  }
+  t.rows = out.map(o => {
+    if (o.leaf){
+      const L = o.leaf;
+      L.row[qc] = fmtQ(L.q, L.like);
+      FXI.set(L.row, { kind: "leaf", from: L.from, unit: L.unit, name: L.name, zero: L.zero, via: L.via });
+      return L.row;
+    }
+    const adds = addTo.get(o.i);
+    if (!adds) return o.r;
+    const nr = o.r.slice();
+    nr[qc] = fmtQ(numQ(o.r[qc]) + adds.reduce((s, a) => s + a.q, 0), o.r[qc]);
+    FXI.set(nr, { kind: "merged", base: String(o.r[qc] ?? ""), adds });
+    return nr;
+  });
+  t.fx = { ex, bad, keep: [...keep], noBom: noBom.size, noBomList: [...noBom.values()], merged: addTo.size, leafRows: leafAt.size,
+           before: t.base.length, after: t.rows.length, at: new Date() };
+  t.fxVer = FX.ver; t.fxBase = t.base;
+  /* v6.3: ไฟล์ไส้ถูก Refresh/Save ใหม่ แต่ผลแตกเหมือนเดิมทุกช่อง -> ใช้ชุดแถวเดิมต่อ (ไม่ล้างผลเช็คโค้ด ไม่เช็คใหม่ ไม่ขึ้นกล่องรอทุกรอบ Refresh) */
+  if (prev !== t.base && sameRows(prev, t.rows)){
+    t.rows.forEach((r, i) => { const inf = FXI.get(r); if (inf) FXI.set(prev[i], inf); else FXI.delete(prev[i]); });
+    t.rows = prev;
+    return false;
+  }
+  return true;
+}
+function sameRows(a, b){
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++){
+    const x = a[i], y = b[i];
+    if (x === y) continue;
+    if (!x || !y || x.length !== y.length || FXI.has(x) !== FXI.has(y)) return false;   /* แถวตามไฟล์ กับ แถวรวมยอด/ไส้ ข้อความตรงกันก็ไม่นับว่าเหมือน */
+    for (let j = 0; j < x.length; j++) if (String(x[j] ?? "") !== String(y[j] ?? "")) return false;
+  }
+  return true;
+}
+/* แก้ X เป็น Y / เช็คเจาะ ในแท็บ Fitting ผูกกับเลขแถว สลับชุดแถวทับไม่ได้ */
+function fxLocked(t){ return !!(t.xy || t.drill); }
+function fxRefresh(opts){
+  opts = opts || {};
+  const t = TABS.fit;
+  if (!t.base){ fxSyncUi(); return false; }
+  if (fxLocked(t)){ t.fxStale = true; fxSyncUi(); return false; }
+  t.fxStale = false;
+  const changed = fxCompute(t);
+  if (changed){
+    t.chk = null; t.onlyNo = false; t.sel = null;
+    syncTabs();
+    if (cur === "fit" && mode === "bom") render();
+    if (opts.check !== false && t.rows.length && checkCols(t).length) runCheck(true, "fit");
+  } else if (cur === "fit" && mode === "bom" && t.rows.length){ syncChkBar(); apply(); }
+  fxSyncUi();
+  return changed;
+}
+window.fxSuffix = t => (t === TABS.fit && t.fx && t.fx.ex && t.fx.ex.length) ? "_Explode" : "";
+
+/* ───────── โหลด / ลบ แหล่ง BOM ───────── */
+async function fxLoadAll(){
+  try{
+    const all = await idbAll();
+    FX.srcs = (all || []).filter(s => s && Array.isArray(s.lines));
+    const cfg = (all || []).find(s => s && s.id === DIR_CFG);
+    if (cfg){ FX.dir.mode = cfg.mode || ""; FX.dir.own = isDirH(cfg.own) ? cfg.own : null; }
+  }catch(e){ FX.err = "จำไฟล์ BOM ในเครื่องไม่ได้ (" + (e && e.message || e) + ") · ใช้ได้เฉพาะรอบนี้"; }
+  buildMap(); FX.ready = true;
+  fxRefresh();
+  /* เบราว์เซอร์ยังให้สิทธิ์อยู่ = อ่านเลย ไม่ต้องกด · รอหน้าโหลดครบก่อน (ตัวอ่าน Excel โหลดจาก CDN ทีหลังสคริปต์นี้) */
+  const go = () => { FX.dir.started = true; dirSync({ resolve: true }); };
+  if (document.readyState === "complete") go(); else window.addEventListener("load", go, { once: true });
+}
+async function fxLoadFile(file, handle, quiet, auto){
+  FX.busyN = (FX.busyN || 0) + 1;
+  FX.busy = "กำลังอ่าน " + file.name + "…"; fxSyncUi(); fxModalSync();
+  /* ไฟล์ AX ใหญ่ (6 หมื่นบรรทัด) อ่านหลายวินาที -> ขึ้นกล่องรอให้เห็นก่อนเริ่มอ่าน */
+  /* อ่านเองจากโฟลเดอร์ (v6.3 อ่านเบื้องหลัง): ไม่ขึ้นกล่องรอ ใช้งานต่อได้ ป้ายบอก "กำลังอ่าน…" · เลือกไฟล์เอง = ขึ้นกล่องรอ */
+  const willMain = XW_OFF || !xlsxLib() || typeof Worker === "undefined";   /* อ่านเบื้องหลังไม่ได้ = หน้าจอค้างระหว่างอ่าน */
+  const ov = mode === "bom" && $("busy").className !== "on" && (!auto || (willMain && FX.on && cur === "fit"));
+  if (ov){
+    busyStart("กำลังอ่านไฟล์ไส้ BOM");
+    $("bsteps").innerHTML = '<div class="bstep run"><span class="m"><span>\u25CC</span></span><span>' + esc(file.name) + "</span></div>";
+    $("bnow").parentNode.style.display = "none";
+    $("bsub").textContent = "อ่านครั้งเดียว จำไว้ในเครื่องนี้ ครั้งหน้าไม่ต้องเลือกใหม่";
+    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 30)));
+  }
+  let res;
+  try{ res = await readBomFile(file); }
+  catch(e){ throw fxFail("อ่านไฟล์ " + file.name + " ไม่ได้ (" + (e && e.message || e) + ") — ถ้าเปิดไฟล์นี้ค้างอยู่ใน Excel ให้ปิดก่อน หรือก๊อปไฟล์มาไว้ในเครื่องแล้วเลือกตัวที่ก๊อป", quiet, "read"); }
+  finally{ if (--FX.busyN <= 0){ FX.busyN = 0; FX.busy = ""; } if (ov){ busyClose(); $("bnow").parentNode.style.display = ""; $("bsub").textContent = ""; } fxSyncUi(); fxModalSync(); }
+  if (!res || res.none){
+    if (quiet) return "notbom";
+    throw fxFail("ไฟล์ " + file.name + " ไม่ใช่ไฟล์ไส้ BOM — ต้องมีหัวคอลัมน์ PARENT_ITEMID · COMPONENT_ITEMID · BOMQTY (หรือ รหัสไม้ · รหัสวัสดุ · จำนวน)" +
+                 (res && res.head && res.head.length ? " · หัวคอลัมน์ในไฟล์นี้: " + res.head.join(", ") : ""));
+  }
+  if (!res.lines.length)
+    throw fxFail("ไฟล์ " + file.name + " มีหัวคอลัมน์แบบไฟล์ไส้ BOM แต่ไม่มีบรรทัดที่ใช้ได้" + (res.bad ? " (ข้าม " + res.bad + " แถว: ไม่มีรหัส หรือจำนวนไม่ใช่ตัวเลข/เป็น 0)" : "") +
+                 " — ยังไม่ได้ใช้ไฟล์นี้" + (res.kind === "ax" || /fittingbom/i.test(file.name)
+                   ? " · ถ้าเป็น FittingBOM_RefreshOnly.xlsm แปลว่ายังไม่ได้ Refresh: เปิดใน Excel → Enable Content → Data → Refresh All → Save แล้วเลือกใหม่" : ""), quiet, "empty");
+  const parents = new Set(res.lines.map(l => up(l[0])));
+  const rec = { id: res.kind + ":" + file.name.toLowerCase(), kind: res.kind, name: file.name, sheet: res.sheet,
+                fileDate: file.lastModified || 0, loadedAt: Date.now(), nLines: res.lines.filter(l => !l[6]).length,
+                nParents: parents.size, bad: res.bad, zero: res.zero,
+                only22: [...parents].every(p => p.length === 22), lines: res.lines };
+  if (handle) rec.handle = handle;
+  let olds = [];
+  if (auto){
+    rec.auto = auto.slot; rec.sig = auto.sig; rec.dirName = auto.dir || ""; rec.sub = auto.sub || "";
+    olds = FX.srcs.filter(s => s.auto === auto.slot && s.id !== rec.id);   /* ไฟล์ใหม่ (ชื่อต่าง) ของช่องเดียวกัน แทนไฟล์เก่า */
+  }
+  FX.srcs = FX.srcs.filter(s => s.id !== rec.id && !olds.includes(s)).concat(rec);
+  olds.forEach(s => { idbDel(s.id).catch(() => {}); });
+  buildMap();
+  try{ await idbPut(rec); FX.err = ""; }
+  catch(e){ FX.err = "จำไฟล์ BOM ในเครื่องไม่ได้ (" + (e && e.message || e) + ") · ใช้ได้เฉพาะรอบนี้"; }
+  fxRefresh();
+  FX.msg = { ok: true, at: Date.now(), text: "โหลด " + rec.name + " แล้ว · " + (rec.kind === "ax" ? "BOM จาก AX" : "BOM ใส่เอง") + " " + TH(rec.nParents) + " รหัส · " + TH(rec.nLines) + " บรรทัด" +
+             (rec.only22 && rec.kind === "ax" ? " · มีแต่ BOM ของรหัสแม่ 22 ตัว (SQL ในไฟล์ยังกรอง 22 ตัว · วิธีแก้อยู่ท้ายกล่องนี้)" : "") };
+  fxModalSync();
+  if (auto) FX.msg.text = (auto.again ? "อัปเดตอัตโนมัติ (ไฟล์เปลี่ยน) · " : "อ่านอัตโนมัติจากโฟลเดอร์ · ") + FX.msg.text;
+  if (!auto || FX.on) toast((auto ? (auto.again ? "อัปเดตไส้ BOM อัตโนมัติ · " : "อ่านไส้ BOM จากโฟลเดอร์ · ") : "") + (rec.kind === "ax" ? "BOM จาก AX" : "BOM ใส่เอง") + ": " + rec.name + " · " + TH(rec.nParents) + " รหัส · " + TH(rec.nLines) + " บรรทัด");
+  return rec;
+}
+/* เลือกไฟล์ไม่สำเร็จ -> จดเหตุไว้แสดงในกล่อง (ลากเข้าหน้าหลักแบบเงียบ ไม่จด) */
+function fxFail(text, quiet, kind){
+  if (!quiet){ FX.msg = { ok: false, at: Date.now(), text }; fxModalSync(); }
+  const e = new Error(text); e.fxKind = kind || ""; return e;
+}
+/* รหัสในไฟล์ที่เปิดอยู่ มีไส้กี่รหัส (ไม่ขึ้นกับสวิตช์) */
+function fileHas(){
+  const t = TABS.fit;
+  if (!t.base || !t.base.length) return null;
+  if (t._fhB === t.base && t._fhV === FX.ver && t._fh) return t._fh;
+  const { ic, qc } = fxCols(t), seen = new Map();
+  if (ic >= 0) t.base.forEach(r => {
+    const c = String(r[ic] ?? "").trim(); if (!c) return;
+    const k = up(c), q0 = qc >= 0 ? numQ(r[qc]) : NaN;
+    let o = seen.get(k);
+    if (!o){
+      const e = FX.map.get(k), lv = leavesOf(c);
+      o = { code: c, qty: 0, has: !!lv, n: lv ? lv.list.length : 0, keep: !!(e && e.no), src: e ? e.src : "", prog: !!(e && e.prog), sized: sized(c) };
+      seen.set(k, o);
+    }
+    if (isFinite(q0)) o.qty += q0;
+  });
+  const list = [...seen.values()];
+  t._fh = { total: list.length, list, byKey: seen, ic, has: list.filter(x => x.has).map(x => x.code), keep: list.filter(x => x.keep).map(x => x.code), noCol: ic < 0 };
+  t._fhB = t.base; t._fhV = FX.ver;
+  return t._fh;
+}
+async function fxRemove(id){
+  FX.srcs = FX.srcs.filter(s => s.id !== id);
+  buildMap();
+  try{ await idbDel(id); }catch(e){ FX.err = "เอาไฟล์ออกจากที่จำในเครื่องไม่สำเร็จ (" + (e && e.message || e) + ") · เปิดหน้าใหม่แล้วไฟล์อาจกลับมา"; toast(FX.err); }
+  fxRefresh(); fxModalSync();
+}
+async function fxReread(id){
+  const s = FX.srcs.find(x => x.id === id);
+  if (!s) return;
+  if (!s.handle) return fxPick();
+  try{
+    let p = s.handle.queryPermission ? await s.handle.queryPermission({ mode: "read" }) : "granted";
+    if (p !== "granted" && s.handle.requestPermission) p = await s.handle.requestPermission({ mode: "read" });
+    if (p !== "granted") return toast("ไม่ได้รับอนุญาตให้อ่านไฟล์ " + s.name);
+    const f = await s.handle.getFile();
+    await fxLoadFile(f, s.handle, false);
+  }catch(e){ toast("อ่านไฟล์เดิมไม่ได้ (" + (e && e.message || e) + ") — กดเลือกไฟล์ใหม่"); }
+}
+const fxPickInput = document.createElement("input");
+fxPickInput.type = "file"; fxPickInput.accept = ".xlsm,.xlsx,.xls,.csv,.txt,.tsv"; fxPickInput.multiple = true;
+fxPickInput.style.display = "none"; fxPickInput.id = "fxpick";
+document.body.appendChild(fxPickInput);
+fxPickInput.onchange = async () => {
+  const fs = [...fxPickInput.files]; fxPickInput.value = "";
+  for (const f of fs){ try{ await fxLoadFile(f, null, false); }catch(e){ toast(e.message || String(e)); } }
+};
+fxPickInput.addEventListener("cancel", () => {});
+async function fxPick(){
+  if (window.showOpenFilePicker){
+    let hs;
+    try{
+      hs = await window.showOpenFilePicker({ multiple: true, types: [{ description: "ไฟล์ไส้ BOM",
+        accept: { "application/vnd.ms-excel.sheet.macroEnabled.12": [".xlsm"],
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+                  "text/csv": [".csv", ".txt", ".tsv"] } }] });
+    }catch(e){ if (e && e.name === "AbortError") return; hs = null; }
+    if (hs){
+      for (const h of hs){
+        let f;
+        try{ f = await h.getFile(); }
+        catch(e){ fxFail("เปิดไฟล์ " + (h && h.name || "") + " ไม่ได้ (" + (e && e.message || e) + ") — ถ้าเปิดค้างอยู่ใน Excel ให้ปิดก่อน หรือก๊อปไฟล์มาไว้ในเครื่องแล้วเลือกตัวที่ก๊อป"); toast(FX.msg.text); continue; }
+        try{ await fxLoadFile(f, h, false); }catch(e){ toast(e.message || String(e)); }
+      }
+      return;
+    }
+  }
+  fxPickInput.click();
+}
+/* ไฟล์ที่น่าจะเป็นไฟล์ BOM (ลาก/เลือกจากปุ่มเปิดไฟล์หลัก) · .xlsm หรือชื่อมีคำว่า BOM แต่ไม่ใช่ export_item / export_fitting */
+function looksBom(f){
+  const n = String(f && f.name || "");
+  if (extOf(n) === "xlsm") return true;
+  return /bom|manual|ใส่เอง/i.test(n) && !/^export[_\- ]?(item|fitting)/i.test(n);
+}
+/* ───────── อ่านเองจากโฟลเดอร์ (แบบ Production V2) ─────────
+   ใช้โฟลเดอร์เดียวกับ Production V2: เปิดจาก GitHub = เว็บเดียวกัน อ่านตำแหน่งโฟลเดอร์ที่ Production V2 จำไว้ได้ (อ่านอย่างเดียว)
+   หรือเลือกโฟลเดอร์เอง · หาไฟล์ FittingBOM* / ReCheckBOM* ใหม่สุดของแต่ละแบบ (ชั้นแรก ไม่เจอค่อยดูโฟลเดอร์ย่อย 1 ชั้น)
+   ไฟล์เปลี่ยน (ชื่อ/ขนาด/เวลาแก้) อ่านใหม่ให้เอง · อ่านไม่ผ่าน (กำลัง Save / ยังไม่ Refresh) = ใช้ข้อมูลเดิมไปก่อน */
+const DIR_CFG = "cfg:dir";
+const PV2_DB = "starnexus-local-xml-v1", PV2_STORE = "config", PV2_KEYS = ["gasAxDir", "dir"];
+const DIR_TICK = 60000, DIR_SCAN = 300000;
+FX.dir = { mode: "", own: null, handle: null, from: "", name: "", perm: "", err: "", at: 0, scanAt: 0, files: {}, busy: false, pv2: [], bad: {},
+           gen: 0, resolvedGen: 0, switchPending: 0, started: false };
+const SLOTS = ["fb-ax", "rc-ax", "fb-man", "rc-man"];
+const isDirH = h => !!(h && h.kind === "directory" && typeof h.entries === "function");
+function slotOf(name){
+  const n = String(name || "");
+  if (/^~\$/.test(n) || !/\.xls[xm]$/i.test(n)) return "";
+  const b = n.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const fam = b.indexOf("fittingbom") === 0 ? "fb" : b.indexOf("recheckbom") === 0 ? "rc" : "";
+  return fam ? fam + (/manual|ใส่เอง/i.test(n) ? "-man" : "-ax") : "";
+}
+/* ตำแหน่งโฟลเดอร์ที่ Production V2 จำไว้ (เว็บเดียวกันเท่านั้น) — อ่านอย่างเดียว
+   ไม่มีฐานข้อมูลนั้น = ไม่เปิด (indexedDB.open ชื่อที่ไม่มี = สร้างฐานข้อมูลเปล่า จะไปขวางตอน Production V2 สร้างของจริง)
+   รอไม่เกิน 4 วินาที (Production V2 กำลังอัปเกรดฐานข้อมูลอยู่ -> ข้ามไปก่อน รอบหน้าลองใหม่) */
+async function pv2DirsRead(){
+  try{
+    if (!indexedDB.databases) return [];
+    const list = await indexedDB.databases();
+    if (!list.some(d => d && d.name === PV2_DB)) return [];
+    const db = await new Promise((res, rej) => {
+      const r = indexedDB.open(PV2_DB);
+      r.onupgradeneeded = () => { try{ r.transaction.abort(); }catch(_){} };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error || new Error("open"));
+      r.onblocked = () => rej(new Error("blocked"));
+    });
+    db.onversionchange = () => { try{ db.close(); }catch(_){} };   /* Production V2 จะอัปเกรด -> ปล่อยทันที ไม่ขวาง */
+    try{
+      if (!db.objectStoreNames.contains(PV2_STORE)) return [];
+      return await new Promise(res => {
+        const got = {}, tx = db.transaction(PV2_STORE, "readonly"), st = tx.objectStore(PV2_STORE);
+        PV2_KEYS.forEach(k => { const q = st.get(k); q.onsuccess = () => { if (isDirH(q.result)) got[k] = q.result; }; });
+        const done = () => res(PV2_KEYS.filter(k => got[k]).map(k => ({ key: k, h: got[k] })));
+        tx.oncomplete = done; tx.onerror = done; tx.onabort = done;
+      });
+    } finally { try{ db.close(); }catch(_){} }
+  }catch(_){ return []; }
+}
+function pv2Dirs(){
+  return Promise.race([pv2DirsRead(), new Promise(res => setTimeout(() => res(null), 4000))]);   /* null = อ่านไม่ทัน (ใช้ค่าเดิม) */
+}
+async function permOf(h, ask){
+  let p = "prompt";
+  try{ p = h.queryPermission ? await h.queryPermission({ mode: "read" }) : "granted"; }catch(_){}
+  if (p !== "granted" && ask && h.requestPermission){ try{ p = await h.requestPermission({ mode: "read" }); }catch(_){} }
+  return p;
+}
+/* หาไฟล์ใหม่สุดของแต่ละช่อง · failed = ช่องที่มีไฟล์ชื่อตรงแต่หยิบไม่ได้ชั่วคราว (Excel กำลัง Save) -> รอบนี้ไม่ตัดสินช่องนั้น */
+async function scanDir(dir, deep){
+  const best = {}, failed = new Set(), subs = [];
+  const take = async (h, nm, sub) => {
+    const sl = slotOf(nm); if (!sl) return;
+    try{ const f = await h.getFile(); if (!best[sl] || f.lastModified > best[sl].f.lastModified) best[sl] = { h, f, sub }; }catch(_){ failed.add(sl); }
+  };
+  for await (const [nm, h] of dir.entries()){
+    if (!h) continue;
+    if (h.kind === "directory"){ if (deep && subs.length < 40 && !/^[._]/.test(nm)) subs.push([nm, h]); continue; }
+    await take(h, nm, "");
+  }
+  if (deep && !best["fb-ax"] && !best["rc-ax"] && !failed.has("fb-ax") && !failed.has("rc-ax")){
+    for (const [sn, sh] of subs){
+      let k = 0;
+      try{ for await (const [nm, h] of sh.entries()){ if (++k > 3000) break; if (h && h.kind === "file") await take(h, nm, sn); } }catch(_){}
+    }
+  }
+  failed.forEach(sl => { delete best[sl]; });
+  return { best, failed: [...failed] };
+}
+async function dirSaveCfg(){
+  try{ await idbDo("readwrite", st => st.put({ id: DIR_CFG, mode: FX.dir.mode, own: FX.dir.own || null })); }
+  catch(_){ try{ await idbDo("readwrite", st => st.put({ id: DIR_CFG, mode: FX.dir.mode })); }catch(__){} }
+}
+/* เลือกโฟลเดอร์ที่จะดู: เลือกเอง > ของ Production V2 (ค่าเริ่ม ถ้ามี)
+   หลายโฟลเดอร์ (Excel ของ AX / Server): โฟลเดอร์แรกที่ได้สิทธิ์และมีไฟล์ไส้ > โฟลเดอร์ที่ยังไม่ได้สิทธิ์/อ่านไม่ได้ (ให้กดอนุญาต)
+   > โฟลเดอร์ที่ได้สิทธิ์แต่ไม่มีไฟล์ · ขออนุญาตแค่โฟลเดอร์เดียวต่อครั้ง · ค่าใหม่ใส่ D ทีเดียวตอนจบ (ระหว่างหา ค่าเดิมยังใช้ได้) */
+async function dirResolve(ask){
+  const D = FX.dir;
+  const gen = D.gen;
+  const pv2 = await pv2Dirs();
+  if (pv2) D.pv2 = pv2;
+  let pick = null;
+  if (D.mode !== "off"){
+    const cands = D.mode === "own" ? (D.own ? [{ key: "own", h: D.own }] : []) : D.pv2;
+    if (!D.mode && cands.length) D.mode = "pv2";
+    let asked = false, first = null, firstBad = null, firstEmpty = null;
+    for (const c of cands){
+      let p = await permOf(c.h, false);
+      if (p !== "granted" && ask && !asked){ asked = true; p = await permOf(c.h, true); }
+      const it = { c, p, scan: null };
+      if (!first) first = it;
+      if (p !== "granted"){ if (!firstBad) firstBad = it; continue; }
+      try{ it.scan = await scanDir(c.h, true); }catch(_){ if (!firstBad) firstBad = it; continue; }
+      if (Object.keys(it.scan.best).length || it.scan.failed.length){ pick = it; break; }
+      if (!firstEmpty) firstEmpty = it;
+    }
+    if (!pick) pick = firstBad || firstEmpty || first;
+  }
+  if (D.mode === "off") pick = null;   /* ปิดระหว่างหา -> ไม่ตั้งโฟลเดอร์ (เปลี่ยนโฟลเดอร์ระหว่างหา: dirSync ไม่ใช้ผลรอบนี้) */
+  const was = D.from + ":" + D.name;
+  D.handle = pick ? pick.c.h : null; D.from = pick ? pick.c.key : ""; D.name = pick ? (pick.c.h.name || "") : ""; D.perm = pick ? pick.p : "";
+  D.preScan = pick && pick.p === "granted" ? pick.scan : null;
+  D.resolvedGen = gen;
+  if (D.from + ":" + D.name !== was) D.files = {};   /* โฟลเดอร์เปลี่ยน = รายชื่อไฟล์เดิมใช้ไม่ได้ */
+}
+/* เปลี่ยนการตั้งค่าโฟลเดอร์ (ผู้ใช้กด) -> รอบที่ค้างอยู่หยุดโหลด · switched = เปลี่ยนโฟลเดอร์ ไฟล์อัตโนมัติจากโฟลเดอร์เดิมเอาออกหลังอ่านโฟลเดอร์ใหม่ได้ */
+function dirCfgChanged(switched){ const D = FX.dir; D.gen++; if (switched) D.switchPending = D.gen; }
+async function dirSync(o){
+  o = o || {};
+  const D = FX.dir;
+  if (D.busy){   /* กำลังตรวจอยู่ (เช่นรอบเปิดหน้า) -> จำคำสั่งไว้ทำต่อทันทีที่เสร็จ ไม่ทิ้ง */
+    const q = D.queued || {};
+    D.queued = { resolve: q.resolve || o.resolve, ask: q.ask || o.ask, force: q.force || o.force };
+    return;
+  }
+  D.busy = true;
+  let srcChanged = false;
+  try{
+    /* ยังไม่มีโฟลเดอร์ / ยังไม่ได้สิทธิ์ -> ดูใหม่ทุกรอบ (Production V2 เพิ่งได้สิทธิ์ในเบราว์เซอร์นี้ ก็ใช้ได้เลย ไม่ถาม) */
+    if (o.resolve || !D.handle || D.perm !== "granted" || D.gen !== D.resolvedGen) await dirResolve(!!o.ask);
+    if (!D.handle || D.perm !== "granted" || D.mode === "off") return;
+    const gen = D.resolvedGen;
+    let scan;
+    if (D.preScan){ scan = D.preScan; D.preScan = null; D.scanAt = Date.now(); }
+    else if (o.force || !D.scanAt || Date.now() - D.scanAt > DIR_SCAN){ scan = await scanDir(D.handle, true); D.scanAt = Date.now(); }
+    else if (!Object.keys(D.files).length) scan = await scanDir(D.handle, false);   /* ยังไม่เจอไฟล์: ทุกนาทีดูชั้นแรก โฟลเดอร์ย่อยทุก 5 นาที */
+    else {
+      scan = { best: {}, failed: [] };
+      for (const sl of Object.keys(D.files)){
+        const x = D.files[sl];
+        try{ scan.best[sl] = { h: x.h, f: await x.h.getFile(), sub: x.sub }; }catch(_){ scan.failed.push(sl); }
+      }
+    }
+    if (D.mode === "off" || D.gen !== gen) return;   /* ผู้ใช้เปลี่ยน/ปิดระหว่างตรวจ -> ไม่ใช้ผลรอบนี้ (รอบที่จำไว้ทำต่อ) */
+    const best = scan.best, prev = D.files;
+    D.files = {};
+    Object.keys(best).forEach(sl => { const b = best[sl]; D.files[sl] = { h: b.h, name: b.f.name, mod: b.f.lastModified, size: b.f.size, sub: b.sub }; });
+    scan.failed.forEach(sl => { if (prev[sl]) D.files[sl] = prev[sl]; });   /* หยิบไม่ได้ชั่วคราว -> คงไฟล์เดิม ไม่สลับไปใช้ไฟล์อื่น */
+    if (scan.failed.length) D.scanAt = 0;   /* รอบหน้าหาใหม่ทั้งโฟลเดอร์ */
+    D.at = Date.now();
+    /* เพิ่งเปลี่ยนโฟลเดอร์ (ผู้ใช้กด): ไฟล์อัตโนมัติจากโฟลเดอร์เดิม (ช่องที่โฟลเดอร์ใหม่ไม่มี) เอาออก */
+    if (D.switchPending && gen >= D.switchPending){
+      D.switchPending = 0;
+      const stale = FX.srcs.filter(x => x.auto && x.dirName !== D.name && !best[x.auto] && !scan.failed.includes(x.auto));
+      if (stale.length){
+        FX.srcs = FX.srcs.filter(x => !stale.includes(x));
+        stale.forEach(x => { idbDel(x.id).catch(() => {}); });
+        buildMap(); fxRefresh(); srcChanged = true;
+      }
+    }
+    const errs = [];
+    for (const sl of SLOTS){
+      const b = best[sl]; if (!b) continue;
+      if (D.mode === "off" || D.gen !== gen) break;
+      const sig = b.f.name + "|" + b.f.size + "|" + b.f.lastModified;
+      const cur = FX.srcs.find(s => s.auto === sl);
+      if (cur && cur.sig === sig) continue;
+      if (D.bad[sl] && D.bad[sl].sig === sig){ errs.push(D.bad[sl].msg); continue; }   /* อ่านไม่ผ่านไปแล้ว ไฟล์ยังไม่เปลี่ยน ไม่ลองซ้ำ (ยังบอกเหตุ) */
+      if (typeof XLSX === "undefined"){ errs.push("ตัวอ่าน Excel ยังโหลดไม่เสร็จ · จะลองอ่าน " + b.f.name + " ใหม่รอบหน้า"); continue; }   /* ไม่จดว่าอ่านไม่ผ่าน */
+      try{
+        const r = await fxLoadFile(b.f, b.h, true, { slot: sl, sig, dir: D.name, sub: b.sub, again: !!cur });
+        if (r === "notbom") throw new Error("ไฟล์ " + b.f.name + " ไม่มีหัวคอลัมน์แบบไฟล์ไส้ BOM");
+        delete D.bad[sl]; srcChanged = true;
+      }catch(e){
+        const msg = (e && e.message || e) + " · ใช้ข้อมูลเดิมไปก่อน";
+        D.bad[sl] = { sig, msg }; errs.push(msg);
+      }
+    }
+    D.err = errs.join(" · ");
+  }catch(e){ D.err = "อ่านโฟลเดอร์ " + (D.name || "") + " ไม่ได้ (" + (e && e.message || e) + ") · ใช้ข้อมูลเดิมไปก่อน"; D.scanAt = 0; }
+  finally{
+    D.busy = false; fxSyncUi();
+    if (srcChanged) fxModalSync(); else dirModalSync();   /* ไม่มีอะไรเปลี่ยน -> วาดใหม่แค่ส่วนโฟลเดอร์ (ช่องค้นหา/หัวข้อที่เปิดไว้ในกล่องไม่หาย) */
+    if (D.queued){ const q = D.queued; D.queued = null; setTimeout(() => dirSync(q), 0); }
+  }
+}
+/* กดอนุญาต: ขอสิทธิ์โฟลเดอร์ที่แสดงอยู่ทันที (ต้องอยู่ในจังหวะคลิก) แล้วตรวจใหม่โดยไม่ถามซ้ำ */
+async function dirAllow(){
+  const D = FX.dir;
+  if (D.handle && D.perm !== "granted"){ await permOf(D.handle, true); return dirSync({ resolve: true, force: true }); }
+  return dirSync({ resolve: true, ask: true, force: true });
+}
+async function dirUsePv2(){ FX.dir.mode = "pv2"; dirCfgChanged(true); await dirSaveCfg(); await dirSync({ resolve: true, ask: true, force: true }); }
+async function dirPick(){
+  if (!window.showDirectoryPicker) return toast("เบราว์เซอร์นี้เลือกโฟลเดอร์ไม่ได้ — ใช้ Chrome หรือ Edge");
+  let h;
+  try{ h = await window.showDirectoryPicker({ mode: "read", id: "recheckbom" }); }catch(e){ return; }
+  await dirSetOwn(h);
+}
+async function dirSetOwn(h){
+  FX.dir.mode = "own"; FX.dir.own = h; FX.dir.bad = {}; dirCfgChanged(true);
+  await dirSaveCfg(); await dirSync({ resolve: true, ask: true, force: true });
+}
+async function dirOn(){ FX.dir.mode = FX.dir.own ? "own" : "pv2"; dirCfgChanged(false); fxModalSync(); await dirSaveCfg(); await dirSync({ resolve: true, ask: true, force: true }); }
+async function dirOff(){ FX.dir.mode = "off"; dirCfgChanged(false); FX.dir.handle = null; FX.dir.files = {}; FX.dir.err = ""; FX.dir.perm = ""; await dirSaveCfg(); fxSyncUi(); fxModalSync(); }
+setInterval(() => { if (!document.hidden && FX.ready && FX.dir.started && FX.dir.mode !== "off") dirSync({}); }, DIR_TICK);
+window.addEventListener("focus", () => { if (FX.ready && FX.dir.started && FX.dir.mode !== "off" && Date.now() - FX.dir.at > 15000) dirSync({}); });
+function dirLine(){
+  const D = FX.dir;
+  if (D.mode === "off") return "ปิดอยู่";
+  if (!D.handle) return "";
+  return (D.perm === "granted" ? "อัตโนมัติ · " : "รออนุญาต · ") + "โฟลเดอร์ " + D.name;
+}
+function fxSetOn(on){
+  const t = TABS.fit;
+  if (on === FX.on) return;
+  if (t.base && fxLocked(t)){
+    toast("แท็บ BOM Fitting มีการแก้ X เป็น Y / ล้างเลขเจาะค้างอยู่ — กดย้อนกลับก่อน แล้วค่อยสลับแตกไส้");
+    fxSyncUi(); return;
+  }
+  FX.on = !!on;
+  try{ localStorage.setItem(LS_FX_ON, FX.on ? "1" : "0"); }catch(_){}
+  fxRefresh();
+  if (FX.on && !FX.map.size && FX.ready){ fxOpen(); return; }
+  if (t.base && t.base.length){
+    if (!FX.on) toast("ปิดแตกไส้ BOM — กลับเป็นแถวตามไฟล์ " + TH(t.rows.length) + " แถว");
+    else if (t.fx && t.fx.ex && t.fx.ex.length) toast("แตกไส้ BOM แล้ว " + t.fx.ex.length + " รหัส · " + TH(t.fx.before) + " → " + TH(t.fx.after) + " แถว");
+    else if (t.fx && t.fx.err) toast(t.fx.err);
+    else toast("ไม่มีรหัสในไฟล์นี้ที่มีไส้ใน BOM ที่โหลดไว้");
+  }
+  fxModalSync();
+}
+/* แท็บ Fitting ปลดล็อกแล้ว (ย้อนกลับ X เป็น Y / เจาะ) แต่ไฟล์ BOM เปลี่ยนระหว่างล็อก -> คำนวณใหม่ */
+function staleCheck(){
+  const t = TABS.fit;
+  if (t.fxStale && t.base && !fxLocked(t)){ t.fxStale = false; setTimeout(() => fxRefresh(), 0); }
+}
+
+/* ───────── หน้าจอ ───────── */
+const css = document.createElement("style");
+css.textContent = `
+.fxbox{display:inline-flex;align-items:center;gap:6px;padding-right:8px;margin-right:2px;border-right:1px solid var(--line)}
+.fxsw{display:inline-flex !important;align-items:center;gap:6px;font-size:12.5px !important;color:var(--ink) !important;
+      border:1px solid var(--line-2);border-radius:7px;padding:5px 11px;cursor:pointer;background:var(--card);white-space:nowrap;user-select:none}
+.fxsw:hover{background:var(--hover)}
+.fxsw input{accent-color:var(--orange);cursor:pointer;margin:0}
+.fxsw.on{background:var(--orange);border-color:var(--orange);color:#3a2200 !important;font-weight:600}
+button.fxpill{cursor:pointer}
+.pill.warn.fxpill{background:var(--hl-bg);color:var(--hl-ink);border:1px solid var(--hl-line)}
+.fxmsg{margin-top:8px;border-radius:8px;padding:8px 11px;font-size:12.5px;line-height:1.6}
+.fxmsg.ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-line)}
+.fxmsg.bad{background:var(--miss-bg);color:var(--miss-ink);border:1px solid var(--miss-line)}
+.fxmsg .at{font-family:var(--mono);font-size:10.5px;opacity:.7;margin-left:4px}
+body.fxmodal #toast{z-index:70}
+.fxauto{border:1px solid #c9d9f5;background:#f6f9ff;border-radius:9px;padding:9px 12px;font-size:12.5px;display:flex;flex-direction:column;gap:5px}
+.fxauto .st{color:var(--dim);line-height:1.6}
+.fxauto .st b{color:#1f4f8f}
+.fxauto .st.warn{color:var(--hl-ink)}
+.fxauto .st.bad{color:var(--miss-ink)}
+.fxauto .st .cbtn{margin-left:6px}
+.fxauto .fl{display:grid;grid-template-columns:150px 1fr auto;gap:8px;font-size:12px}
+.fxauto .fl .k{color:var(--dim)}
+.fxauto .fl .v{font-family:var(--mono);color:#1f4f8f;font-weight:600;word-break:break-all}
+.fxauto .fl .m{font-family:var(--mono);color:var(--faint);font-size:11px;white-space:nowrap}
+.fxauto .bt{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
+.fxauto .bt .cbtn{font-size:12px;padding:4px 10px}
+.fxautob{font-size:11px;font-weight:600;color:#1f4f8f;background:#dbe7fb;border-radius:9px;padding:2px 8px;white-space:nowrap}
+button.fxpill:hover{filter:brightness(.96)}
+tbody tr.fx td{background:#eef4ff}
+tbody tr.fx:hover td{background:#e2ecfd}
+tbody tr.fx td.rn{background:#e3ecfb;color:#1f4f8f;font-weight:600;box-shadow:inset 3px 0 0 #3b6fc4}
+tbody tr.fx td.hl{background:#e6eefc;color:#1f4f8f}
+tbody tr.fxm td.rn{box-shadow:inset 3px 0 0 #3b6fc4;color:#1f4f8f;font-weight:600}
+tbody tr.fxm td.n{color:#1f4f8f;font-weight:600}
+.stat b.fxb{color:#1f4f8f}
+.sumcard.fxc>h3{background:#eaf1fd;color:#1f4f8f;border-bottom-color:#c9d9f5}
+.fxp{display:grid;grid-template-columns:minmax(118px,auto) 78px 1fr;gap:9px;align-items:start;
+     padding:6px 11px;border-bottom:1px solid var(--line);font-size:11.5px}
+.fxp:last-child{border-bottom:0}
+.fxp.par{background:#f6f9ff;font-weight:600}
+.fxp.kid{cursor:pointer}
+.fxp.kid:hover{background:var(--hover)}
+.fxp.kid.sel{background:#fff6e7;box-shadow:inset 3px 0 0 var(--orange)}
+.fxp .v{font-family:var(--mono);word-break:break-all;line-height:1.45}
+.fxp.kid .v{padding-left:12px}
+.fxp.kid .v::before{content:"└ ";color:var(--faint)}
+.fxp .q{font-family:var(--mono);text-align:right;white-space:nowrap}
+.fxp .nm{color:var(--dim);line-height:1.5;word-break:break-word}
+.fxp .bd{font-family:var(--sans);font-size:10px;font-weight:600;border-radius:9px;padding:1px 6px;margin-left:5px;
+         background:#e3ecfb;color:#1f4f8f;white-space:nowrap}
+.fxp .bd.man{background:var(--hl-bg);color:var(--hl-ink)}
+.fxnote{padding:7px 11px;font-size:11.5px;color:var(--dim);line-height:1.6;border-bottom:1px solid var(--line)}
+.fxnote:last-child{border-bottom:0}
+.fxnote.bad{color:var(--miss-ink)}
+.fxnote button{margin-top:6px}
+.fxempty{border:1px solid #c9d9f5;background:#f6f9ff;border-radius:11px;padding:12px 14px;text-align:left;width:100%;max-width:440px;
+         display:flex;flex-direction:column;gap:9px;margin-top:4px;min-width:0}
+.fxempty .fxsw{white-space:normal;text-align:left}
+.fxet{font-size:13px;font-weight:600;color:#1f4f8f}
+.fxet i{font-style:normal;font-weight:400;color:var(--dim);font-size:12px}
+.fxer{display:grid;grid-template-columns:18px 1fr;gap:6px;align-items:start;font-size:12.5px;color:var(--ink);line-height:1.7}
+.fxer>b{font-family:var(--mono);color:#1f4f8f;padding-top:2px}
+.fxer .cbtn{margin-top:4px}
+.fxes{font-family:var(--mono);font-size:11.5px;color:#1f4f8f;font-weight:600}
+.fxes.none{color:var(--miss-ink)}
+.fxer .cbtn{font-size:12px;padding:4px 10px}
+.fxer .fxsw{padding:4px 10px}
+.fxeh{font-size:11.5px;color:var(--dim);line-height:1.6;border-top:1px solid #dbe4f5;padding-top:7px}
+.fxm p{font-size:13px;color:var(--dim);line-height:1.7;margin-bottom:10px}
+.fxm h4{font-size:12.5px;margin:14px 0 6px;color:var(--navy)}
+.fxsrc{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.fxs{padding:9px 12px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center}
+.fxs:last-child{border-bottom:0}
+.fxs .nm{font-size:13px;font-weight:600;word-break:break-all}
+.fxs .nm i{font-style:normal;font-family:var(--sans);font-size:10.5px;font-weight:600;border-radius:9px;padding:1px 7px;
+           margin-right:6px;background:#e3ecfb;color:#1f4f8f}
+.fxs .nm i.man{background:var(--hl-bg);color:var(--hl-ink)}
+.fxs .mt{grid-column:1;font-size:11.5px;color:var(--dim);font-family:var(--mono)}
+.fxs .ac{grid-column:2;grid-row:1 / span 2;display:flex;gap:6px}
+.fxs .wn{grid-column:1 / span 2;font-size:11.5px;color:var(--hl-ink);background:var(--hl-bg);border:1px solid var(--hl-line);
+         border-radius:7px;padding:6px 9px;line-height:1.6}
+.fxs.none{color:var(--faint);font-size:12.5px;display:block}
+.fxdz{margin-top:10px;border:2px dashed var(--line-2);border-radius:9px;padding:12px;text-align:center;font-size:12.5px;color:var(--dim)}
+.fxdz.over{border-color:var(--orange);background:#fdf6ec}
+.fxdz .cbtn{margin:6px 4px 0}
+.fxq{display:flex;gap:8px;align-items:center}
+.fxq input{flex:1;font-family:var(--mono);font-size:12.5px;padding:7px 10px;border-radius:7px;border:1px solid var(--line-2);outline:0}
+.fxq input:focus{border-color:var(--orange)}
+.fxqr{margin-top:6px;border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:12px}
+.fxqr:empty{display:none}
+.fxqr .h{padding:6px 10px;background:var(--page);color:var(--dim);font-size:11.5px}
+.fxqr .l{display:grid;grid-template-columns:minmax(120px,auto) 80px 1fr;gap:8px;padding:5px 10px;border-top:1px solid var(--line)}
+.fxqr .l .v{font-family:var(--mono)}
+.fxqr .l .q{font-family:var(--mono);text-align:right}
+.fxm details{margin-top:12px;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--dim);line-height:1.7}
+.fxm details summary{cursor:pointer;color:var(--navy);font-weight:600}
+.fxm ol{margin:6px 0 6px 20px}
+.fxm pre{font-family:var(--mono);font-size:11px;background:var(--page);border:1px solid var(--line-2);border-radius:8px;
+         padding:10px 12px;white-space:pre;overflow:auto;max-height:220px;color:var(--ink);margin-top:6px}
+.fxres{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.fxcalc{display:block;font-family:var(--mono);font-size:10.5px;color:#1f4f8f;opacity:.85;margin-top:1px}
+.fxhow{font-size:11px;color:#1f4f8f;background:#f6f9ff}
+.fxp .cbtn{font-size:11px;padding:2px 8px;margin-left:4px}
+.fxp.cd{padding:3px 11px;align-items:center}
+.fxp.cd .nm{display:flex;align-items:center;gap:8px}
+.fxp.cd .nm .n{flex:1;min-width:0}
+.fxp.cd .cbtn{flex:0 0 auto}
+.fxp.cd.has{background:#f3f7ff}
+.fxp.cd.has .v,.fxp.cd.has .q{color:#1f4f8f;font-weight:700}
+.fxp.cd.no .v,.fxp.cd.no .q,.fxp.cd.no .n{color:#8a8a92}
+.fxp.cd.keep .v,.fxp.cd.keep .q{color:var(--hl-ink);font-weight:600}
+.fxp .sb{font-family:var(--sans);font-size:10px;font-weight:600;border-radius:9px;padding:1px 7px;white-space:nowrap;flex:0 0 auto}
+.fxp .sb.has{background:#dbe7fb;color:#1f4f8f}
+.fxp .sb.no{background:var(--page);color:#8a8a92;border:1px solid var(--line)}
+.fxp .sb.keep{background:var(--hl-bg);color:var(--hl-ink)}
+details.fxnob>summary b.fxh{color:#1f4f8f}
+details.fxnob>summary b.fxn{color:#8a8a92}
+details.fxnob>summary b.fxk{color:var(--hl-ink)}
+tbody td.fxhas,tbody td.hl.fxhas{color:#1f4f8f;font-weight:700;background:#e6eefc}
+tbody tr:hover td.fxhas{background:#dbe7fb}
+tbody td.fxkeep{color:var(--hl-ink);font-style:italic}
+details.fxnob{border-top:1px solid var(--line)}
+details.fxnob>summary{cursor:pointer;padding:7px 11px;font-size:11.5px;color:var(--dim);list-style-position:inside}
+details.fxnob>summary:hover{background:var(--hover)}
+.fxsub{font-size:12px;color:var(--dim)}
+.fxref{border:1px solid #c9d9f5;background:#f6f9ff;border-radius:8px;padding:8px 11px;font-size:12px;color:#1f4f8f;margin-bottom:10px}
+.fxref.none{color:var(--dim);background:var(--page);border-color:var(--line)}
+.fxref .l{display:grid;grid-template-columns:minmax(120px,auto) 90px 1fr;gap:8px;padding:3px 0;color:var(--ink)}
+.fxref .l .v,.fxref .l .q{font-family:var(--mono)}
+.fxref .cbtn{margin-top:6px;font-size:11.5px;padding:4px 10px}
+.fxedt{width:100%;border-collapse:collapse;font-size:12px;white-space:normal}
+.fxedt th{position:static;background:var(--page);color:var(--dim);font-weight:600;font-size:11px;padding:5px 6px;text-align:left;border-bottom:1px solid var(--line);cursor:default}
+.fxedt td{padding:3px 4px;border-bottom:1px solid var(--line);font-family:var(--sans);max-width:none}
+.fxedt input{width:100%;font-family:var(--mono);font-size:12px;padding:5px 7px;border:1px solid var(--line-2);border-radius:6px;outline:0;background:var(--card);color:var(--ink)}
+.fxedt input:focus{border-color:var(--orange)}
+.fxedt td:nth-child(2){width:28%}.fxedt td:nth-child(3){width:13%}.fxedt td:nth-child(4){width:9%}
+.fxedt td.res{font-family:var(--mono);font-size:11px;color:#1f4f8f;white-space:nowrap}
+.fxedt tr.bad input{border-color:var(--miss-ink);background:var(--miss-bg)}
+.fxedt tr.err td{color:var(--miss-ink);font-size:11.5px;border-bottom:0;padding-top:0}
+.fxedt .cbtn{padding:3px 9px}
+.fxedb{display:flex;align-items:center;gap:10px;margin:8px 0 12px;flex-wrap:wrap}
+.fxprog .fxs .ac .cbtn{font-size:11.5px;padding:4px 9px}
+.fxres .fxnote{border-bottom:1px solid var(--line)}
+`;
+document.head.appendChild(css);
+
+/* สวิตช์ + ป้ายบนแถบเช็ค (แสดงเฉพาะแท็บ BOM Fitting) */
+const box = document.createElement("span");
+box.className = "fxbox"; box.id = "fxbox"; box.style.display = "none";
+box.innerHTML = '<label class="fxsw" title="ติ๊ก = รหัสที่มี BOM ถูกแทนด้วยวัสดุข้างใน × Qty · ไม่ติ๊ก = แถวตามไฟล์เหมือนเดิม">' +
+                '<input type="checkbox" data-fxon> แตกไส้ BOM</label>' +
+                '<button type="button" class="pill wait fxpill" id="fxpill"></button>';
+$("chkbar").insertBefore(box, $("chkbar").firstChild);
+$("pick").accept = $("pick").accept + ",.xlsm";
+
+document.addEventListener("change", e => {
+  if (e.target && e.target.matches && e.target.matches("input[data-fxon]")) fxSetOn(e.target.checked);
+});
+document.addEventListener("click", e => {
+  const b = e.target && e.target.closest && e.target.closest("#fxpill,[data-fxopen]");
+  if (b){
+    e.preventDefault();
+    if (FX.dir.handle && FX.dir.perm !== "granted" && FX.dir.mode !== "off") dirAllow();
+    fxOpen();
+  }
+});
+
+function pillState(){
+  const t = TABS.fit;
+  if (!FX.ready) return ["wait", "ไส้ BOM · กำลังโหลด…"];
+  if (FX.busy) return ["wait", FX.busy];
+  if (FX.dir.handle && FX.dir.perm !== "granted" && FX.dir.mode !== "off" && !FX.map.size) return ["bad", "กดเพื่ออนุญาตอ่านโฟลเดอร์ไส้ BOM"];
+  if (!FX.map.size) return [FX.on ? "bad" : "wait", "ยังไม่ได้เลือกไฟล์ไส้ BOM · กดเพื่อเลือก"];
+  if (!t.base || !t.base.length) return ["wait", "ไส้ BOM พร้อม · " + TH(FX.map.size) + " รหัส" + (FX.on ? " · แตกตอนเปิดไฟล์" : "")];
+  if (!FX.on){
+    const fh = fileHas();
+    if (fh && !fh.noCol) return fh.has.length ? ["wait", "ไฟล์นี้มีไส้ " + fh.has.length + " รหัส · ติ๊กแตกไส้เพื่อแตก"] : ["warn", "ไฟล์นี้ไม่มีรหัสที่มีไส้ใน BOM"];
+    return ["wait", "ไส้ BOM พร้อม · " + TH(FX.map.size) + " รหัส"];
+  }
+  if (fxLocked(t) && t.base && !t.fx) return ["bad", "แตกไส้ไม่ได้ · มีการแก้ค้างอยู่"];
+  if (t.fx && t.fx.err) return ["bad", "แตกไส้ไม่ได้ · ไม่พบคอลัมน์"];
+  if (t.fx && t.fx.ex.length) return ["good", "แตกแล้ว " + t.fx.ex.length + " รหัส · " + TH(t.fx.before) + " → " + TH(t.fx.after) + " แถว"];
+  return ["warn", "ไม่มีรหัสในไฟล์นี้ที่มีไส้ใน BOM"];
+}
+function fxSyncUi(){
+  document.querySelectorAll("input[data-fxon]").forEach(cb => {
+    cb.checked = FX.on;
+    const l = cb.closest(".fxsw"); if (l) l.classList.toggle("on", FX.on);
+  });
+  const show = cur === "fit" && TABS.fit.rows.length > 0;
+  box.style.display = show ? "" : "none";
+  const [cls, txt] = pillState();
+  const p = $("fxpill");
+  p.className = "pill " + cls + " fxpill"; p.textContent = txt;
+  p.title = "คลิกเพื่อดู/เลือกไฟล์ไส้ BOM ที่ใช้แตก" + (dirLine() ? "\n" + dirLine() : "") + (FX.err ? "\n" + FX.err : "");
+  /* หน้าว่าง: ไฟล์ไส้ที่เลือกไว้ */
+  const ns = FX.srcs.filter(x => !x.prog), pg = FX.srcs.find(x => x.prog);
+  const stxt = !FX.ready ? "กำลังโหลด…" : FX.busy ? FX.busy :
+    (ns.length ? (ns.length === 1 ? ns[0].name : ns.length + " ไฟล์") + " · " + TH(ns.reduce((a, x) => a + x.nParents, 0)) + " รหัส" : "ยังไม่ได้เลือก") +
+    (pg ? " · ใส่เอง " + TH(pg.nParents) + " รหัส" : "") + (dirLine() ? " · " + dirLine() : "");
+  document.querySelectorAll("[data-fxsrc]").forEach(el => { el.textContent = stxt; el.classList.toggle("none", !ns.length && !pg); });
+}
+
+/* ห่อของเดิม (ไม่แก้ในตัวฟังก์ชัน) */
+const _ingest = ingest;
+ingest = function(){
+  const before = TABS.fit.rows;
+  const r = _ingest.apply(this, arguments);
+  const t = TABS.fit;
+  if (t.rows !== before){
+    /* ไฟล์ BOM Fitting ใหม่ -> base = แถวตามไฟล์ · ติ๊กไว้ = แตกให้เลย (ก่อนรอบเช็คโค้ดที่ ingest ตั้งไว้) */
+    t.base = t.rows; t.fx = null; t.fxVer = -1; t.fxBase = null;
+    if (FX.on && fxCompute(t)){ t.sel = null; syncTabs(); if (cur === "fit") render(); }
+    fxSyncUi();
+  }
+  return r;
+};
+const _takeFiles = takeFiles;
+takeFiles = async function(list){
+  const arr = [...(list || [])];
+  const cand = arr.filter(looksBom);
+  if (!cand.length) return _takeFiles.call(this, list);
+  const used = new Set();
+  for (const f of cand){
+    let r;
+    try{ r = await fxLoadFile(f, null, true); }
+    catch(e){
+      /* .xlsm / หัวแบบไฟล์ BOM -> บอกเหตุ · อ่านไม่ออกเลย -> ส่งให้ตัวเปิดไฟล์เดิมขึ้นจอ error แบบเดิม */
+      if (extOf(f.name) === "xlsm" || (e && e.fxKind === "empty")){ toast("อ่านไฟล์ไส้ BOM ไม่สำเร็จ: " + (e && e.message || e)); used.add(f); }
+      continue;
+    }
+    if (r === "notbom"){
+      if (extOf(f.name) === "xlsm"){ toast("ไฟล์ " + f.name + " ไม่มีหัวคอลัมน์แบบไฟล์ไส้ BOM (PARENT_ITEMID · COMPONENT_ITEMID · BOMQTY)"); used.add(f); }
+    } else used.add(f);
+  }
+  const rest = arr.filter(f => !used.has(f));   /* ลำดับเดิม */
+  if (rest.length) return _takeFiles.call(this, rest);
+  if (mode === "bom") render();   /* ตัวรับลากวางล้างหน้าจอไว้แล้ว -> วาดคืน */
+};
+const _drawTable = drawTable;
+drawTable = function(q){
+  _drawTable.apply(this, arguments);
+  if (cur !== "fit") return;
+  const t = T();
+  const trs = $("body").children, n = Math.min(view.length, trs.length);
+  if (t.fx && t.fx.ex && t.fx.ex.length){
+    for (let i = 0; i < n; i++){
+      const inf = FXI.get(view[i]);
+      if (!inf) continue;
+      trs[i].classList.add(inf.kind === "leaf" ? "fx" : "fxm");
+      trs[i].title = tipOf(inf);
+    }
+  }
+  /* รหัสที่มีไส้ (ยังไม่ได้แตก) = ช่อง ItemId สีฟ้าตัวหนา · ตั้งไว้ไม่แตก = น้ำตาล · ไม่มีไส้ = สีเดิม */
+  const fh = FX.map.size ? fileHas() : null;
+  if (!fh || fh.noCol) return;
+  for (let i = 0; i < n; i++){
+    const o = fh.byKey.get(up(view[i][fh.ic]));
+    if (!o || !(o.has || o.keep) || FXI.get(view[i])) continue;
+    const td = trs[i].children[fh.ic + 1];
+    if (!td) continue;
+    td.classList.add(o.has ? "fxhas" : "fxkeep");
+    td.title = o.has ? "มีไส้ใน BOM " + o.n + " รายการ" + (FX.on ? "" : " · ติ๊ก แตกไส้ BOM เพื่อแตก") : "ตั้งไว้ไม่แตก (NOEXPLODE)";
+  }
+};
+function tipOf(inf){
+  if (inf.kind === "leaf"){
+    return "ไส้ BOM ของ " + inf.from.map(f => f.p + " (ต่อ 1 = " + TH(r4(f.per)) + " × Qty " + TH(f.pq) + " = " + TH(r4(f.q)) + ")").join(" + ") +
+           (inf.via && inf.via.length ? "\nแตกผ่าน " + inf.via.join(" › ") : "") +
+           (inf.name ? "\n" + inf.name : "") + (inf.unit ? " · หน่วย " + inf.unit : "") +
+           (inf.zero ? "\n⚠ ใน BOM จำนวนเป็น 0" : "");
+  }
+  return "รวมยอด: เดิม " + inf.base + " + ไส้ของ " + inf.adds.map(a => a.p + " " + TH(r4(a.q)) + " (" + TH(r4(a.per)) + " × " + TH(a.pq) + ")").join(" + ");
+}
+const _drawSummary = drawSummary;
+drawSummary = function(){
+  _drawSummary.apply(this, arguments);
+  staleCheck();
+  if (cur !== "fit") return;
+  const t = T();
+  if (!t.rows.length) return;
+  if (!FX.on && !FX.map.size) return;   /* ไม่ติ๊ก + ไม่มีไส้สักแหล่ง = หน้าจอเหมือน v6.1 */
+  if (!FX.on){
+    const off = cardOffHTML(t);
+    if (!off) return;
+    $("sum").insertAdjacentHTML("afterbegin", off);
+    $("side").className = "on"; fitPanes();
+    const nb0 = $("sum").querySelector("details.fxnob");
+    if (nb0) nb0.addEventListener("toggle", () => { try{ localStorage.setItem(LS_FX_NOB, nb0.open ? "1" : "0"); }catch(_){} });
+    return;
+  }
+  if (t.fx && t.fx.ex && t.fx.ex.length && $("bar").className === "on"){
+    $("bar").insertAdjacentHTML("beforeend", '<div class="stat"><b class="fxb">' + t.fx.ex.length + " → " +
+      TH(t.fx.leafRows + t.fx.merged) + '</b><i>แตกไส้ BOM (รหัส → แถวไส้)</i></div>');
+  }
+  $("sum").insertAdjacentHTML("afterbegin", cardHTML(t));
+  $("side").className = "on";
+  fitPanes();
+  const { ic } = fxCols(t);
+  const nb = $("sum").querySelector("details.fxnob");
+  if (nb) nb.addEventListener("toggle", () => { try{ localStorage.setItem(LS_FX_NOB, nb.open ? "1" : "0"); }catch(_){} });
+  $("sum").querySelectorAll(".fxp.kid[data-v]").forEach(el => {
+    el.onclick = () => {
+      const v = el.dataset.v;
+      t.sel = (t.sel && t.sel.col === ic && t.sel.val === v) ? null : { col: ic, val: v };
+      apply();
+    };
+  });
+};
+function srcBadge(src, prog){ return prog ? '<span class="bd man">ใส่เองในโปรแกรม</span>' : src === "manual" ? '<span class="bd man">ใส่เอง</span>' : '<span class="bd">AX</span>'; }
+const LS_FX_NOB = "imosviewer_fx_nob";   /* จำว่าพับรายการ "ยังไม่มีไส้" ไว้ไหม */
+function nobOpen(){ try{ return localStorage.getItem(LS_FX_NOB) !== "0"; }catch(_){ return true; } }
+/* ทุกรหัสในไฟล์ (ลำดับตามไฟล์) · มีไส้ = ฟ้าตัวหนา · ไม่มีไส้ = เทา · ตั้งไว้ไม่แตก = น้ำตาล */
+function codesHTML(t){
+  const fh = fileHas();
+  if (!fh || fh.noCol || !fh.list.length) return "";
+  const nNo = fh.list.filter(o => !o.has && !o.keep).length;
+  return '<details class="fxnob"' + (nobOpen() ? " open" : "") + '><summary>รหัสในไฟล์ ' + TH(fh.total) +
+    ' · <b class="fxh">มีไส้ ' + fh.has.length + '</b> · <b class="fxn">ไม่มีไส้ ' + TH(nNo) + "</b>" +
+    (fh.keep.length ? ' · <b class="fxk">ไม่แตก ' + fh.keep.length + "</b>" : "") + " · รหัสไหนควรมีไส้ กด ＋ ใส่ไส้</summary>" +
+    fh.list.map(o => {
+      const rec = t.chk && t.chk.map ? t.chk.map.get(String(o.code).trim()) : null;   /* ชื่อจากผลเช็คโค้ด (ถ้ามี) */
+      const st = o.has ? "has" : o.keep ? "keep" : "no";
+      const bd = o.has ? '<span class="sb has">มีไส้ ' + o.n + (o.prog ? " · ใส่เอง" : o.src === "manual" ? " · ไฟล์ใส่เอง" : " · AX") + "</span>"
+               : o.keep ? '<span class="sb keep">ไม่แตก</span>' : '<span class="sb no">ไม่มีไส้</span>';
+      const btn = o.has || o.keep ? '<button type="button" class="cbtn fxadd" data-fxedit="' + escA(o.code) + '">✎ แก้ไส้</button>'
+                                  : (o.sized ? "" : '<button type="button" class="cbtn fxadd" data-fxedit="' + escA(o.code) + '">＋ ใส่ไส้</button>');
+      return '<div class="fxp cd ' + st + '"><span class="v">' + esc(o.code) + '</span><span class="q">× ' + esc(TH(r4(o.qty))) +
+        '</span><span class="nm">' + bd + '<span class="n">' + esc(rec && rec.product_name || "") + "</span>" + btn + "</span></div>";
+    }).join("") +
+    "</details>";
+}
+const CALC_NOTE = '<div class="fxnote fxhow">วิธีคิด: จำนวนไส้ = จำนวนต่อ 1 (BOMQTY ÷ BOMQTYSERIE) × Qty ของแถว · แตกหลายชั้นคูณต่อกัน · เช่น ต่อ 1 = 0.5 × Qty 4 = 2 EA</div>';
+/* ยังไม่ติ๊กแตก แต่มีไส้ BOM โหลดไว้ -> บอกก่อนว่ารหัสไหนมีไส้ (แถวไม่เปลี่ยน) */
+function cardOffHTML(t){
+  const fh = fileHas();
+  if (!fh || fh.noCol) return "";
+  return '<div class="sumcard fxc"><h3><span>ไส้ BOM · ยังไม่ได้ติ๊กแตก</span><em>มีไส้ ' + fh.has.length + " จาก " + TH(fh.total) + " รหัส</em></h3>" +
+    '<div class="fxnote">' + (fh.has.length ? "ติ๊ก <b>แตกไส้ BOM</b> บนแถบเช็คเพื่อแตก · ตอนนี้แถวยังเป็นตามไฟล์" : "ไม่มีรหัสในไฟล์นี้ที่มีไส้ใน BOM ที่โหลดไว้ · ติ๊กแตกก็ไม่มีอะไรเปลี่ยน") + "</div>" +
+    CALC_NOTE + codesHTML(t) + "</div>";
+}
+function cardHTML(t){
+  const fx = t.fx;
+  const head = n => '<div class="sumcard fxc"><h3><span>ไส้ BOM</span><em>' + n + "</em></h3>";
+  if (!FX.map.size){
+    return head("ยังไม่ได้เลือกไฟล์ไส้ BOM") + '<div class="fxnote bad">ติ๊กแตกไส้ไว้ แต่ยังไม่มีไส้สักรหัส · เลือกไฟล์ไส้ BOM หรือใส่ไส้เองทีละรหัสข้างล่าง' +
+      '<br><button type="button" class="cbtn" data-fxopen>เลือกไฟล์ไส้ BOM</button></div>' + CALC_NOTE + codesHTML(t) + "</div>";
+  }
+  if (!fx) return "";
+  if (fx.err) return head("แตกไม่ได้") + '<div class="fxnote bad">' + esc(fx.err) + "</div></div>";
+  const { ic } = fxCols(t);
+  let h = head(fx.ex.length + " รหัส · " + TH(fx.before) + " → " + TH(fx.after) + " แถว");
+  if (!fx.ex.length){
+    h += '<div class="fxnote">ไม่มีรหัสในไฟล์นี้ที่มี BOM ในไฟล์ที่โหลดไว้ (' + TH(FX.map.size) + " รหัส) · แถวเหมือนเดิมทุกแถว</div>";
+    if (FX.srcs.some(s => !s.prog) && FX.srcs.filter(s => !s.prog).every(s => s.only22)) h += '<div class="fxnote bad">ไฟล์ไส้ BOM ที่โหลดไว้มีแต่ BOM ของรหัสแม่ 22 ตัว (ไม้ / ชุด KIT · SQL ในไฟล์ยังกรอง 22 ตัว) ' +
+      "ไม่มี BOM ของรหัสอื่น เช่น TPP… · กดป้าย “ไส้ BOM” ด้านบนเพื่อดูวิธีแก้ SQL ให้ดึงทุกรหัส (ทำครั้งเดียว)</div>";
+  }
+  if (fx.ex.length) h += CALC_NOTE;
+  fx.ex.forEach(rec => {
+    h += '<div class="fxp par"><span class="v">' + esc(rec.code) + srcBadge(rec.src, rec.prog) + '</span><span class="q">× ' + TH(rec.qty) +
+         '</span><span class="nm">แตกเป็น ' + rec.leaves.length + " รายการ" + (rec.deep ? " · ⚠ ลึกเกิน " + FX_MAXD + " ชั้น" : "") +
+         (rec.cyc ? " · ⚠ BOM วนกลับ" : "") +
+         ' <button type="button" class="cbtn fxedit" data-fxedit="' + escA(rec.code) + '" title="แก้ไส้ของรหัสนี้ (ใส่เองในโปรแกรม ใช้แทนของ AX)">✎ แก้ไส้</button></span></div>';
+    rec.leaves.forEach(L => {
+      const on = t.sel && t.sel.col === ic && t.sel.val === String(L.c).trim();
+      h += '<div class="fxp kid' + (on ? " sel" : "") + '" data-v="' + escA(String(L.c).trim()) + '" title="ต่อ 1 = ' + escA(TH(r4(L.per))) +
+           (L.via.length ? " · แตกผ่าน " + escA(L.via.join(" › ")) : "") + (L.into ? " · รวมยอดเข้ากับแถวเดิมในไฟล์" : "") + '">' +
+           '<span class="v">' + esc(L.c) + '</span><span class="q">' + esc(TH(r4(L.q))) + (L.unit ? " " + esc(L.unit) : "") +
+           '</span><span class="nm">' + esc(L.name || "") + (L.zero ? ' <b style="color:var(--miss-ink)">· จำนวนใน BOM = 0</b>' : "") +
+           (L.into ? ' <i style="color:#1f4f8f;font-style:normal">· รวมกับแถวเดิม</i>' : "") +
+           '<small class="fxcalc">ต่อ 1 = ' + esc(TH(r4(L.per))) + " × " + esc(TH(rec.qty)) + " = " + esc(TH(r4(L.q))) + (L.unit ? " " + esc(L.unit) : "") +
+           (L.via.length ? " · ผ่าน " + esc(L.via.join(" › ")) : "") + "</small></span></div>";
+    });
+  });
+  if (fx.merged) h += '<div class="fxnote">ไส้ที่ตรงกับแถวเดิมในไฟล์ รวมยอดเข้าแถวนั้น ' + fx.merged + " แถว (ชี้ที่แถวในตารางดูวิธีรวม)</div>";
+  if (fx.keep.length) h += '<div class="fxnote">ตั้งไว้ไม่แตก (NOEXPLODE): ' + fx.keep.map(esc).join(" · ") + "</div>";
+  fx.bad.forEach(b => { h += '<div class="fxnote bad">' + esc(b.code) + ": " + esc(b.why) + "</div>"; });
+  return h + codesHTML(t) + "</div>";
+}
+const _syncChkBar = syncChkBar;
+syncChkBar = function(){ _syncChkBar.apply(this, arguments); fxSyncUi(); staleCheck(); };
+const _emptyScreen = emptyScreen;
+emptyScreen = function(){
+  _emptyScreen.apply(this, arguments);
+  if (cur !== "fit") return;
+  $("drop").insertAdjacentHTML("beforeend",
+    '<div class="fxempty"><div class="fxet">แตกไส้ BOM <i>(ไม่บังคับ)</i></div>' +
+    '<div class="fxer"><b>①</b><div><span>ไฟล์ไส้ BOM:</span> <span class="fxes" data-fxsrc></span>' +
+    '<br><button type="button" class="cbtn" data-fxopen>เลือก / ดูไฟล์ไส้ BOM…</button></div></div>' +
+    '<div class="fxer"><b>②</b><div><label class="fxsw"><input type="checkbox" data-fxon> แตกไส้ให้เลยเมื่อเปิดไฟล์ export_fitting</label></div></div>' +
+    '<div class="fxeh">ไฟล์งาน export_fitting เปิดด้วยปุ่ม <b>เปิดไฟล์เข้าแท็บนี้</b> ด้านบน หรือลากมาวาง เหมือนเดิม<br>' +
+    "ไฟล์ไส้ BOM = FittingBOM_RefreshOnly.xlsm หรือไฟล์ BOM ใส่เอง · เลือกครั้งเดียว โปรแกรมจำไว้</div></div>");
+  fxSyncUi();
+};
+/* เช็คโค้ดที่เริ่มก่อนสลับชุดแถว -> ผลเป็นของรหัสชุดเก่า · ทิ้งแล้วเช็คใหม่ */
+const _runCheck = runCheck;
+runCheck = async function(auto, key){
+  const k = key || cur, t = TABS[k], rowsAt = t.rows, baseAt = t.base;
+  const r = await _runCheck.apply(this, arguments);
+  if (k === "fit" && t.rows !== rowsAt && t.base === baseAt && baseAt && t.rows.length){
+    t.chk = null; t.onlyNo = false;
+    if (cur === "fit" && mode === "bom"){ syncChkBar(); apply(); }
+    return runCheck(true, k);
+  }
+  return r;
+};
+
+/* ───────── กล่อง ไส้ BOM ───────── */
+const FIT_SQL = [
+  "SELECT V.ITEMID AS PARENT_ITEMID, B.ITEMID AS COMPONENT_ITEMID, P.SEARCHNAME AS COMPONENT_NAME,",
+  "  B.BOMQTY AS BOMQTY, B.BOMQTYSERIE AS BOMQTYSERIE, B.UNITID AS UNITID, B.BOMCONSUMP AS BOMCONSUMP,",
+  "  B.FORMULA AS FORMULA, B.SCRAPVAR AS SCRAPVAR, B.SCRAPCONST AS SCRAPCONST, B.BOMTYPE AS BOMTYPE,",
+  "  B.LINENUM AS LINENUM, DL.INVENTLOCATIONID AS WAREHOUSE, V.BOMID AS BOMID, DV.INVENTSITEID AS SITE,",
+  "  V.VERSIONS AS VERSIONS, B.RECID AS RECID",
+  "FROM (",
+  "  SELECT BV.ITEMID, BV.BOMID, BV.INVENTDIMID, BV.DATAAREAID, BV.PARTITION,",
+  "         COUNT(*) OVER (PARTITION BY BV.ITEMID) AS VERSIONS,",
+  "         ROW_NUMBER() OVER (PARTITION BY BV.ITEMID ORDER BY BV.FROMQTY, BV.FROMDATE DESC, BV.RECID) AS RN",
+  "  FROM dbo.BOMVERSION BV",
+  "  WHERE BV.DATAAREAID = 'stm' AND BV.ACTIVE = 1 AND BV.APPROVED = 1",
+  "    AND BV.FROMDATE <= GETDATE()",
+  "    AND (BV.TODATE >= CAST(GETDATE() AS DATE) OR BV.TODATE < '19010101')",
+  ") V",
+  "JOIN dbo.BOM B ON B.BOMID = V.BOMID AND B.DATAAREAID = V.DATAAREAID AND B.PARTITION = V.PARTITION",
+  "LEFT JOIN dbo.INVENTDIM DV ON DV.INVENTDIMID = V.INVENTDIMID AND DV.DATAAREAID = V.DATAAREAID AND DV.PARTITION = V.PARTITION",
+  "LEFT JOIN dbo.INVENTDIM DL ON DL.INVENTDIMID = B.INVENTDIMID AND DL.DATAAREAID = B.DATAAREAID AND DL.PARTITION = B.PARTITION",
+  "LEFT JOIN dbo.INVENTTABLE IT ON IT.ITEMID = B.ITEMID AND IT.DATAAREAID = B.DATAAREAID AND IT.PARTITION = B.PARTITION",
+  "LEFT JOIN dbo.ECORESPRODUCT P ON P.RECID = IT.PRODUCT",
+  "WHERE V.RN = 1 AND B.FROMDATE <= GETDATE()",
+  "  AND (B.TODATE >= CAST(GETDATE() AS DATE) OR B.TODATE < '19010101')",
+  "ORDER BY V.ITEMID, B.LINENUM"
+].join("\n");
+let fxOpenNow = false;
+function fxOpen(){
+  fxOpenNow = true;
+  $("mtitle").textContent = "ไส้ BOM · แท็บ BOM Fitting";
+  $("mbody").innerHTML = '<div class="fxm" id="fxm"></div>';
+  $("mfoot").innerHTML = '<span class="note">ไฟล์ไส้ BOM อ่านในเครื่องนี้ จำไว้ในเบราว์เซอร์เครื่องนี้ ไม่ส่งออกไปไหน</span>' +
+                         '<span class="sp"></span><button class="cbtn primary" id="fxclose">ปิด</button>';
+  $("fxclose").onclick = closeModal;
+  const mb = $("modal");   /* ทั้งกล่อง (หัว ท้าย พื้นหลัง) ไม่ให้ไฟล์หลุดไปเปิดเป็นตารางหลัก · ปลดตอนปิดกล่อง */
+  mb.ondragover = e => { e.preventDefault(); e.stopPropagation(); const z = $("fxdz"); if (z) z.classList.add("over"); };
+  mb.ondragleave = () => { const z = $("fxdz"); if (z) z.classList.remove("over"); };
+  mb.ondrop = async e => {
+    e.preventDefault(); e.stopPropagation();
+    const z = $("fxdz"); if (z) z.classList.remove("over");
+    $("drop").classList.remove("over");
+    const dt = e.dataTransfer;
+    const items = [...(dt.items || [])].filter(it => it.kind === "file");
+    const hps = items.map(it => it.getAsFileSystemHandle ? it.getAsFileSystemHandle().catch(() => null) : null);
+    const files = [...(dt.files || [])];
+    const hs = await Promise.all(hps);
+    for (let i = 0; i < files.length; i++){
+      const h = hs[i] && hs[i].kind === "file" ? hs[i] : null;
+      try{ await fxLoadFile(files[i], h, false); }catch(err){ toast(err.message || String(err)); }
+    }
+  };
+  $("modal").className = "on";
+  document.body.classList.add("fxmodal");
+  fxModalSync();
+}
+function fxModalSync(){
+  const el = $("fxm");
+  if (!el || $("modal").className !== "on" || !fxOpenNow) return;
+  const t = TABS.fit;
+  const qOld = $("fxq") ? $("fxq").value : "";
+  const srcs = FX.srcs.filter(x => !x.prog).sort((a, b) => (rank(a) - rank(b)) || (a.loadedAt - b.loadedAt));
+  const pg = progSrc();
+  let h = "<p>ติ๊ก <b>แตกไส้ BOM</b> แล้ว รหัสในแท็บ BOM Fitting ที่มี BOM ในไฟล์ข้างล่าง จะถูกแทนด้วยวัสดุข้างใน " +
+          "(จำนวน = Qty ของแถว × จำนวนใน BOM ÷ ต่อกี่ชิ้น · วัสดุที่มี BOM ของตัวเองแตกต่อจนสุด) " +
+          "ไส้ที่เป็นรหัสเดียวกับแถวเดิมในไฟล์ รวมยอดเข้าแถวนั้น · <b>ไม่ติ๊ก</b> = แถวตามไฟล์เหมือนเดิมทุกอย่าง</p>" +
+          '<label class="fxsw"><input type="checkbox" data-fxon> แตกไส้ BOM</label><div id="fxdirbox">' + dirHTML() + "</div>" +
+          "<h4>ไฟล์ไส้ BOM ที่ใช้ (FittingBOM จาก AX / ไฟล์ใส่เอง · ไม่ใช่ไฟล์ export_fitting)</h4><div class=\"fxsrc\">";
+  if (!srcs.length) h += '<div class="fxs none">ยังไม่ได้เลือกไฟล์ไส้ BOM</div>';
+  srcs.forEach(s => {
+    h += '<div class="fxs"><div class="nm"><i class="' + (s.kind === "manual" ? "man" : "") + '">' + (s.kind === "manual" ? "ใส่เอง" : "AX") + "</i>" + esc(s.name) + "</div>" +
+         '<div class="ac">' + (s.auto && FX.dir.mode !== "off" ? '<span class="fxautob">อัตโนมัติ</span>' :
+           (s.handle ? '<button class="cbtn" data-fxre="' + escA(s.id) + '">↻ อ่านไฟล์เดิมใหม่</button>' : "") +
+           '<button class="cbtn" data-fxdel="' + escA(s.id) + '">เอาออก</button>') + "</div>" +
+         '<div class="mt">' + TH(s.nParents) + " รหัส · " + TH(s.nLines) + " บรรทัด" + (s.sheet ? " · ชีต " + esc(s.sheet) : "") +
+         " · ไฟล์แก้ " + esc(dt(s.fileDate)) + " · โหลด " + esc(dt(s.loadedAt)) + (s.bad ? " · ข้าม " + TH(s.bad) + " แถวที่อ่านไม่ได้" : "") + "</div>" +
+         (s.only22 && s.kind === "ax" ? '<div class="wn">ไฟล์นี้มีแต่ BOM ของรหัสแม่ยาว 22 ตัว (ไม้ / ชุด KIT) เพราะ SQL ในไฟล์ยังกรอง 22 ตัวอยู่ ' +
+           "รหัสอื่นอย่าง TPP… 414LT… จะไม่ถูกแตก · แก้ SQL ในไฟล์ตัวนี้ให้ดึงทุกรหัส ทำครั้งเดียว (ดูวิธีข้างล่าง)</div>" : "") +
+         "</div>";
+  });
+  h += "</div>";
+  /* ใส่เองในโปรแกรม */
+  const pl = pg ? [...new Set(pg.lines.map(l => l[0]))].sort((a, b) => up(a).localeCompare(up(b))) : [];
+  h += "<h4>ไส้ที่ใส่เองในโปรแกรม (ชนะไฟล์ทุกแบบ)</h4><div class=\"fxsrc fxprog\">" +
+       (pl.length
+         ? '<div class="fxs"><div class="nm"><i class="man">ใส่เอง</i>' + TH(pl.length) + " รหัส · " + TH(pg.nLines) + " บรรทัด</div>" +
+           '<div class="ac"><button class="cbtn" data-fxexp>⬇ ส่งออกเป็นไฟล์</button><button class="cbtn" data-fxclr>ล้างทั้งหมด</button></div>' +
+           '<div class="mt">แก้ล่าสุด ' + esc(dt(pg.loadedAt)) + " · ส่งออกแล้วเอาไฟล์ไปเลือกที่เครื่องอื่นได้</div></div>" +
+           pl.map(code => { const ls = pg.lines.filter(l => up(l[0]) === up(code)), no = ls.some(l => l[6]);
+             return '<div class="fxs"><div class="nm">' + esc(code) + '</div><div class="ac"><button class="cbtn" data-fxedit="' + escA(code) + '">✎ แก้</button></div>' +
+               '<div class="mt">' + (no ? "ไม่แตก" : ls.map(l => esc(l[1]) + " " + esc(TH(r4(l[2] / (l[3] || 1)))) + " " + esc(l[4])).join(" · ")) + "</div></div>"; }).join("")
+         : '<div class="fxs none">ยังไม่มี · ใส่ได้จากปุ่ม ＋ ใส่ไส้ ในการ์ดไส้ BOM หรือช่องดูไส้ข้างล่าง</div>') + "</div>";
+  h += '<div class="fxdz" id="fxdz">' + (FX.busy ? esc(FX.busy) : "ลากไฟล์ไส้ BOM มาวางตรงนี้ (.xlsm .xlsx .csv)") +
+       '<br><button class="cbtn primary" data-fxpick>เลือกไฟล์ไส้ BOM…</button>' +
+       '<button class="cbtn" data-fxtpl>⬇ แบบฟอร์ม BOM ใส่เอง</button></div>' +
+       (FX.msg ? '<div class="fxmsg ' + (FX.msg.ok ? "ok" : "bad") + '" id="fxmsg">' + (FX.msg.ok ? "✓ " : "✕ ") + esc(FX.msg.text) +
+         ' <span class="at">' + esc(dt(FX.msg.at)) + "</span></div>" : "") +
+       (FX.err ? '<p style="color:var(--miss-ink);margin-top:8px">' + esc(FX.err) + "</p>" : "");
+  /* ไฟล์ที่เปิดอยู่: มีไส้กี่รหัส (บอกแม้ยังไม่ติ๊ก) */
+  h += "<h4>ไฟล์ที่เปิดอยู่" + (t.base && t.base.length ? ": " + esc(t.file) : "") + '</h4><div class="fxres" id="fxfile">';
+  if (!t.base || !t.base.length) h += '<div class="fxnote">ยังไม่ได้เปิดไฟล์ export_fitting · เปิดแล้วจะบอกว่ารหัสไหนมีไส้</div>';
+  else if (!FX.map.size) h += '<div class="fxnote bad">ยังไม่มีไส้สักรหัส · เลือกไฟล์ไส้ BOM หรือใส่ไส้เองในการ์ดไส้ BOM</div>';
+  else {
+    const fh = fileHas();
+    if (fh.noCol) h += '<div class="fxnote bad">ไฟล์นี้ไม่มีคอลัมน์ ItemId จึงเช็คไส้ไม่ได้</div>';
+    else if (!fh.has.length){
+      h += '<div class="fxnote bad">ไม่มีรหัสไหนในไฟล์นี้ที่มีไส้ใน BOM ที่โหลดไว้ (0 จาก ' + TH(fh.total) + " รหัส) · ติ๊กแตกไส้ก็ไม่มีอะไรเปลี่ยน" +
+           (FX.srcs.some(x => !x.prog) && FX.srcs.filter(x => !x.prog).every(x => x.only22) ? " · ไฟล์ไส้ BOM ที่โหลดไว้มีแต่ BOM ของรหัสแม่ 22 ตัว ถ้ารหัสพวกนี้ควรมีไส้ แก้ SQL ในไฟล์ให้ดึงทุกรหัส (วิธีอยู่ข้างล่าง) หรือใส่เองที่ปุ่ม ＋ ใส่ไส้ ในการ์ด" : "") + "</div>";
+    } else {
+      h += '<div class="fxnote">มีไส้ <b>' + fh.has.length + "</b> จาก " + TH(fh.total) + " รหัส: " + fh.has.slice(0, 12).map(esc).join(" · ") + (fh.has.length > 12 ? " …" : "") +
+           (FX.on ? "" : ' · <b>ยังไม่ได้ติ๊ก แตกไส้ BOM</b>') + "</div>";
+      if (FX.on && t.fx && !t.fx.err) h += '<div class="fxnote">แตกแล้ว · แถว ' + TH(t.fx.before) + " → " + TH(t.fx.after) + " · ไม่มีไส้ " + TH(t.fx.noBom) + " รหัส (คงเดิม)</div>";
+    }
+    if (fh.keep.length) h += '<div class="fxnote">ตั้งไว้ไม่แตก: ' + fh.keep.map(esc).join(" · ") + "</div>";
+  }
+  h += "</div>";
+  h += '<h4>ดูไส้ของรหัส</h4><div class="fxq"><input id="fxq" placeholder="พิมพ์รหัส เช่น 414LT00002450007" autocomplete="off" spellcheck="false"></div><div class="fxqr" id="fxqr"></div>';
+  h += "<details><summary>ไฟล์ FittingBOM_RefreshOnly.xlsm มีแต่รหัส 22 ตัว — แก้ให้มีไส้ทุกรหัส (ทำครั้งเดียว)</summary>" +
+       "SQL ในไฟล์ FittingBOM_RefreshOnly.xlsm กรองไว้เฉพาะรหัสแม่ยาว 22 ตัว (ไม้ / ชุด KIT) จึงไม่มีไส้ของรหัสอื่น เช่น TPP… " +
+       "ที่หน้าต่าง BOM ไม้ (AX) ของ Production V2 ใน Odoo มี (ดึงจาก API) · แก้ที่ไฟล์ตัวเดิม ไม่ต้องก๊อปไฟล์:" +
+       "<ol><li>กด <b>คัดลอก SQL</b> ข้างล่าง</li>" +
+       "<li>เปิดไฟล์ FittingBOM_RefreshOnly.xlsm ใน Excel → Enable Content → Data → Queries &amp; Connections → คลิกขวาที่ connection → Properties → แท็บ Definition → ช่อง Command text " +
+       "ลบของเดิมแล้ววาง SQL ที่คัดลอก (ไม่ต้องแตะ Connection string) → OK → Refresh All → Save</li>" +
+       "<li>เสร็จ · ReCheck อ่านไฟล์ใหม่เองจากโฟลเดอร์ (หรือกด ↻ ตรวจตอนนี้) · สคริปต์ Refresh อัตโนมัติ Refresh ไฟล์นี้ต่อตามเดิม</li></ol>" +
+       "SQL นี้เหมือนของเดิมทุกอย่าง แค่ตัดเงื่อนไข LEN(ITEMID) = 22 ออก ได้ BOM ทุกรหัสที่ Active + Approved ใน AX (จำนวนบรรทัดควรใกล้กับหน้าต่าง BOM ไม้ (AX) ใน Production V2) · " +
+       "Production V2 แตกเฉพาะรหัสไม้ปิดผิว 22 ตัวเหมือนเดิม รหัสที่เพิ่มมาไม่ถูกแตก · ไฟล์ใหญ่ขึ้น ReCheck อ่านเบื้องหลัง หน้าจอไม่ค้าง" +
+       "<pre id=\"fxsql\">" + esc(FIT_SQL) + "</pre>" +
+       '<button class="cbtn" data-fxsql style="margin-top:6px">คัดลอก SQL</button></details>';
+  el.innerHTML = h;
+  fxSyncUi();
+  el.querySelectorAll("[data-fxdel]").forEach(b => b.onclick = () => fxRemove(b.dataset.fxdel));
+  el.querySelectorAll("[data-fxre]").forEach(b => b.onclick = () => fxReread(b.dataset.fxre));
+  el.querySelectorAll("[data-fxpick]").forEach(b => b.onclick = () => fxPick());
+  el.querySelectorAll("[data-fxtpl]").forEach(b => b.onclick = () => fxTemplate());
+  el.querySelectorAll("[data-fxsql]").forEach(b => b.onclick = () => copyText(FIT_SQL, "คัดลอก SQL แล้ว"));
+  el.querySelectorAll("[data-fxexp]").forEach(b => b.onclick = () => fxExportProg());
+  dirBind(el);
+  el.querySelectorAll("[data-fxclr]").forEach(b => b.onclick = async () => {
+    if (!b.dataset.sure){ b.dataset.sure = "1"; b.textContent = "กดอีกครั้งเพื่อล้าง"; b.classList.add("warn"); return; }
+    FX.srcs = FX.srcs.filter(x => !x.prog);
+    let okDel = true;
+    try{ await idbDel(PROG_ID); }catch(e){ okDel = false; FX.err = "ล้างที่จำในเครื่องไม่สำเร็จ (" + (e && e.message || e) + ") · เปิดหน้าใหม่แล้วอาจกลับมา"; }
+    buildMap(); fxRefresh(); fxModalSync();
+    toast(okDel ? "ล้างไส้ที่ใส่เองในโปรแกรมแล้ว" : FX.err);
+  });
+  const qi = $("fxq");
+  qi.oninput = () => lookup(qi.value);
+  qi.addEventListener("paste", e => e.stopPropagation());   /* ตัวรับวางตารางของทั้งหน้าข้ามเฉพาะช่องค้นหา */
+  if (qOld){ qi.value = qOld; lookup(qOld); }
+}
+function dirBind(el){
+  el.querySelectorAll("[data-fxdir]").forEach(b => b.onclick = () => {
+    const a = b.dataset.fxdir;
+    if (a === "allow") dirAllow();
+    else if (a === "pv2") dirUsePv2();
+    else if (a === "pick") dirPick();
+    else if (a === "now") dirSync({ force: true });
+    else if (a === "off") dirOff();
+    else if (a === "on") dirOn();
+  });
+}
+/* วาดใหม่เฉพาะส่วนอ่านเองจากโฟลเดอร์ (ตรวจทุกนาที ไม่ไปล้างช่องค้นหา / หัวข้อที่เปิดไว้) */
+function dirModalSync(){
+  const el = $("fxdirbox");
+  if (!el || $("modal").className !== "on" || !fxOpenNow) return;
+  el.innerHTML = dirHTML(); dirBind(el);
+}
+function dirHTML(){
+  const D = FX.dir, sameWeb = !!(D.pv2 && D.pv2.length);
+  const sigOf = f => f.name + "|" + f.size + "|" + f.mod;
+  const label = { "fb-ax": "BOM จาก AX", "rc-ax": "BOM จาก AX (ReCheck)", "fb-man": "BOM ใส่เอง", "rc-man": "BOM ใส่เอง (ReCheck)" };
+  let h = '<h4>อ่านเองจากโฟลเดอร์ (แบบ Production V2)</h4><div class="fxauto">';
+  if (D.mode === "off") h += '<div class="st">ปิดอยู่ · ใช้ไฟล์ที่เลือกเองด้านล่าง</div>';
+  else if (!D.handle){
+    h += '<div class="st">ยังไม่ได้ตั้งโฟลเดอร์ · ' + (location.protocol === "https:"
+      ? "Production V2 ในเบราว์เซอร์นี้ยังไม่ได้เลือกโฟลเดอร์ (หรือเปิด Production V2 จากที่อื่น) — กด เลือกโฟลเดอร์… แล้วเลือกโฟลเดอร์ที่มีไฟล์ FittingBOM"
+      : "เปิดแบบนี้ (ReCheck-Bom.cmd / ไฟล์ในเครื่อง) อ่านโฟลเดอร์ที่ Production V2 จำไว้ไม่ได้ — กด เลือกโฟลเดอร์… ครั้งเดียว") + "</div>";
+  } else {
+    const from = D.from === "own" ? "เลือกเอง" : "เดียวกับ Production V2" + (D.from === "gasAxDir" ? " (โฟลเดอร์ Excel ของ AX)" : " (โฟลเดอร์ Server)");
+    h += '<div class="st"><b>' + esc(D.name) + "</b> · " + esc(from) + "</div>";
+    if (D.perm !== "granted") h += '<div class="st warn">เบราว์เซอร์ต้องให้กดอนุญาตอ่านโฟลเดอร์นี้อีกครั้ง (ถามรอบละครั้งหลังเปิดเบราว์เซอร์ใหม่ · ถ้ามีตัวเลือก “อนุญาตทุกครั้ง” เลือกอันนั้น)' +
+      ' <button type="button" class="cbtn primary" data-fxdir="allow">อนุญาตอ่านโฟลเดอร์</button></div>';
+    else {
+      const ks = ["fb-ax", "rc-ax", "fb-man", "rc-man"].filter(k => D.files[k]);
+      h += '<div class="st">' + (D.busy ? "กำลังตรวจ…" : "ตรวจไฟล์ใหม่ทุก 1 นาที · ล่าสุด " + esc(dt(D.at))) + "</div>";
+      h += ks.length ? ks.map(k => { const f = D.files[k], cur = FX.srcs.find(s => s.auto === k), used = cur && cur.sig === sigOf(f), bad = D.bad[k] && D.bad[k].sig === sigOf(f);
+             return '<div class="fl"><span class="k">' + esc(label[k]) + '</span><span class="v">' + esc((f.sub ? f.sub + "/" : "") + f.name) +
+             '</span><span class="m">แก้ ' + esc(dt(f.mod)) + "</span></div>" +
+             (used ? "" : '<div class="st ' + (bad ? "bad" : "warn") + '">' + (bad ? "ไฟล์นี้อ่านไม่ผ่าน ยังไม่ได้ใช้" : "ยังไม่ได้อ่านไฟล์นี้ (กำลังอ่าน / รอบหน้า)") +
+               (cur ? " · ตอนนี้ใช้ " + esc(cur.name) + " ที่อ่านไว้ " + esc(dt(cur.loadedAt)) : "") + "</div>"); }).join("")
+        : '<div class="st warn">ไม่พบไฟล์ FittingBOM*.xlsm / ReCheckBOM*.xlsx ในโฟลเดอร์นี้ (ดูชั้นแรก และโฟลเดอร์ย่อย 1 ชั้น)</div>';
+    }
+    if (D.err) h += '<div class="st bad">' + esc(D.err) + "</div>";
+  }
+  h += '<div class="bt">' +
+    (sameWeb && D.mode !== "pv2" ? '<button type="button" class="cbtn" data-fxdir="pv2">ใช้โฟลเดอร์เดียวกับ Production V2</button>' : "") +
+    (window.showDirectoryPicker ? '<button type="button" class="cbtn" data-fxdir="pick">' + (D.mode === "own" ? "เปลี่ยนโฟลเดอร์…" : "เลือกโฟลเดอร์…") + "</button>" : "") +
+    (D.handle && D.perm === "granted" && D.mode !== "off" ? '<button type="button" class="cbtn" data-fxdir="now">↻ ตรวจตอนนี้</button>' : "") +
+    (D.mode !== "off" && D.handle ? '<button type="button" class="cbtn" data-fxdir="off">หยุดอ่านเอง</button>' : "") +
+    (D.mode === "off" ? '<button type="button" class="cbtn" data-fxdir="on">เปิดอ่านเองอีกครั้ง</button>' : "") +
+    "</div></div>";
+  return h;
+}
+function lookup(v){
+  const out = $("fxqr"); if (!out) return;
+  const c = String(v || "").trim();
+  if (!c){ out.innerHTML = ""; return; }
+  const e = FX.map.get(up(c));
+  const btn = (txt) => '<div class="h"><button type="button" class="cbtn" data-fxedit="' + escA(c) + '">' + txt + "</button></div>";
+  if (!e){ out.innerHTML = '<div class="h">' + esc(c) + " · ไม่มี BOM ในไฟล์ที่โหลดไว้</div>" + btn("＋ ใส่ไส้รหัสนี้"); return; }
+  if (e.no){ out.innerHTML = '<div class="h">' + esc(c) + " · ตั้งไว้ไม่แตก (NOEXPLODE) · " + esc(e.file) + "</div>" + btn("✎ แก้"); return; }
+  const lv = leavesOf(c);
+  let h = '<div class="h">' + esc(e.parent) + " · " + (e.src === "manual" ? "ใส่เอง" : "AX") + " · " + esc(e.file) + " · ต่อ 1 หน่วย" +
+          (lv && lv.list.length !== e.lines.length || (lv && lv.list.some(L => L.via.length)) ? " · แตกต่อจนสุดได้ " + lv.list.length + " รายการ" : "") + "</div>";
+  (lv ? lv.list : []).forEach(L => {
+    h += '<div class="l"><span class="v">' + esc(L.c) + '</span><span class="q">' + esc(TH(r4(L.per))) + (L.unit ? " " + esc(L.unit) : "") +
+         "</span><span>" + esc(L.name || "") + (L.via.length ? ' <i style="color:var(--faint);font-style:normal">· ผ่าน ' + esc(L.via.join(" › ")) + "</i>" : "") + "</span></div>";
+  });
+  out.innerHTML = h + btn("✎ แก้ไส้ (ใส่เองในโปรแกรม ใช้แทน)");
+}
+function copyText(txt, ok){
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject())
+    .then(() => toast(ok))
+    .catch(() => {
+      const ta = document.createElement("textarea");
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); toast(ok); }catch(_){ toast("คัดลอกไม่สำเร็จ"); }
+      ta.remove();
+    });
+}
+function fxTemplate(){
+  if (typeof XLSX === "undefined") return toast("ตัวเขียน .xlsx โหลดไม่ได้");
+  const head = ["PARENT_ITEMID (รหัสหลัก)", "COMPONENT_ITEMID (รหัสวัสดุ)", "COMPONENT_NAME (ชื่อ ไม่ใส่ก็ได้)",
+                "BOMQTY (จำนวนต่อชิ้น)", "BOMQTYSERIE (ต่อกี่ชิ้น ว่าง=1)", "UNITID (หน่วย)", "NOTE (หมายเหตุ)"];
+  const ws = XLSX.utils.aoa_to_sheet([head]);
+  ws["!cols"] = head.map(hh => ({ wch: Math.max(16, hh.length + 2) }));
+  const help = XLSX.utils.aoa_to_sheet([
+    ["ไฟล์ไส้ BOM ใส่เอง สำหรับ ReCheck Bom (แท็บ BOM Fitting · แตกไส้ BOM)"], [""],
+    ["1 แถว = วัสดุ 1 ตัวของรหัสหลัก 1 รหัส · แถวถัดไปของรหัสหลักตัวเดิม เว้นช่อง PARENT_ITEMID ว่างได้"],
+    ["BOMQTY = จำนวนวัสดุต่อรหัสหลัก 1 หน่วย · BOMQTYSERIE = ต่อกี่หน่วย (ว่าง = 1)"],
+    ["รหัสที่อยู่ในไฟล์นี้ใช้แทน BOM จาก AX ของรหัสเดียวกันทั้งชุด"],
+    ["ไม่อยากให้รหัสไหนแตก: ใส่ COMPONENT_ITEMID = NOEXPLODE"],
+    ["ตั้งชื่อไฟล์ให้มีคำว่า Manual หรือ ใส่เอง เช่น ReCheckBOM_Manual.xlsx · อย่าตั้งชื่อขึ้นต้น FittingBOM (Production V2 จะหยิบไปใช้)"]
+  ]);
+  help["!cols"] = [{ wch: 110 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "BOM");
+  XLSX.utils.book_append_sheet(wb, help, "วิธีใช้");
+  XLSX.writeFile(wb, "ReCheckBOM_Manual.xlsx");
+}
+/* ───────── ใส่ไส้เองในโปรแกรม ─────────
+   รหัสที่ AX ไม่มีไส้ (หรือไส้ใน AX ไม่ถูก) ใส่เองทีละรหัส · จำนวน = ต่อ 1 หน่วยของรหัสหลัก
+   เก็บเป็นแหล่งพิเศษ id = PROG_ID ใน IndexedDB · ชนะไฟล์ใส่เองและไฟล์ AX ของรหัสเดียวกัน (ทั้งชุด)
+   ส่งออกเป็น .xlsx (หัวแบบไฟล์ใส่เอง) ไปเลือกที่เครื่องอื่นได้ */
+const PROG_ID = "prog:ใส่เองในโปรแกรม";
+const progSrc = () => FX.srcs.find(s => s.id === PROG_ID) || null;
+function progApply(rec, parent, lines, noExp){
+  const P = up(parent);
+  const s = rec ? Object.assign({}, rec) : { id: PROG_ID, kind: "manual", prog: true, name: "ใส่เองในโปรแกรม", sheet: "", fileDate: 0, loadedAt: 0,
+                                             nLines: 0, nParents: 0, bad: 0, zero: 0, only22: false, lines: [] };
+  s.lines = (s.lines || []).filter(l => up(l[0]) !== P);
+  if (noExp) s.lines.push([parent, "", 0, 1, "", "", 1]);
+  else lines.forEach(l => s.lines.push([parent, l.c, l.q, l.per, l.unit, l.name, 0]));
+  s.nParents = new Set(s.lines.map(l => up(l[0]))).size;
+  s.nLines = s.lines.filter(l => !l[6]).length;
+  s.loadedAt = s.fileDate = Date.now();
+  return s;
+}
+/* อ่านของในเครื่องล่าสุด แก้เฉพาะรหัสนี้ แล้วเขียนกลับในธุรกรรมเดียว — เปิดหลายแท็บพร้อมกันไม่ทับของกัน */
+async function progSave(parent, lines, noExp){
+  let merged = null;
+  try{
+    const db = await idb();
+    try{
+      merged = await new Promise((res, rej) => {
+        const tx = db.transaction(FX_STORE, "readwrite"), st = tx.objectStore(FX_STORE);
+        let out = null;
+        const g = st.get(PROG_ID);
+        g.onsuccess = () => {
+          out = progApply(g.result && Array.isArray(g.result.lines) ? g.result : null, parent, lines, noExp);
+          if (out.lines.length) st.put(out); else st.delete(PROG_ID);
+        };
+        tx.oncomplete = () => res(out);
+        tx.onerror = () => rej(tx.error || new Error("IndexedDB"));
+        tx.onabort = () => rej(tx.error || new Error("IndexedDB ถูกยกเลิก"));
+      });
+    } finally { try{ db.close(); }catch(_){} }
+    FX.err = "";
+  }catch(e){
+    merged = progApply(progSrc(), parent, lines, noExp);   /* เก็บในเครื่องไม่ได้ -> ใช้ได้เฉพาะรอบนี้ */
+    FX.err = "จำไส้ที่ใส่เองในเครื่องไม่ได้ (" + (e && e.message || e) + ") · ใช้ได้เฉพาะรอบนี้ ส่งออกเป็นไฟล์เก็บไว้ก่อน";
+  }
+  FX.srcs = FX.srcs.filter(x => !x.prog);
+  if (merged && merged.lines.length) FX.srcs.push(merged);
+  buildMap(); fxRefresh();
+}
+/* ไส้ของรหัสจากแหล่งอื่น (ไม่ใช่ที่ใส่ในโปรแกรม) ไว้ดูเทียบ / เอามาแก้ */
+function refOf(code){
+  const P = up(code);
+  const srcs = FX.srcs.filter(s => !s.prog).sort((a, b) => (rank(b) - rank(a)) || (b.loadedAt - a.loadedAt));
+  for (const s of srcs){
+    const ls = s.lines.filter(l => up(l[0]) === P);
+    if (ls.length) return { file: s.name, kind: s.kind, no: ls.some(l => l[6]), lines: ls.filter(l => !l[6]).map(l => ({ c: String(l[1]), q: +l[2], per: +l[3] || 1, unit: l[4] || "", name: l[5] || "" })) };
+  }
+  return null;
+}
+/* Qty รวมของรหัสในไฟล์ที่เปิดอยู่ (ไว้ทำตัวอย่างผลตอนแตก) */
+function qtyInFile(code){
+  const t = TABS.fit, { ic, qc } = fxCols(t);
+  if (!t.base || ic < 0 || qc < 0) return null;
+  let n = 0, hit = false;
+  t.base.forEach(r => { if (up(r[ic]) === up(code)){ const q = numQ(r[qc]); if (isFinite(q)){ n += q; hit = true; } } });
+  return hit ? n : null;
+}
+let ED = null;
+function fxEdit(code, back){
+  const P = String(code || "").trim();
+  if (!P) return;
+  fxOpenNow = false;
+  const mine = progSrc() ? progSrc().lines.filter(l => up(l[0]) === up(P)) : [];
+  const ref = refOf(P);
+  ED = { parent: P, back: !!back, q: back && $("fxq") ? $("fxq").value : "", ref, fq: qtyInFile(P),
+         no: mine.some(l => l[6]),
+         rows: mine.filter(l => !l[6]).map(l => ({ c: String(l[1]), q: fmtPer(+l[2], +l[3]), unit: l[4] || "", name: l[5] || "" })),
+         had: mine.length > 0 };
+  if (!ED.rows.length) ED.rows.push({ c: "", q: "", unit: "EA", name: "" });
+  $("mtitle").textContent = "ใส่ไส้ · " + P;
+  const m = $("modal");
+  m.ondragover = e => { e.preventDefault(); e.stopPropagation(); };
+  m.ondrop = e => { e.preventDefault(); e.stopPropagation(); toast("ปิดตัวใส่ไส้ก่อน แล้วค่อยลากไฟล์"); };
+  m.className = "on";
+  document.body.classList.add("fxmodal");
+  edDraw();
+}
+function fmtPer(q, per){ return per && per !== 1 ? q + "/" + per : String(q); }
+function edRead(){
+  const box = $("fxed"); if (!box) return;
+  box.querySelectorAll("tr[data-i]").forEach(tr => {
+    const r = ED.rows[+tr.dataset.i]; if (!r) return;
+    r.c = tr.querySelector("[data-k=c]").value; r.q = tr.querySelector("[data-k=q]").value;
+    r.unit = tr.querySelector("[data-k=unit]").value; r.name = tr.querySelector("[data-k=name]").value;
+  });
+  const no = $("fxedno"); if (no) ED.no = no.checked;
+}
+function edCheck(){
+  const out = [], errs = [];
+  ED.rows.forEach((r, i) => {
+    const c = String(r.c || "").trim(), qs = String(r.q ?? "").trim();
+    if (!c && !qs && !String(r.name || "").trim()) return;           // แถวว่าง ข้าม
+    if (!c){ errs.push([i, "ใส่รหัสวัสดุ"]); return; }
+    if (up(c) === up(ED.parent)){ errs.push([i, "รหัสวัสดุซ้ำกับรหัสหลัก"]); return; }
+    if (up(c) === "NOEXPLODE"){ errs.push([i, "ไม่แตกรหัสนี้ ให้ติ๊กช่อง “ไม่แตกรหัสนี้” ข้างล่างแทน"]); return; }
+    const qp = qtyPer(qs);
+    if (!qp || !(qp.q > 0)){ errs.push([i, "จำนวนต่อ 1 ต้องเป็นตัวเลขมากกว่า 0 (เช่น 0.5 หรือ 1/4)"]); return; }
+    out.push({ c, q: qp.q, per: qp.per || 1, unit: String(r.unit || "").trim() || "EA", name: String(r.name || "").trim() });
+  });
+  return { out, errs };
+}
+function edDraw(errs){
+  const fq = ED.fq, em = new Map((errs || []).map(e => [e[0], e[1]]));
+  const ref = ED.ref;
+  let h = '<div class="fxm" id="fxed">' +
+    "<p>ใส่ไส้ของ <b>" + esc(ED.parent) + "</b> · จำนวน = <b>ต่อ 1 หน่วย</b>ของรหัสนี้ · ตอนแตก จำนวนไส้ = จำนวนต่อ 1 × Qty ของแถว " +
+    "(เช่น ต่อ 1 = 0.5 · Qty 4 → 0.5 × 4 = 2 EA) · ใส่ 1/4 = 1 ชิ้นต่อ 4 หน่วย</p>" +
+    (fq !== null ? '<p class="fxsub">ในไฟล์ที่เปิดอยู่ ' + esc(ED.parent) + " มี Qty รวม <b>" + esc(TH(fq)) + "</b> · ช่อง ผลตอนแตก คิดให้ดู</p>" : "") +
+    (ref ? '<div class="fxref"><b>ไส้ใน ' + (ref.kind === "ax" ? "AX" : "ไฟล์ใส่เอง") + "</b> (" + esc(ref.file) + ")" +
+      (ref.no ? " · ตั้งไว้ไม่แตก" : "") + " · ที่ใส่ตรงนี้จะใช้แทนทั้งชุด" +
+      ref.lines.map(l => '<div class="l"><span class="v">' + esc(l.c) + '</span><span class="q">' + esc(TH(r4(l.q / l.per)))  + " " + esc(l.unit) + "</span><span>" + esc(l.name) + "</span></div>").join("") +
+      (ref.lines.length ? '<button type="button" class="cbtn" id="fxedcopy">เอาไส้นี้มาแก้</button>' : "") + "</div>"
+         : '<div class="fxref none">ในไฟล์ไส้ BOM ที่โหลดไว้ ไม่มีไส้ของ ' + esc(ED.parent) + "</div>") +
+    '<table class="fxedt"><thead><tr><th>#</th><th>รหัสวัสดุ</th><th>จำนวนต่อ 1</th><th>หน่วย</th><th>ชื่อ (ไม่ใส่ก็ได้)</th>' +
+    (fq !== null ? "<th>ผลตอนแตก</th>" : "") + "<th></th></tr></thead><tbody>";
+  ED.rows.forEach((r, i) => {
+    const qp = qtyPer(String(r.q ?? "").trim());
+    const res = fq !== null && qp && qp.q > 0 ? TH(r4(qp.q / (qp.per || 1))) + " × " + TH(fq) + " = " + TH(r4(qp.q / (qp.per || 1) * fq)) + " " + (String(r.unit || "").trim() || "EA") : "";
+    h += '<tr data-i="' + i + '"' + (em.has(i) ? ' class="bad"' : "") + "><td>" + (i + 1) + "</td>" +
+      '<td><input data-k="c" value="' + escA(r.c) + '" placeholder="รหัส" spellcheck="false"></td>' +
+      '<td><input data-k="q" value="' + escA(r.q) + '" placeholder="0.5" inputmode="decimal"></td>' +
+      '<td><input data-k="unit" value="' + escA(r.unit) + '" placeholder="EA"></td>' +
+      '<td><input data-k="name" value="' + escA(r.name) + '"></td>' +
+      (fq !== null ? '<td class="res">' + esc(res) + "</td>" : "") +
+      '<td><button type="button" class="cbtn" data-fxrow="' + i + '" title="ลบบรรทัดนี้">×</button></td></tr>' +
+      (em.has(i) ? '<tr class="err"><td></td><td colspan="' + (fq !== null ? 6 : 5) + '">' + esc(em.get(i)) + "</td></tr>" : "");
+  });
+  h += "</tbody></table>" +
+    '<div class="fxedb"><button type="button" class="cbtn" id="fxedadd">＋ เพิ่มบรรทัด</button>' +
+    '<span class="fxsub">วางจาก Excel ได้ (คอลัมน์ รหัส · จำนวนต่อ 1 · หน่วย · ชื่อ) — คลิกช่องรหัสแล้ว Ctrl+V</span></div>' +
+    '<label class="fxsw"><input type="checkbox" id="fxedno"' + (ED.no ? " checked" : "") + "> ไม่แตกรหัสนี้ (ใช้รหัสตรง ๆ แม้ AX มีไส้)</label>" +
+    "</div>";
+  $("mbody").innerHTML = h;
+  $("mfoot").innerHTML = (ED.had ? '<button class="cbtn" id="fxeddel">ลบไส้ที่ใส่เอง</button>' : "") +
+    '<span class="note">จำไว้ในเครื่องนี้ · ส่งออกเป็นไฟล์ได้ที่กล่อง ไส้ BOM</span><span class="sp"></span>' +
+    '<button class="cbtn" id="fxedcancel">ยกเลิก</button><button class="cbtn primary" id="fxedsave">บันทึก</button>';
+  const box = $("fxed");
+  box.addEventListener("paste", e => {
+    e.stopPropagation();   /* ไม่ให้ตัวรับวางตารางของทั้งหน้าเอาไปเปิดเป็นไฟล์ */
+    const tg = e.target, x = (e.clipboardData || window.clipboardData).getData("text");
+    if (!tg || !tg.matches || !tg.matches("input[data-k]") || !x || !/[\t\n]/.test(x.replace(/\r?\n$/, ""))) return;
+    e.preventDefault(); edRead();
+    const at = +tg.closest("tr").dataset.i;
+    /* แบบตาราง: เติมจากช่องที่คลิก ไปขวาและลงล่าง (แถวไม่พอ เพิ่มให้) */
+    const K = ["c", "q", "unit", "name"], k0 = Math.max(0, K.indexOf(tg.dataset.k));
+    const lines = x.replace(/\r/g, "").replace(/\n+$/, "").split("\n").map(l => l.split("\t"));
+    lines.forEach((cs, j) => {
+      if (!ED.rows[at + j]) ED.rows[at + j] = { c: "", q: "", unit: "EA", name: "" };
+      cs.forEach((v, m) => { const k = K[k0 + m]; if (k) ED.rows[at + j][k] = String(v || "").trim() || (k === "unit" ? "EA" : ""); });
+    });
+    edDraw();
+  });
+  box.addEventListener("input", e => { if (e.target.matches("input[data-k=q],input[data-k=unit]") && fq !== null){
+    edRead(); const tr = e.target.closest("tr"), r = ED.rows[+tr.dataset.i], qp = qtyPer(String(r.q ?? "").trim()), td = tr.querySelector("td.res");
+    if (td) td.textContent = qp && qp.q > 0 ? TH(r4(qp.q / (qp.per || 1))) + " × " + TH(fq) + " = " + TH(r4(qp.q / (qp.per || 1) * fq)) + " " + (String(r.unit || "").trim() || "EA") : "";
+  } });
+  box.querySelectorAll("[data-fxrow]").forEach(b => b.onclick = () => { edRead(); ED.rows.splice(+b.dataset.fxrow, 1); if (!ED.rows.length) ED.rows.push({ c: "", q: "", unit: "EA", name: "" }); edDraw(); });
+  $("fxedadd").onclick = () => { edRead(); ED.rows.push({ c: "", q: "", unit: "EA", name: "" }); edDraw(); const ins = $("fxed").querySelectorAll("input[data-k=c]"); ins[ins.length - 1].focus(); };
+  const cp = $("fxedcopy");
+  if (cp) cp.onclick = () => { edRead(); ED.rows = ref.lines.map(l => ({ c: l.c, q: fmtPer(l.q, l.per), unit: l.unit || "EA", name: l.name })); edDraw(); };
+  $("fxedcancel").onclick = () => edClose();
+  const lock = () => ["fxedsave", "fxeddel", "fxedcancel"].forEach(id => { const b = $(id); if (b) b.disabled = true; });
+  if ($("fxeddel")) $("fxeddel").onclick = async () => {
+    const b = $("fxeddel"), ed = ED;
+    if (!ed || ed.busy) return;
+    if (!b.dataset.sure){ b.dataset.sure = "1"; b.textContent = "กดอีกครั้งเพื่อลบ"; b.classList.add("warn"); return; }
+    ed.busy = true; lock();
+    await progSave(ed.parent, [], false);
+    toast("ลบไส้ที่ใส่เองของ " + ed.parent + " แล้ว · กลับไปใช้ไส้จาก AX/ไฟล์ (ถ้ามี)");
+    if (ED === ed) edClose();
+  };
+  $("fxedsave").onclick = async () => {
+    const ed = ED;
+    if (!ed || ed.busy) return;
+    edRead();
+    const { out, errs: es } = edCheck();
+    if (es.length) return edDraw(es);
+    if (!out.length && !ed.no) return toast("ใส่ไส้อย่างน้อย 1 บรรทัด หรือติ๊ก ไม่แตกรหัสนี้");
+    ed.busy = true; lock();
+    await progSave(ed.parent, out, ed.no);
+    toast(ed.no ? "ตั้ง " + ed.parent + " ไม่แตกแล้ว" : "บันทึกไส้ของ " + ed.parent + " แล้ว " + out.length + " รายการ" + (FX.on ? "" : " · ติ๊ก แตกไส้ BOM เพื่อใช้"));
+    if (ED === ed) edClose();
+  };
+}
+function edClose(){
+  const back = ED && ED.back, q = ED && ED.q;
+  ED = null;
+  closeModal();
+  if (back){
+    fxOpen();
+    const qi = $("fxq");
+    if (qi && q){ qi.value = q; lookup(q); }
+  }
+}
+function fxExportProg(){
+  const s = progSrc();
+  if (!s || !s.lines.length) return toast("ยังไม่มีไส้ที่ใส่เองในโปรแกรม");
+  if (typeof XLSX === "undefined") return toast("ตัวเขียน .xlsx โหลดไม่ได้");
+  const head = ["PARENT_ITEMID (รหัสหลัก)", "COMPONENT_ITEMID (รหัสวัสดุ)", "COMPONENT_NAME (ชื่อ ไม่ใส่ก็ได้)",
+                "BOMQTY (จำนวนต่อชิ้น)", "BOMQTYSERIE (ต่อกี่ชิ้น ว่าง=1)", "UNITID (หน่วย)", "NOTE (หมายเหตุ)"];
+  const rows = s.lines.slice().sort((a, b) => up(a[0]).localeCompare(up(b[0])))
+    .map(l => l[6] ? [l[0], "NOEXPLODE", "", "", "", "", "ไม่แตก"] : [l[0], l[1], l[5], l[2], l[3] === 1 ? "" : l[3], l[4], ""]);
+  const ws = XLSX.utils.aoa_to_sheet([head, ...rows]);
+  ws["!cols"] = head.map(hh => ({ wch: Math.max(16, hh.length + 2) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "BOM");
+  const d = new Date(), z = n => String(n).padStart(2, "0");
+  XLSX.writeFile(wb, "ReCheckBOM_Manual_" + d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + ".xlsx");
+}
+document.addEventListener("click", e => {
+  const b = e.target && e.target.closest && e.target.closest("[data-fxedit]");
+  if (b){ e.preventDefault(); e.stopPropagation(); fxEdit(b.dataset.fxedit, !!b.closest("#fxm")); }
+}, true);
+/* กล่องไส้ BOM / ตัวใส่ไส้เปิดอยู่: วาง (Ctrl+V) ที่ส่วนอื่นของกล่อง (หัว ท้าย พื้นหลัง) ไม่ให้ตัวรับวางตารางของทั้งหน้าเอาไปเปิดเป็นไฟล์
+   ช่องในตัวใส่ไส้ (#fxed) และช่องดูไส้ (#fxq) มีตัวรับของตัวเองอยู่แล้ว */
+document.addEventListener("paste", e => {
+  if ($("modal").className !== "on" || !(ED || fxOpenNow)) return;
+  const t = e.target, ed = $("fxed"), q = $("fxq");
+  if ((ed && ed.contains(t)) || (q && q === t)) return;
+  e.stopPropagation(); e.preventDefault();
+}, true);
+/* ปิดกล่องแล้วไม่ต้องอัปเดตกล่องอีก (กล่องอื่นใช้ #mbody ร่วมกัน) */
+const _closeModal = closeModal;
+closeModal = function(){
+  fxOpenNow = false; ED = null; document.body.classList.remove("fxmodal");
+  const m = $("modal"); m.ondrop = null; m.ondragover = null; m.ondragleave = null;
+  return _closeModal.apply(this, arguments);
+};
+$("mclose").onclick = closeModal;
+$("modal").onclick = e => { if (e.target === $("modal")) closeModal(); };
+
+window.FX_state = () => ({
+  on: FX.on, ready: FX.ready, err: FX.err, parents: FX.map.size, via: FX.via || "",
+  prog: progSrc() ? { parents: progSrc().nParents, lines: progSrc().lines.map(l => l.slice()) } : null,
+  srcs: FX.srcs.filter(s => !s.prog).map(s => ({ id: s.id, kind: s.kind, name: s.name, auto: s.auto || "", nParents: s.nParents, nLines: s.nLines, only22: s.only22, bad: s.bad, handle: !!s.handle })),
+  fit: TABS.fit.fx ? { ex: TABS.fit.fx.ex.map(x => ({ code: x.code, qty: x.qty, leaves: x.leaves.map(L => [L.c, r4(L.q), L.unit]) })),
+                       before: TABS.fit.fx.before, after: TABS.fit.fx.after, noBom: TABS.fit.fx.noBom, merged: TABS.fit.fx.merged, err: TABS.fit.fx.err || "" } : null
+});
+window.FX_leaves = code => { const l = leavesOf(code); return l ? l.list.map(L => ({ code: L.c, per: r4(L.per), unit: L.unit, via: L.via.slice() })) : null; };
+window.FX_setOn = on => fxSetOn(!!on);
+window.FX_dir = () => ({ mode: FX.dir.mode, from: FX.dir.from, name: FX.dir.name, perm: FX.dir.perm, err: FX.dir.err, busy: FX.dir.busy || !!FX.dir.queued, msg: FX.msg ? FX.msg.text : "",
+  files: Object.fromEntries(Object.entries(FX.dir.files).map(([k, f]) => [k, f.name])), pv2: (FX.dir.pv2 || []).map(x => x.key) });
+window.FX_dirSync = o => dirSync(o || {});
+window.FX_setDir = h => dirSetOwn(h);
+window.FX_load = (file, handle) => fxLoadFile(file, handle || null, false);
+window.FX_xw = off => { XW_OFF = !!off; };   /* ทดสอบ: ปิดอ่านเบื้องหลัง (อ่านแบบเดิม) */
+
+fxSyncUi();
+if (cur === "fit") emptyScreen();
+fxLoadAll();
+})();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
