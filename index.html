@@ -925,9 +925,10 @@ button.artpill:hover{filter:brightness(.96)}
 /* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
 const APP_META = {
   name: "ReCheck Bom",
-  version: "6.5",
-  build: "2026-11-21/production-handoff",
+  version: "6.6",
+  build: "2026-11-21/production-codecheck",
   changelog: [
+    ["6.6","2026-11-21","FEAT เปิดจาก Production Nexus (V333 ขึ้นไป) = เช็คโค้ดกับ Fitting Global + Fitting BOM ของ Production · ผู้ใช้ 21/11 “ต้องทำให้ Import bom to AX ลิงก์จาก Fitting BOM กับ Fitting Global ในโปรแกรมโปรดักชั่น ตอนนี้เหมือนไม่ได้เชื่อมต่อ” → ข้อมูลชุดเดียวกับที่ Production ดึงจาก AX (Fitting Global + BOM ใน AX) แทน Supabase ของแอปส่งตั้ง Code AX · มีโค้ด = อยู่ใน Fitting Global หรือมี BOM ใน AX (การ์ดบอก BOM กี่รายการ) · Production รุ่นเก่า / ปิดไปแล้ว = เช็คกับ Supabase แบบเดิม · เปิดหน้านี้เอง = เหมือน v6.5 · แตกไส้ BOM ทำที่ Production (ผู้ใช้ 16:17)"],
     ["6.5","2026-11-21","FEAT ส่งต่อเข้า Production Nexus ได้เลย · ผู้ใช้ 21/11 “กด Import แล้ววิ่งเข้าไปในโปรแกรม Import to AX พอกดต่อก็กลับมาที่ Production · มีแค่ BOM ไม้ก็ส่งมาแค่ BOM ไม้ กับ BOM Fitting แบบเดิม” · เปิดหน้านี้จากปุ่ม 📥 Import ของ Production (V330 ขึ้นไป) = มีแถบส้มด้านบน + ปุ่ม ▶ ส่งเข้า Production บนหัวแอป · ทำงานในหน้านี้ตามเดิม (เปิด export_item + export_fitting · แก้ X เป็น Y อัตโนมัติ · เช็คไฟล์เจาะล้าง Barcode) แล้วกดปุ่ม → ถามยืนยันพร้อมสรุป (ไม้กี่แถว · แก้ X เป็น Y กี่ช่อง · ล้างบาร์โค้ดกี่ช่อง · Fitting กี่แถว · เตือนถ้ายังไม่ได้เช็คไฟล์เจาะ) → ส่งให้หน้าต่าง Production ที่เปิดหน้านี้ (ส่งถึงหน้าต่างนั้นหน้าต่างเดียว · มีรหัสสุ่มของรอบนั้นกำกับ) → Production ตอบรับแล้วหน้านี้ปิดเอง กลับไปที่ Production · BOM ไม้ = แถวที่เห็น/บันทึกในแท็บไม้ทุกแถว (รวมที่แก้แล้ว · ไม่สนตัวกรอง) · BOM Fitting = แถวตามไฟล์ (ไม่ส่งแบบแตกไส้ — Production แตกไส้ / แปลงรหัสสั่งซื้อเอง กันซ้ำ) · มีแค่แท็บเดียวก็ส่งแท็บเดียว · หน้าต่าง Production ถูกปิด / เบราว์เซอร์ตัดการเชื่อม = บอกให้บันทึกไฟล์ _Pass แล้วลากเข้า Production แทน · ไม่ส่งข้อมูลไปที่อื่น ไม่แตะ Supabase เพิ่ม"],
     ["6.4","2026-10-21","FIX SQL ในปุ่ม คัดลอก SQL (กล่อง ไส้ BOM) · ตัวเดิม (v6.2–v6.3) ตัดเงื่อนไขรหัส 22 ตัวออกหมด ลองกับ AX จริงแล้วได้เกิน 1,048,576 แถว Excel ใส่ไม่ได้ (ดึงสินค้าสำเร็จรูป / ครัวสั่งทำที่ BOM ยาวมาด้วย) · ตัวใหม่ = รหัสแม่ 22 ตัวครบเหมือนเดิม + รหัสอื่นที่ BOM ไม่เกิน 20 บรรทัด (ชิ้นตัด TPP… 406… 414LT… ชุดอุปกรณ์เล็ก) ลองกับ AX จริง 21/10/2026 ได้ 207,708 บรรทัด มี TPP00000320416 → TPP0000032 0.1598 · วิธีทำในกล่องเพิ่มขั้น เอาติ๊ก Adjust column width ออก (ไม่งั้น Excel ปรับความกว้างคอลัมน์สองแสนแถวทุกครั้งที่ Refresh ค้างนาน) · ข้อความ ดึงทุกรหัส เปลี่ยนเป็น ดึงรหัสอื่นด้วย · ไม่แตะการแตกไส้ / การอ่านไฟล์"],
     ["6.3","2026-10-21","FEAT อ่านไฟล์ไส้ BOM เบื้องหลัง หน้าจอไม่ค้าง · ไฟล์ FittingBOM ที่ดึงทุกรหัส (~9.4 หมื่นบรรทัด) อ่านนานหลายวินาที เดิมหน้าจอค้างระหว่างอ่าน ตอนนี้อ่านใน Web Worker ใช้งานต่อได้ระหว่างอ่าน ป้ายบนแถบเช็คบอก กำลังอ่าน… · อ่านเองจากโฟลเดอร์ (ไฟล์ถูก Refresh / Save ใหม่) ไม่ขึ้นกล่องรอแล้ว ติ๊กแตกไส้อยู่ขึ้นข้อความเมื่ออ่านเสร็จ · เลือกไฟล์เองยังขึ้นกล่องรอเหมือนเดิม · ใช้ตัวอ่าน Excel ตัวเดียวกับหน้านี้ ผลอ่านเหมือนเดิมทุกค่า ใช้เบื้องหลังไม่ได้ (เปิดจากไฟล์ในเครื่อง / ไม่มีเน็ต) อ่านแบบเดิมให้เอง · ข้อความไฟล์ FittingBOM ที่มีแต่รหัส 22 ตัว เปลี่ยนเป็นวิธีแก้ SQL ในไฟล์ตัวเดิมให้ดึงทุกรหัส (ทำครั้งเดียว ไม่ต้องก๊อปไฟล์) แทนการทำไฟล์ใหม่ · ปุ่ม คัดลอก SQL อยู่ในกล่อง ไส้ BOM · ตัวอย่างผู้ใช้ TPP00000320416 Qty 2 → TPP0000032 0.1598 × 2 = 0.3196 · ไม่ติ๊ก = แถวตามไฟล์เหมือน v6.1 ทุกตัวอักษร"],
@@ -1255,7 +1256,7 @@ function drawSummary(){
   if (t.chk){
     bar += '<div class="stat"><b><span style="color:#1e6b38">' + t.chk.found +
            ' มี</span> <span style="color:var(--miss-ink)">' + t.chk.missing.length +
-           ' ยังไม่มี</span></b><i>เช็คกับ fitting_global</i></div>';
+           ' ยังไม่มี</span></b><i>' + (t.chk.via ? "เช็คกับ Production" : "เช็คกับ fitting_global") + '</i></div>';
   }
   $("bar").className = "on"; $("bar").innerHTML = bar;
 
@@ -1287,7 +1288,8 @@ function drawSummary(){
         '<span class="st' + (has === null ? " wait" : "") + '">' +
           (has === null ? "\u2013" : has ? "\u2713 มีโค้ด" : "\u2715 ยังไม่มี") +
           /* v4.5: หน่วยมาต่อท้ายสถานะ แทนที่จะกินบรรทัดสีเทาอีกบรรทัด */
-          (has && rec.unit ? ' <b class="u">' + esc(rec.unit) + "</b>" : "") + "</span>" +
+          (has && rec.unit ? ' <b class="u">' + esc(rec.unit) + "</b>" : "") +
+          (has && rec.bom ? ' <b class="u" title="มี BOM ใน AX ' + (+rec.bom) + ' รายการ (Fitting BOM ของ Production)">BOM ' + (+rec.bom) + "</b>" : "") + "</span>" +
         /* v4.5: ตัดบรรทัดสีเทาใต้ชื่อออก search_name ซ้ำกับ product_name แทบทุกแถว
            เก็บไว้ใน title เผื่อวันไหนมันต่างกันจริง เอาเมาส์ชี้แล้วเห็น */
         '<span class="nm"' + (has && rec.search_name ? ' title="' + esc(rec.search_name) + '"' : "") + ">" +
@@ -1997,6 +1999,7 @@ $("fixxy").onclick = () => {
     const n = applyXY(t);
     closeModal();
     syncFixBtn(); apply();
+    if (n) prodRecheck(t);   /* v6.6 */
     toast("แก้ " + t.cols[mat] + " แล้ว " + n + " แถว  \u00B7  คอลัมน์ผิวคงเดิม  \u00B7  กดบันทึกไฟล์เพื่อเอาออก");
   };
   $("modal").className = "on";
@@ -3330,7 +3333,7 @@ function syncChkBar(){
     $("onlyno").disabled = missing.length === 0;
     $("onlyno").setAttribute("aria-pressed", String(t.onlyNo));
     $("chkat").textContent = "เช็คเมื่อ " + t.chk.at.toLocaleTimeString("th-TH") +
-      "  \u00B7  " + cols.map(i => t.cols[i]).join(", ");
+      "  \u00B7  " + cols.map(i => t.cols[i]).join(", ") + (t.chk.via ? "  \u00B7  " + t.chk.via : "");
   }
 }
 
@@ -3398,6 +3401,43 @@ function busyClose(){ $("busy").className = ""; }
    ไม่มีปุ่มแล้ว เปิดไฟล์เสร็จเช็คให้เองทันที ทั้งแท็บไม้และแท็บ Fitting
    รับ key ของแท็บมาตรง ๆ จะได้ไล่เช็คหลายแท็บได้โดยไม่ต้องสลับหน้าจอ
    auto = true -> ล้มเหลวแล้วไม่ขึ้น toast รบกวน */
+/* v6.6: เช็คโค้ดกับ Production (Fitting Global + Fitting BOM ที่ Production ดึงจาก AX) — คืน true = จบแล้ว (สำเร็จ / ล้ม) · false = Production ไม่ตอบ → Supabase */
+function prodRecheck(t){
+  if (!t || !t.chk || !t.chk.via || !window.RCB_prodCheck || !window.RCB_prodCheck.on()) return Promise.resolve();
+  const k = ["wood", "fit"].find(x => TABS[x] === t);
+  return k ? runCheck(true, k) : Promise.resolve();
+}
+async function prodRun(t, k, codes, cols){
+  busyOpen(codes.length, $("busy").className === "on" ? null : "กำลังเช็คโค้ดกับ Production \u00B7 " + t.label);
+  busyStep(0, codes.length, "ถาม Production \u00B7 Fitting Global + Fitting BOM");
+  let done = true;
+  try{
+    const R = await window.RCB_prodCheck.ask(codes);
+    const map = new Map(), res = (R && R.res) || {};
+    Object.keys(res).forEach(c => {
+      const x = res[c] || {}, ax = +x.ax || 0;
+      map.set(c, { item_number: c, product_name: x.n || (ax ? "(มี BOM ใน AX — ไม่มีชื่อใน Fitting Global)" : "\u2013"), unit: x.u || "",
+                   search_name: "Production \u00B7 Fitting Global " + (x.fg ? "\u2713" : "\u2715") + " \u00B7 BOM ใน AX " + (ax ? ax + " รายการ" : "ไม่มี"), bom: ax });
+    });
+    const missing = codes.filter(c => !map.has(c));
+    const warn = (R.fg && !R.fg.ok) ? "Fitting Global ใน Production ยังโหลดไม่ครบ" : (!R.bom ? "Fitting BOM ใน Production ยังไม่พร้อม" : "");
+    t.chk = { map, cols, at: new Date(), found: map.size, total: codes.length, missing,
+              via: "เช็คกับ Production (Fitting Global" + (R.bom ? " + Fitting BOM" : "") + ")" + (warn ? " \u26A0 " + warn : "") };
+    t.onlyNo = false;
+    busyStep(codes.length, codes.length, "พบแล้ว " + map.size + " รายการ");
+    toast(t.label + " (Production): " + (missing.length ? "ยังไม่มีโค้ด " + missing.length + " จาก " + codes.length : "มีโค้ดครบทั้ง " + codes.length + " รายการ") +
+          (warn ? " \u00B7 \u26A0 " + warn + " — ผลที่ยังไม่มีอาจไม่ถูก" : ""));
+  }catch(e){
+    if (e && e.old){ done = false; toast("Production ไม่ตอบการเช็คโค้ด (รุ่นก่อน V333 หรือปิดไปแล้ว) — เช็คกับ Supabase แทน"); }
+    else toast(t.label + ": เช็คกับ Production ไม่สำเร็จ \u2014 " + (e && e.message || e));
+  }
+  if (done){
+    if (!_checking) busyClose();
+    if (cur === k){ syncChkBar(); apply(); } else syncTabs();
+  }
+  return done;
+}
+
 async function runCheck(auto, key){
   const k = key || cur, t = TABS[k];
   /* v4.0: รวมค่าจากทุกคอลัมน์ที่เน้น แล้วยิงถามทีเดียว
@@ -3412,6 +3452,11 @@ async function runCheck(auto, key){
   if (!codes.length){
     if (!auto) toast(cols.length ? "ไม่มีค่าให้เช็ค" : "คอลัมน์ที่เน้นอยู่ไม่ได้ตั้งให้เช็คกับ Supabase");
     return;
+  }
+
+  /* v6.6: เปิดจาก Production → เช็คกับ Fitting Global + Fitting BOM ของ Production · ไม่ตอบ (รุ่นเก่า / ปิด) → Supabase แบบเดิม */
+  if (window.RCB_prodCheck && window.RCB_prodCheck.on()){
+    if (await prodRun(t, k, codes, cols)) return;
   }
 
   const client = getSb();
@@ -3478,14 +3523,15 @@ function scheduleChecks(){
 
       /* 2) v4.1: แก้ X เป็น Y ให้เลย ไม่ต้องกดปุ่ม · ย้อนกลับได้ */
       busyRun("fix");
-      const fixed = [];
+      const fixed = [], fixedT = [];
       ["wood", "fit"].forEach(k => {
         const t = TABS[k];
         if (!t.rows.length || t.xy) return;
         const n = applyXY(t);
-        if (n) fixed.push(t.label + " " + n + " แถว");
+        if (n){ fixed.push(t.label + " " + n + " แถว"); fixedT.push(t); }
       });
       busyDone("fix", fixed.length ? fixed.join("  \u00B7  ") : "ไม่มี X ต้องแก้");
+      for (const t of fixedT) await prodRecheck(t);   /* v6.6 */
 
       syncChkBar(); apply();
       if (fixed.length) toast("แก้ X เป็น Y ให้แล้ว \u2014 " + fixed.join("  \u00B7  ") + "  \u00B7  กดย้อนกลับได้ถ้าไม่ต้องการ");
@@ -3508,6 +3554,7 @@ $("undoxy").onclick = () => {
   const t = T();
   const n = undoXY(t);
   syncFixBtn(); apply();
+  if (n) prodRecheck(t);   /* v6.6 */
   toast(n ? "ย้อนกลับแล้ว " + n + " แถว" : "ไม่มีอะไรให้ย้อน");
 };
 
@@ -6683,6 +6730,34 @@ fxLoadAll();
     } else { sent = null; sync(); alert("Production ยังรับไม่ได้: " + String(d.msg || "")); }
   });
   window.RCB_state = () => ({ on: true, target: target, sent: sent ? { ok: !!sent.ok } : null });
+  /* v6.6: เช็คโค้ดกับ Production — { __rcbQ:1, t, id, op:"check", codes } → Production ตอบ st:"wait" ทันที แล้ว st:"ok" + ผล
+     ไม่ตอบใน 5 วิ (Production ก่อน V333 / ปิด) = เลิกถามรอบนี้ ใช้ Supabase · รอผล ≤ 90 วิ (Production รอโหลด Fitting Global / BOM ให้ครบก่อน) */
+  const PQ = { off: false, n: 0, q: new Map() };
+  window.addEventListener("message", ev => {
+    if (!window.opener || ev.source !== window.opener) return;
+    const d = ev.data; if (!d || d.__rcbQ !== 1 || d.t !== tk) return;
+    const q = PQ.q.get(d.id); if (!q) return;
+    if (d.st === "wait"){
+      clearTimeout(q.t1);
+      if (!q.t2) q.t2 = setTimeout(() => { PQ.q.delete(d.id); q.rej(new Error("Production ไม่ส่งผลภายใน 90 วินาที")); }, 90000);
+      return;
+    }
+    clearTimeout(q.t1); clearTimeout(q.t2); PQ.q.delete(d.id);
+    if (d.st === "ok") q.res(d); else q.rej(new Error(String(d.msg || "Production เช็คไม่สำเร็จ")));
+  });
+  window.RCB_prodCheck = {
+    on: () => !PQ.off && !!(window.opener && !window.opener.closed),
+    ask: codes => new Promise((res, rej) => {
+      const id = "q" + (++PQ.n) + "-" + Date.now().toString(36), q = { res, rej, t1: 0, t2: 0 };
+      PQ.q.set(id, q);
+      q.t1 = setTimeout(() => { PQ.q.delete(id); PQ.off = true; const e = new Error("Production ไม่ตอบ"); e.old = true; rej(e); }, 5000);
+      try { window.opener.postMessage({ __rcbQ: 1, t: tk, id: id, op: "check", codes: codes.map(c => String(c)) }, target); }
+      catch(e){ clearTimeout(q.t1); PQ.q.delete(id); PQ.off = true; const er = new Error(String(e && e.message || e)); er.old = true; rej(er); }
+    }),
+    state: () => ({ off: PQ.off, asked: PQ.n })
+  };
+  try { STEPS[2][1] = "เช็คโค้ดกับ Production (Fitting Global + Fitting BOM)"; } catch(_){}
+  bar.innerHTML += ' <span style="white-space:nowrap">\u00B7 เช็คโค้ดกับ <b>Fitting Global + Fitting BOM ของ Production</b></span>';
 })();
 </script>
 </body>
