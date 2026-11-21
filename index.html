@@ -790,6 +790,7 @@ button.artpill:hover{filter:brightness(.96)}
   <input id="find" placeholder="ค้นหา" autocomplete="off" spellcheck="false">
   <button class="btn" id="only" aria-pressed="false" title="แสดงเฉพาะแถวที่คอลัมน์เน้นยังว่าง">เฉพาะที่ยังว่าง</button>
   <div class="sp"></div>
+  <button class="btn go" id="toprod" style="display:none" title="ส่ง BOM ไม้ + BOM Fitting ในหน้านี้กลับเข้า Production Nexus (หน้าต่างที่เปิดหน้านี้)">&#9654; ส่งเข้า Production</button>
   <button class="btn" id="colbtn" disabled>คอลัมน์ที่เน้น</button>
   <button class="btn" id="copy" disabled title="คัดลอกรายการโค้ดไม่ซ้ำ ไว้วางในแอปส่งตั้ง Code AX">คัดลอกโค้ด</button>
   <div class="menuwrap">
@@ -799,6 +800,7 @@ button.artpill:hover{filter:brightness(.96)}
   </div>
 </header>
 
+<div id="prodbar" style="display:none"></div>
 <div id="tabs">
   <button class="tab on empty" data-t="wood">BOM ไม้ <span class="n">0</span></button>
   <button class="tab empty" data-t="fit">BOM Fitting <span class="n">0</span></button>
@@ -923,9 +925,10 @@ button.artpill:hover{filter:brightness(.96)}
 /* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
 const APP_META = {
   name: "ReCheck Bom",
-  version: "6.4",
-  build: "2026-10-21/fitting-bom-sql",
+  version: "6.5",
+  build: "2026-11-21/production-handoff",
   changelog: [
+    ["6.5","2026-11-21","FEAT ส่งต่อเข้า Production Nexus ได้เลย · ผู้ใช้ 21/11 “กด Import แล้ววิ่งเข้าไปในโปรแกรม Import to AX พอกดต่อก็กลับมาที่ Production · มีแค่ BOM ไม้ก็ส่งมาแค่ BOM ไม้ กับ BOM Fitting แบบเดิม” · เปิดหน้านี้จากปุ่ม 📥 Import ของ Production (V330 ขึ้นไป) = มีแถบส้มด้านบน + ปุ่ม ▶ ส่งเข้า Production บนหัวแอป · ทำงานในหน้านี้ตามเดิม (เปิด export_item + export_fitting · แก้ X เป็น Y อัตโนมัติ · เช็คไฟล์เจาะล้าง Barcode) แล้วกดปุ่ม → ถามยืนยันพร้อมสรุป (ไม้กี่แถว · แก้ X เป็น Y กี่ช่อง · ล้างบาร์โค้ดกี่ช่อง · Fitting กี่แถว · เตือนถ้ายังไม่ได้เช็คไฟล์เจาะ) → ส่งให้หน้าต่าง Production ที่เปิดหน้านี้ (ส่งถึงหน้าต่างนั้นหน้าต่างเดียว · มีรหัสสุ่มของรอบนั้นกำกับ) → Production ตอบรับแล้วหน้านี้ปิดเอง กลับไปที่ Production · BOM ไม้ = แถวที่เห็น/บันทึกในแท็บไม้ทุกแถว (รวมที่แก้แล้ว · ไม่สนตัวกรอง) · BOM Fitting = แถวตามไฟล์ (ไม่ส่งแบบแตกไส้ — Production แตกไส้ / แปลงรหัสสั่งซื้อเอง กันซ้ำ) · มีแค่แท็บเดียวก็ส่งแท็บเดียว · หน้าต่าง Production ถูกปิด / เบราว์เซอร์ตัดการเชื่อม = บอกให้บันทึกไฟล์ _Pass แล้วลากเข้า Production แทน · ไม่ส่งข้อมูลไปที่อื่น ไม่แตะ Supabase เพิ่ม"],
     ["6.4","2026-10-21","FIX SQL ในปุ่ม คัดลอก SQL (กล่อง ไส้ BOM) · ตัวเดิม (v6.2–v6.3) ตัดเงื่อนไขรหัส 22 ตัวออกหมด ลองกับ AX จริงแล้วได้เกิน 1,048,576 แถว Excel ใส่ไม่ได้ (ดึงสินค้าสำเร็จรูป / ครัวสั่งทำที่ BOM ยาวมาด้วย) · ตัวใหม่ = รหัสแม่ 22 ตัวครบเหมือนเดิม + รหัสอื่นที่ BOM ไม่เกิน 20 บรรทัด (ชิ้นตัด TPP… 406… 414LT… ชุดอุปกรณ์เล็ก) ลองกับ AX จริง 21/10/2026 ได้ 207,708 บรรทัด มี TPP00000320416 → TPP0000032 0.1598 · วิธีทำในกล่องเพิ่มขั้น เอาติ๊ก Adjust column width ออก (ไม่งั้น Excel ปรับความกว้างคอลัมน์สองแสนแถวทุกครั้งที่ Refresh ค้างนาน) · ข้อความ ดึงทุกรหัส เปลี่ยนเป็น ดึงรหัสอื่นด้วย · ไม่แตะการแตกไส้ / การอ่านไฟล์"],
     ["6.3","2026-10-21","FEAT อ่านไฟล์ไส้ BOM เบื้องหลัง หน้าจอไม่ค้าง · ไฟล์ FittingBOM ที่ดึงทุกรหัส (~9.4 หมื่นบรรทัด) อ่านนานหลายวินาที เดิมหน้าจอค้างระหว่างอ่าน ตอนนี้อ่านใน Web Worker ใช้งานต่อได้ระหว่างอ่าน ป้ายบนแถบเช็คบอก กำลังอ่าน… · อ่านเองจากโฟลเดอร์ (ไฟล์ถูก Refresh / Save ใหม่) ไม่ขึ้นกล่องรอแล้ว ติ๊กแตกไส้อยู่ขึ้นข้อความเมื่ออ่านเสร็จ · เลือกไฟล์เองยังขึ้นกล่องรอเหมือนเดิม · ใช้ตัวอ่าน Excel ตัวเดียวกับหน้านี้ ผลอ่านเหมือนเดิมทุกค่า ใช้เบื้องหลังไม่ได้ (เปิดจากไฟล์ในเครื่อง / ไม่มีเน็ต) อ่านแบบเดิมให้เอง · ข้อความไฟล์ FittingBOM ที่มีแต่รหัส 22 ตัว เปลี่ยนเป็นวิธีแก้ SQL ในไฟล์ตัวเดิมให้ดึงทุกรหัส (ทำครั้งเดียว ไม่ต้องก๊อปไฟล์) แทนการทำไฟล์ใหม่ · ปุ่ม คัดลอก SQL อยู่ในกล่อง ไส้ BOM · ตัวอย่างผู้ใช้ TPP00000320416 Qty 2 → TPP0000032 0.1598 × 2 = 0.3196 · ไม่ติ๊ก = แถวตามไฟล์เหมือน v6.1 ทุกตัวอักษร"],
     ["6.2","2026-10-21","FEAT แท็บ BOM Fitting แตกไส้ BOM ได้ · เดิมแท็บนี้แสดงรหัสตามไฟล์ export_fitting ตรง ๆ รหัสที่มี BOM (ไส้) ต้องไปแตกเอง · ตอนนี้มีสวิตช์ แตกไส้ BOM บนแถบเช็คของแท็บ Fitting (และในหน้าว่างก่อนเปิดไฟล์) ติ๊กแล้วรหัสที่มีไส้ถูกแทนด้วยวัสดุข้างใน จำนวนไส้ = จำนวนต่อ 1 (BOMQTY ÷ BOMQTYSERIE) × Qty ของแถว เช่น ต่อ 1 = 0.5 × Qty 4 = 2 EA วัสดุที่มีไส้ของตัวเองแตกต่อจนสุด คูณต่อกัน (หยุดที่ P48/P68 · ไม่วน · ลึกสุด 8 ชั้น แบบเดียวกับ Production V2) ไส้ที่เป็นรหัสเดียวกับแถวเดิมในไฟล์ (คอลัมน์อื่นตรงกัน ไม่สนตัวพิมพ์) รวมยอดเข้าแถวนั้น คอลัมน์อื่น (Warehouse FittingType) ตามแถวแม่ จำนวนเขียนตามรูปแบบในไฟล์ (144.00 · 1,200.00) · ไม่ติ๊ก = แถวตามไฟล์ทุกตัวอักษรเหมือน v6.1 สลับไปมาได้ ข้อมูลตามไฟล์ไม่ถูกแก้ จำค่าติ๊กไว้ในเครื่อง · ไส้มาจาก 3 แหล่ง (ชนะกันตามลำดับ ทั้งชุดต่อรหัส): ใส่เองในโปรแกรม > ไฟล์ BOM ใส่เอง (หัวแบบ FittingBOM_Manual.xlsx ของ Production V2 · NOEXPLODE = ไม่แตก) > ไฟล์ AX แบบ FittingBOM_RefreshOnly.xlsm (หรือ .csv ที่ Production V2 ส่งออก) · อ่านเองจากโฟลเดอร์แบบ Production V2: เปิดจาก GitHub (เว็บเดียวกับ Production V2) ใช้โฟลเดอร์ที่ Production V2 จำไว้ได้เลย (โฟลเดอร์ Excel ของ AX หรือโฟลเดอร์ Server · อ่านอย่างเดียว ไม่แตะข้อมูลของ Production V2) หรือเลือกโฟลเดอร์เอง หาไฟล์ FittingBOM* / ReCheckBOM* ใหม่สุด (ชั้นแรก ไม่เจอดูโฟลเดอร์ย่อย 1 ชั้น) ตรวจทุก 1 นาทีและตอนกลับมาที่หน้าต่าง ไฟล์ถูก Refresh / Save ใหม่ อ่านให้เอง ไฟล์อ่านไม่ผ่าน (กำลัง Save · มีแต่หัว) ใช้ข้อมูลเดิมไปก่อนและบอกเหตุในกล่อง สิทธิ์โฟลเดอร์หายหลังเปิดเบราว์เซอร์ใหม่ไม่ลบไส้ที่อ่านไว้ ไม่ได้ติ๊กแตกไส้ = อ่านเงียบ ๆ ไม่ขึ้นกล่องรอ เบราว์เซอร์ต้องการให้กดอนุญาตอ่านโฟลเดอร์รอบละครั้งหลังเปิดใหม่ (กดป้ายหรือปุ่มในหน้าว่างครั้งเดียว) · หรือเลือกไฟล์เองจากกล่อง ไส้ BOM ลากมาวางในกล่อง หรือลากเข้าหน้าหลัก (.xlsm หรือชื่อมีคำว่า BOM / Manual / ใส่เอง) อ่านในเครื่อง จำไว้ใน IndexedDB ของเบราว์เซอร์ ไม่ต้องเลือกใหม่ทุกครั้ง มีปุ่มอ่านไฟล์เดิมใหม่ (Chrome/Edge) · รหัสที่ควรมีไส้แต่ AX ไม่มี: การ์ด ไส้ BOM มีรายการ ยังไม่มีไส้ พร้อมชื่อจากผลเช็คโค้ดและปุ่ม ＋ ใส่ไส้ ทุกรหัส · รหัสที่แตกแล้วมีปุ่ม ✎ แก้ไส้ (เห็นไส้ใน AX กด เอาไส้นี้มาแก้ ได้) · ตัวใส่ไส้: รหัสวัสดุ / จำนวนต่อ 1 (ใส่ 1/4 ได้) / หน่วย / ชื่อ วางจาก Excel ได้หลายบรรทัด มีช่อง ผลตอนแตก คิดจาก Qty ในไฟล์ให้ดู ติ๊ก ไม่แตกรหัสนี้ ได้ ตรวจก่อนบันทึก (ไม่มีรหัส · จำนวนไม่ใช่ตัวเลขหรือเป็น 0 · ซ้ำกับรหัสหลัก) · ไส้ที่ใส่เองจำไว้ในเครื่อง ส่งออกเป็น ReCheckBOM_Manual_วันที่.xlsx ไปเลือกที่เครื่องอื่นได้ ลบทีละรหัส / ล้างทั้งหมดต้องกดสองครั้ง · ดูง่าย: รหัสที่มีไส้เป็นสีฟ้าตัวหนา (ช่อง ItemId ในตารางและรายการ รหัสในไฟล์ ในการ์ด) รหัสที่ไม่มีไส้เป็นสีเทา ป้ายบนแถบเช็คบอกว่าไฟล์นี้มีไส้กี่รหัสหรือไม่มีเลย (ก่อนติ๊กก็เห็น) · หน้าว่างแยกชัด ① ไฟล์ไส้ BOM (FittingBOM / ใส่เอง เลือกครั้งเดียว) ② สวิตช์แตกไส้ ส่วนไฟล์งาน export_fitting เปิดด้วยปุ่ม เปิดไฟล์เข้าแท็บนี้ เหมือนเดิม · เลือกไฟล์ไส้แล้วผลขึ้นในกล่องเลย (สำเร็จสีเขียว · ไม่สำเร็จสีแดงพร้อมเหตุผล เช่น ไม่ใช่ไฟล์ไส้ BOM / ไฟล์ยังไม่ได้ Refresh / ไฟล์เปิดค้างใน Excel) · แถวที่มาจากการแตกระบายฟ้า ชี้ดูวิธีคิด (ต่อ 1 × Qty) การ์ด ไส้ BOM มีโน้ตวิธีคิดและโน้ตตัวเล็กใต้วัสดุทุกตัว คลิกวัสดุเพื่อกรองตาราง · เช็คโค้ดกับ Supabase ใหม่ให้เองหลังสลับ · บันทึกไฟล์ตอนแตกแล้วได้คอลัมน์เท่าเดิม ชื่อไฟล์ต่อท้าย _Explode · กล่องมีช่องดูไส้ของรหัส แบบฟอร์ม BOM ใส่เอง และ SQL ทำไฟล์ BOM ที่มีไส้ของรหัส Fitting (ไฟล์ FittingBOM_RefreshOnly.xlsm ของ Production V2 ดึงเฉพาะรหัสไม้ 22 ตัว ไม่มีไส้ของ Fitting) · ไม่แตะ Production V2 ไม่แตะแท็บ BOM ไม้ หน้า Lot order หน้า ชื่อไทย Article · ทดสอบใน Chromium กับไฟล์ export_fitting_2607212401_BO69_0546 ของผู้ใช้ ไฟล์ FittingBOM_RefreshOnly.xlsm จริง (66,513 บรรทัด อ่าน 6 วินาที) และไฟล์ BOM จำลองของรหัส Fitting: ไม่ติ๊กแล้วแถว ไฟล์ .xlsx และ .csv ที่บันทึกตรงกับ v6.1 ทุกไบต์ · ยังไม่ได้ทดสอบกับไฟล์ BOM ที่ดึงทุกรหัสจาก AX จริง"],
@@ -6618,5 +6621,69 @@ fxLoadAll();
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ═══ v6.5 — ส่งต่อเข้า Production Nexus (เปิดจากปุ่ม 📥 Import ของ Production) ═══════════════════════
+   ลิงก์ที่ Production เปิด: ?from=production&t=<รหัสสุ่มของรอบ>&o=<origin ของ Production>
+   ส่งด้วย window.opener.postMessage ถึง origin นั้นเท่านั้น · Production ตรวจหน้าต่าง + origin + รหัสสุ่มอีกชั้น
+   ไม่ได้เปิดจาก Production = ไม่มีปุ่ม (เหมือน v6.4 ทุกอย่าง) */
+(function(){
+  const qs = new URLSearchParams(location.search);
+  if (qs.get("from") !== "production") return;
+  const tk = String(qs.get("t") || ""), og = String(qs.get("o") || "");
+  if (!/^[a-f0-9]{16,64}$/.test(tk)) return;
+  const target = og === "null" ? "*" : (/^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(og) ? og : "");
+  if (!target) return;
+  const host = target === "*" ? "Production (ไฟล์ในเครื่อง)" : target.replace(/^https?:\/\//, "");
+  const btn = $("toprod"), bar = $("prodbar");
+  bar.style.cssText = "display:block;background:#fff4e5;border-bottom:1px solid #f0d5ac;color:#7a4a08;font-size:13px;padding:7px 14px;line-height:1.5";
+  bar.innerHTML = "เปิดจาก <b>Production Nexus</b> (" + esc(host) + ") — เปิดไฟล์ BOM ไม้ / BOM Fitting · แก้ X เป็น Y · เช็คไฟล์เจาะ ให้เรียบร้อย แล้วกด <b>&#9654; ส่งเข้า Production</b> บนหัวแอป (มีแค่ BOM ไม้ก็ส่งได้)";
+  btn.style.display = "";
+  let sent = null;
+  const n = t => (t && t.rows ? t.rows.length : 0);
+  function sync(){
+    const w = n(TABS.wood), f = n(TABS.fit);
+    btn.disabled = !(w || f) || !!sent;
+    btn.innerHTML = sent ? "กำลังส่ง…" : "&#9654; ส่งเข้า Production";
+    btn.title = (w || f ? "จะส่ง: " + [w ? "BOM ไม้ " + w + " แถว" : "", f ? "BOM Fitting " + f + " แถว" : ""].filter(Boolean).join(" · ") + " — " : "ยังไม่มีไฟล์ — ") + "ส่งกลับเข้า Production Nexus (หน้าต่างที่เปิดหน้านี้)";
+  }
+  setInterval(sync, 700); sync();
+  btn.onclick = () => {
+    const w = TABS.wood, f = TABS.fit, nw = n(w), nf = n(f);
+    if (!nw && !nf) return;
+    if (!window.opener || window.opener.closed){
+      alert("ส่งเข้า Production ไม่ได้ — หน้าต่าง Production ที่เปิดหน้านี้ถูกปิดไปแล้ว หรือเบราว์เซอร์ตัดการเชื่อม\n\nใช้วิธีเดิมแทน: กด บันทึกไฟล์ (ได้ไฟล์ _Pass) แล้วลากเข้าปุ่ม 📥 Import ใน Production");
+      return;
+    }
+    const fb = f.base || f.rows;
+    const xy = w.xy ? w.xy.n : 0, dr = w.drill ? w.drill.n : 0;
+    const msg = "ส่งเข้า Production — " + host + "\n\n" +
+      (nw ? "• BOM ไม้ " + nw.toLocaleString("th-TH") + " แถว (" + (w.file || "-") + ")\n   แก้ X เป็น Y " + xy + " ช่อง · ล้างบาร์โค้ดชิ้นที่ไม่มีไฟล์เจาะ " + dr + " ช่อง" +
+            (w.drill ? "" : "\n   ⚠ ยังไม่ได้เช็คไฟล์เจาะ (ส่งได้ — Barcode ตามไฟล์)") + "\n" : "• ไม่มี BOM ไม้\n") +
+      (nf ? "• BOM Fitting " + fb.length.toLocaleString("th-TH") + " แถว (" + (f.file || "-") + ") — ตามไฟล์ ไม่แตกไส้ (Production แตกไส้ / แปลงรหัสสั่งซื้อเอง)\n" : "• ไม่มี BOM Fitting\n") +
+      "\nกด OK = ส่ง แล้วกลับไปที่ Production";
+    if (!confirm(msg)) return;
+    const pick = t => ({ file: String(t.file || ""), cols: t.cols.map(c => String(c)), rows: null });
+    const payload = { __rcb: 1, t: tk, v: APP_META.version,
+      wood: nw ? Object.assign(pick(w), { rows: w.rows.map(r => w.cols.map((_, i) => String(r[i] ?? ""))) }) : null,
+      fit: nf ? Object.assign(pick(f), { rows: fb.map(r => f.cols.map((_, i) => String(r[i] ?? ""))) }) : null,
+      info: { xy: xy, drill: w.drill ? { n: dr, from: String(w.drill.from || "") } : null } };
+    sent = { at: Date.now() }; sync();
+    try { window.opener.postMessage(payload, target); }
+    catch(e){ sent = null; sync(); alert("ส่งไม่สำเร็จ: " + (e && e.message || e) + "\n\nใช้วิธีเดิม: บันทึกไฟล์ _Pass แล้วลากเข้า Production"); return; }
+    setTimeout(() => { if (sent && !sent.ok){ sent = null; sync(); alert("ยังไม่ได้รับคำตอบจาก Production (10 วินาที)\n\nตรวจว่า Production ยังเปิดอยู่ แล้วกดส่งใหม่ — หรือบันทึกไฟล์ _Pass แล้วลากเข้า Production"); } }, 10000);
+  };
+  window.addEventListener("message", ev => {
+    if (!window.opener || ev.source !== window.opener) return;
+    const d = ev.data; if (!d || d.__rcbAck !== 1 || d.t !== tk || !sent) return;
+    if (d.ok){
+      sent.ok = true; toast("Production รับแล้ว — กลับไปที่ Production");
+      bar.innerHTML = "&#10003; ส่งเข้า Production แล้ว — " + esc(String(d.msg || "")) + " · ปิดหน้านี้ได้";
+      try { window.opener.focus(); } catch(e){}
+      setTimeout(() => { try { window.close(); } catch(e){} }, 1200);
+    } else { sent = null; sync(); alert("Production ยังรับไม่ได้: " + String(d.msg || "")); }
+  });
+  window.RCB_state = () => ({ on: true, target: target, sent: sent ? { ok: !!sent.ok } : null });
+})();
+</script>
 </body>
 </html>
