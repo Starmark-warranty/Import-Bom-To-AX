@@ -925,9 +925,10 @@ button.artpill:hover{filter:brightness(.96)}
 /* ---- APP_META: แหล่งความจริงเดียวของเวอร์ชัน · แสดงบนหัวแอปและชื่อแท็บ ---- */
 const APP_META = {
   name: "ReCheck Bom",
-  version: "6.6",
-  build: "2026-11-21/production-codecheck",
+  version: "6.7",
+  build: "2026-11-21/packing-list",
   changelog: [
+    ["6.7","2026-11-21","FEAT เปิดไฟล์ Packing list (ItemCode · Quantitiy · Length · Width) ได้ · ผู้ใช้ 21/11 “ให้มันทำได้ 2 แบบเหมือนกันไปเลย (เหมือน Import BOM Fitting ของ Production) จะได้ไม่งง ทำแต่โปรแกรมเดียวพอ” → หาแถวหัวตารางเอง (หัวไม่อยู่แถวแรกก็ได้) · เข้าแท็บ BOM Fitting · ไม่เอาคอลัมน์ราคา / ยอดเงิน · เช็คโค้ด ItemCode · ▶ ส่งเข้า Production = หน้าต่าง Import Fitting ของ Production (หารหัสสั่งตัดตามขนาด · ติ๊กแปลงรหัสสั่งซื้อ = คิดเป็นเส้นยาว) · export_item / export_fitting เหมือนเดิม"],
     ["6.6","2026-11-21","FEAT เปิดจาก Production Nexus (V333 ขึ้นไป) = เช็คโค้ดกับ Fitting Global + Fitting BOM ของ Production · ผู้ใช้ 21/11 “ต้องทำให้ Import bom to AX ลิงก์จาก Fitting BOM กับ Fitting Global ในโปรแกรมโปรดักชั่น ตอนนี้เหมือนไม่ได้เชื่อมต่อ” → ข้อมูลชุดเดียวกับที่ Production ดึงจาก AX (Fitting Global + BOM ใน AX) แทน Supabase ของแอปส่งตั้ง Code AX · มีโค้ด = อยู่ใน Fitting Global หรือมี BOM ใน AX (การ์ดบอก BOM กี่รายการ) · Production รุ่นเก่า / ปิดไปแล้ว = เช็คกับ Supabase แบบเดิม · เปิดหน้านี้เอง = เหมือน v6.5 · แตกไส้ BOM ทำที่ Production (ผู้ใช้ 16:17)"],
     ["6.5","2026-11-21","FEAT ส่งต่อเข้า Production Nexus ได้เลย · ผู้ใช้ 21/11 “กด Import แล้ววิ่งเข้าไปในโปรแกรม Import to AX พอกดต่อก็กลับมาที่ Production · มีแค่ BOM ไม้ก็ส่งมาแค่ BOM ไม้ กับ BOM Fitting แบบเดิม” · เปิดหน้านี้จากปุ่ม 📥 Import ของ Production (V330 ขึ้นไป) = มีแถบส้มด้านบน + ปุ่ม ▶ ส่งเข้า Production บนหัวแอป · ทำงานในหน้านี้ตามเดิม (เปิด export_item + export_fitting · แก้ X เป็น Y อัตโนมัติ · เช็คไฟล์เจาะล้าง Barcode) แล้วกดปุ่ม → ถามยืนยันพร้อมสรุป (ไม้กี่แถว · แก้ X เป็น Y กี่ช่อง · ล้างบาร์โค้ดกี่ช่อง · Fitting กี่แถว · เตือนถ้ายังไม่ได้เช็คไฟล์เจาะ) → ส่งให้หน้าต่าง Production ที่เปิดหน้านี้ (ส่งถึงหน้าต่างนั้นหน้าต่างเดียว · มีรหัสสุ่มของรอบนั้นกำกับ) → Production ตอบรับแล้วหน้านี้ปิดเอง กลับไปที่ Production · BOM ไม้ = แถวที่เห็น/บันทึกในแท็บไม้ทุกแถว (รวมที่แก้แล้ว · ไม่สนตัวกรอง) · BOM Fitting = แถวตามไฟล์ (ไม่ส่งแบบแตกไส้ — Production แตกไส้ / แปลงรหัสสั่งซื้อเอง กันซ้ำ) · มีแค่แท็บเดียวก็ส่งแท็บเดียว · หน้าต่าง Production ถูกปิด / เบราว์เซอร์ตัดการเชื่อม = บอกให้บันทึกไฟล์ _Pass แล้วลากเข้า Production แทน · ไม่ส่งข้อมูลไปที่อื่น ไม่แตะ Supabase เพิ่ม"],
     ["6.4","2026-10-21","FIX SQL ในปุ่ม คัดลอก SQL (กล่อง ไส้ BOM) · ตัวเดิม (v6.2–v6.3) ตัดเงื่อนไขรหัส 22 ตัวออกหมด ลองกับ AX จริงแล้วได้เกิน 1,048,576 แถว Excel ใส่ไม่ได้ (ดึงสินค้าสำเร็จรูป / ครัวสั่งทำที่ BOM ยาวมาด้วย) · ตัวใหม่ = รหัสแม่ 22 ตัวครบเหมือนเดิม + รหัสอื่นที่ BOM ไม่เกิน 20 บรรทัด (ชิ้นตัด TPP… 406… 414LT… ชุดอุปกรณ์เล็ก) ลองกับ AX จริง 21/10/2026 ได้ 207,708 บรรทัด มี TPP00000320416 → TPP0000032 0.1598 · วิธีทำในกล่องเพิ่มขั้น เอาติ๊ก Adjust column width ออก (ไม่งั้น Excel ปรับความกว้างคอลัมน์สองแสนแถวทุกครั้งที่ Refresh ค้างนาน) · ข้อความ ดึงทุกรหัส เปลี่ยนเป็น ดึงรหัสอื่นด้วย · ไม่แตะการแตกไส้ / การอ่านไฟล์"],
@@ -1082,6 +1083,7 @@ function ingest(matrix, name, tab, src){
   t.needCheck = false; t.xy = null; t.onlyEd = false;
   t.drill = null; t.drillText = "";   // v4.9: ไฟล์ใหม่ = ผลเช็คเจาะเก่าใช้ไม่ได้
   t.mirror = null; t.mirRun = 0;      // v6.0: ผลเช็ค Mirror ก็เป็นของงานเก่า · รอบที่ยังอ่านค้างอยู่จะถูกทิ้ง
+  t.pk = (matrix && matrix.pk67) || null;   // v6.7: Packing list
 
   const wantSet = new Set(t.want.map(norm));
   t.hl = t.cols.map((c, i) => (wantSet.size && wantSet.has(norm(c))) ? i : -1).filter(i => i >= 0);
@@ -1124,7 +1126,7 @@ function emptyScreen(){
   $("drop").className = "";
   $("drop").innerHTML =
     "<h2>" + esc(t.label) + " — ลากไฟล์มาวางตรงนี้</h2>" +
-    "<p>ลาก <b>export_item</b> กับ <b>export_fitting</b> มาพร้อมกันได้เลย " +
+    "<p>ลาก <b>export_item</b> กับ <b>export_fitting</b> มาพร้อมกันได้เลย (หรือ <b>Packing list</b> ItemCode · Quantitiy · Length แทน export_fitting) " +
     "ระบบดูหัวคอลัมน์แล้วแยกเข้าสองแท็บให้เอง<br>" +
     "รองรับ <code>.xlsx</code> <code>.csv</code> <code>.tsv</code> " +
     "หรือคัดลอกจาก Excel แล้วกด <b>Ctrl+V</b><br>" +
@@ -1497,6 +1499,32 @@ function tabScore(head, k){
 /* v3.1: อ่านให้ครบก่อน แล้วค่อยแบ่งแท็บ
    เดิมเดาจากชื่อไฟล์ทีละตัว ทำให้ export_item_... กับ export_fitting_...
    วิ่งเข้าแท็บเดียวกันทั้งคู่ ตัวหลังทับตัวแรก */
+/* v6.7: Packing list — หาแถวหัว (ItemCode + Quantitiy / Quantity / Qty) ใน 30 แถวแรก → ตารางใหม่ (หัวแถวแรก) · ตัดคอลัมน์ราคา / ยอดเงิน / ไม่มีหัว · แถวไม่มี ItemCode / แถวรวม ไม่เอา
+   null = ไม่ใช่ Packing list (ไฟล์ export_item / export_fitting / อื่น ๆ = แบบเดิม) */
+function pkNorm67(v){ return String(v == null ? "" : v).toLowerCase().replace(/[\s_.\-]/g, ""); }
+function pkDetect67(m){
+  if (!Array.isArray(m)) return null;
+  for (let i = 0; i < Math.min(30, m.length); i++){
+    const row = (m[i] || []).map(pkNorm67);
+    const ic = row.indexOf("itemcode");
+    const qc = row.findIndex(h => h === "quantitiy" || h === "quantity" || h === "qty");
+    if (ic < 0 || qc < 0) continue;
+    if (row.indexOf("itemid") >= 0) return null;   /* หัวแบบ export_fitting = แบบเดิม */
+    const keep = [];
+    row.forEach((h, j) => { if (h && !/price|total|amount|discount|vat|currency|ราคา|ส่วนลด|ยอดเงิน|มูลค่า|สกุลเงิน/.test(h)) keep.push(j); });
+    const cur3 = j => { const v = m.slice(i + 1).map(r => String(((r || [])[j]) == null ? "" : r[j]).trim()).filter(Boolean); return v.length > 0 && v.every(x => /^(THB|USD|EUR|CNY|RMB|JPY|SGD|บาท)$/i.test(x)); };
+    for (let z = keep.length - 1; z >= 0; z--) if (cur3(keep[z])) keep.splice(z, 1);   /* คอลัมน์สกุลเงินของราคา (เช่น Unit = THB) ไม่เอา */
+    const head = keep.map(j => String(m[i][j] == null ? "" : m[i][j]).trim());
+    const rows = m.slice(i + 1).filter(r => { const c = String(((r || [])[ic]) == null ? "" : r[ic]).trim(); return c && !/^(total|grand ?total|รวม)/i.test(c); })
+                  .map(r => keep.map(j => (r && r[j] != null) ? r[j] : ""));
+    if (!rows.length) return null;
+    const out = [head].concat(rows);
+    out.pk67 = { at: i + 1, drop: row.filter(h => h).length - keep.length, n: rows.length,
+                 len: head.some(h => pkNorm67(h) === "length") };
+    return out;
+  }
+  return null;
+}
 async function takeFiles(list){
   const fs = [...list].slice(0, 2);
   if (!fs.length) return;
@@ -1514,12 +1542,16 @@ async function takeFiles(list){
       "หรือคัดลอกทั้งตารางแล้วกด <b>Ctrl+V</b>");
   }
 
+  got.forEach(g => { const pk = pkDetect67(g.m); if (pk){ g.m = pk; g.pk = pk.pk67; } });   /* v6.7: Packing list */
   got.forEach(g => {
     const head = (g.m[0] || []).map(h => String(h).trim());
     g.w = tabScore(head, "wood");
     g.f = tabScore(head, "fit");
     g.hint = guessTab(g.name);          // ชื่อไฟล์เป็นแค่ตัวช่วยตัดสินเวลาคะแนนเท่ากัน
+    if (g.pk){ g.w = 0; g.f = 99; g.hint = "fit"; }   /* v6.7: Packing list = แท็บ BOM Fitting เสมอ */
   });
+  got.filter(g => g.pk).forEach(g => toast("Packing list " + g.name + " → แท็บ BOM Fitting · " + g.pk.n + " แถว (หัวตารางแถว " + g.pk.at + ")" +
+    (g.pk.drop ? " · ไม่เอาคอลัมน์ราคา / ยอดเงิน " + g.pk.drop + " คอลัมน์" : "") + " · ส่งเข้า Production = หารหัสสั่งตัดตามขนาด"));
 
   busyDone("read", fs.length + " ไฟล์");
   busyRun("split");
@@ -1573,7 +1605,8 @@ document.addEventListener("paste", e => {
   if (!x || x.indexOf("\n") < 0) return;
   e.preventDefault();
   $("drop").className = "";
-  ingest(parseDelimited(x, detectDelim(x)), "วางจากคลิปบอร์ด", null,
+  const _m67 = parseDelimited(x, detectDelim(x)), _pk67 = pkDetect67(_m67);   /* v6.7: วาง Packing list = แท็บ BOM Fitting */
+  ingest(_pk67 || _m67, "วางจากคลิปบอร์ด", _pk67 ? "fit" : null,
          { kind: "xlsx" });   /* v4.7: วางมาจาก Excel ตั้งค่าเริ่มต้นเป็น .xlsx */
 });
 
@@ -6706,7 +6739,7 @@ fxLoadAll();
     const msg = "ส่งเข้า Production — " + host + "\n\n" +
       (nw ? "• BOM ไม้ " + nw.toLocaleString("th-TH") + " แถว (" + (w.file || "-") + ")\n   แก้ X เป็น Y " + xy + " ช่อง · ล้างบาร์โค้ดชิ้นที่ไม่มีไฟล์เจาะ " + dr + " ช่อง" +
             (w.drill ? "" : "\n   ⚠ ยังไม่ได้เช็คไฟล์เจาะ (ส่งได้ — Barcode ตามไฟล์)") + "\n" : "• ไม่มี BOM ไม้\n") +
-      (nf ? "• BOM Fitting " + fb.length.toLocaleString("th-TH") + " แถว (" + (f.file || "-") + ") — ตามไฟล์ ไม่แตกไส้ (Production แตกไส้ / แปลงรหัสสั่งซื้อเอง)\n" : "• ไม่มี BOM Fitting\n") +
+      (nf ? "• BOM Fitting " + fb.length.toLocaleString("th-TH") + " แถว (" + (f.file || "-") + ")" + (f.pk ? " — Packing list: Production หารหัสสั่งตัดตามขนาด (ติ๊กแปลงรหัสสั่งซื้อ = คิดเป็นเส้นยาว)\n" : " — ตามไฟล์ ไม่แตกไส้ (Production แตกไส้ / แปลงรหัสสั่งซื้อเอง)\n") : "• ไม่มี BOM Fitting\n") +
       "\nกด OK = ส่ง แล้วกลับไปที่ Production";
     if (!confirm(msg)) return;
     const pick = t => ({ file: String(t.file || ""), cols: t.cols.map(c => String(c)), rows: null });
